@@ -7,204 +7,240 @@
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#0E1116; --panel:#161A21; --panel2:#1C222B; --rule:#232935;
-  --ink:#E6E9EF; --mid:#A2ABBA; --dim:#6F7889;
+  --ink:#E9ECF2; --mid:#A2ABBA; --dim:#6F7889;
   --proof:#4DB6A0; --good:#5FBE8E; --warn:#E0A458; --bad:#E0664F; --cool:#6E9BD8;
   --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
   --sans:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
 }
 body{background:var(--bg);color:var(--ink);font-family:var(--sans);
-     font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
-.wrap{max-width:1120px;margin:0 auto;padding:36px 28px 72px}
+     font-size:14.5px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:960px;margin:0 auto;padding:40px 28px 80px}
 .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 
-header{display:flex;justify-content:space-between;align-items:flex-end;
-       gap:24px;flex-wrap:wrap;border-bottom:1px solid var(--rule);padding-bottom:20px}
-.brand{font-family:var(--mono);font-size:20px;letter-spacing:.24em;
+/* masthead */
+.brand{font-family:var(--mono);font-size:13px;letter-spacing:.3em;
        text-transform:uppercase;color:var(--proof);font-weight:600}
-.sub{color:var(--mid);font-size:13px;margin-top:6px;max-width:52ch}
-.meta{font-family:var(--mono);font-size:11.5px;color:var(--dim);text-align:right;
-      line-height:1.9;letter-spacing:.02em}
-.meta b{color:var(--mid);font-weight:400}
+.meta{font-family:var(--mono);font-size:11.5px;color:var(--dim);margin-top:6px}
 
-h2{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;
-   color:var(--dim);font-weight:500;margin:40px 0 14px;
-   padding-bottom:8px;border-bottom:1px solid var(--rule)}
+/* hero — the answer, before any method */
+.hero{margin:30px 0 8px}
+.hero h1{font-size:31px;line-height:1.25;font-weight:600;letter-spacing:-.015em;
+         max-width:19ch}
+.hero h1 b{color:var(--good);font-weight:600}
+.hero h1 i{color:var(--bad);font-style:normal}
+.hero p{color:var(--mid);font-size:15px;margin-top:14px;max-width:62ch}
 
-/* the descent */
-.rates{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--rule);
-       border:1px solid var(--rule)}
-.rate{background:var(--panel);padding:22px 24px 20px;position:relative}
-.rate .lbl{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;
-           text-transform:uppercase;color:var(--dim)}
-.rate .val{font-family:var(--mono);font-size:40px;font-weight:600;line-height:1.05;
-           margin:12px 0 4px;letter-spacing:-.02em}
-.rate .frac{font-family:var(--mono);font-size:12px;color:var(--mid)}
-.rate .say{font-size:12px;color:var(--dim);margin-top:12px;line-height:1.45}
-.r1 .val{color:var(--mid)} .r2 .val{color:var(--proof)} .r3 .val{color:var(--bad)}
-.bar{height:3px;background:var(--panel2);margin-top:14px;border-radius:2px;overflow:hidden}
-.bar i{display:block;height:100%}
-.r1 .bar i{background:var(--mid)} .r2 .bar i{background:var(--proof)}
-.r3 .bar i{background:var(--bad)}
+.split{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--rule);
+       border:1px solid var(--rule);margin-top:24px}
+.split > div{background:var(--panel);padding:18px 20px}
+.split .l{font-family:var(--mono);font-size:10px;letter-spacing:.15em;
+          text-transform:uppercase;color:var(--dim)}
+.split .v{font-family:var(--mono);font-size:26px;font-weight:600;margin-top:9px;
+          letter-spacing:-.02em}
+.split .n{font-size:12px;color:var(--dim);margin-top:7px;line-height:1.4}
 
-table{width:100%;border-collapse:collapse;font-size:13px}
+h2{font-size:19px;font-weight:600;margin:52px 0 6px;letter-spacing:-.01em}
+h2 + .lede{color:var(--mid);font-size:14px;margin-bottom:16px;max-width:66ch}
+.step{font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;
+      text-transform:uppercase;color:var(--proof);margin-bottom:8px}
+
+/* the worked example */
+.case{border:1px solid var(--rule);background:var(--panel);padding:24px 26px}
+.eq{font-family:var(--mono);font-size:13.5px;line-height:2.1;margin:14px 0 6px}
+.eq .row{display:flex;gap:14px;align-items:baseline;flex-wrap:wrap}
+.eq .lab{color:var(--mid);min-width:250px}
+.eq .amt{color:var(--bad);font-weight:600;min-width:92px;text-align:right}
+.eq .amt.g{color:var(--good)}
+.eq .tot{border-top:1px solid var(--rule);margin-top:10px;padding-top:10px}
+.eq .tot .amt{color:var(--warn)}
+.verdict{margin-top:16px;padding-top:16px;border-top:1px solid var(--rule);
+         color:var(--mid);font-size:13.5px;line-height:1.6}
+.verdict b{color:var(--ink)}
+
+/* descent */
+.descent{border:1px solid var(--rule);background:var(--panel);padding:22px 26px}
+.dline{display:flex;align-items:center;gap:18px;padding:13px 0;
+       border-bottom:1px solid var(--rule)}
+.dline:last-child{border-bottom:none}
+.dnum{font-family:var(--mono);font-size:27px;font-weight:600;min-width:100px;
+      letter-spacing:-.02em}
+.dtrack{flex:1;height:6px;background:var(--panel2);border-radius:3px;overflow:hidden;
+        min-width:80px}
+.dtrack i{display:block;height:100%}
+.dtext{min-width:290px;font-size:13.5px;color:var(--mid);line-height:1.45}
+.dtext b{color:var(--ink);display:block;font-weight:600;font-size:14px}
+.c1{color:var(--mid)} .c1t{background:var(--mid)}
+.c2{color:var(--proof)} .c2t{background:var(--proof)}
+.c3{color:var(--bad)} .c3t{background:var(--bad)}
+
+table{width:100%;border-collapse:collapse;font-size:13.5px}
 th{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
-   color:var(--dim);font-weight:500;text-align:left;padding:9px 12px;
+   color:var(--dim);font-weight:500;text-align:left;padding:10px 13px;
    background:var(--panel2);border-bottom:1px solid var(--rule)}
-td{padding:9px 12px;border-bottom:1px solid var(--rule);color:var(--mid);
+td{padding:11px 13px;border-bottom:1px solid var(--rule);color:var(--mid);
    vertical-align:top}
 tr:last-child td{border-bottom:none}
 td.k{color:var(--ink)}
+td.k small{display:block;color:var(--dim);font-size:11.5px;margin-top:3px;
+           font-weight:400}
 td.n,th.n{font-family:var(--mono);text-align:right;white-space:nowrap;
           font-variant-numeric:tabular-nums}
 .tbl{border:1px solid var(--rule);background:var(--panel);overflow-x:auto}
 tr.miss td{background:rgba(224,102,79,.07)}
-tr.held td.k{color:var(--cool)}
 
 .tag{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
-     padding:2px 6px;border-radius:2px;white-space:nowrap}
+     padding:2.5px 6px;border-radius:2px;white-space:nowrap}
 .t-ok{background:rgba(95,190,142,.13);color:var(--good)}
 .t-miss{background:rgba(224,102,79,.13);color:var(--bad)}
 .t-held{background:rgba(110,155,216,.13);color:var(--cool)}
+.t-urg{background:rgba(224,102,79,.13);color:var(--bad)}
+.t-soon{background:rgba(224,164,88,.13);color:var(--warn)}
 
-.note{border-left:2px solid var(--proof);background:var(--panel);padding:14px 18px;
-      margin-top:12px;font-size:12.5px;color:var(--mid);line-height:1.55}
+.note{border-left:2px solid var(--proof);background:var(--panel);padding:15px 19px;
+      margin-top:14px;font-size:13px;color:var(--mid);line-height:1.6}
 .note b{color:var(--ink);font-weight:600}
+.note.warnb{border-left-color:var(--warn)}
 
-.attest{border:1px solid var(--rule);background:var(--panel);margin-top:14px;
-        display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--rule)}
-.attest > div{background:var(--panel);padding:20px 24px}
-.attest .lbl{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;
-             text-transform:uppercase;color:var(--dim)}
-.attest .v{font-family:var(--mono);font-size:22px;margin-top:10px;font-weight:600}
-.status-no{color:var(--warn)} .status-yes{color:var(--good)}
-.reason{font-size:12px;color:var(--dim);margin-top:8px;line-height:1.45}
+.status{border:1px solid var(--rule);background:var(--panel);padding:22px 26px;
+        display:flex;gap:26px;align-items:center;flex-wrap:wrap}
+.status .big{font-family:var(--mono);font-size:22px;font-weight:600;color:var(--warn)}
+.status .why{color:var(--mid);font-size:13.5px;max-width:60ch;line-height:1.55}
 
-.chain{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:12px;
-       font-family:var(--mono);font-size:11px}
-.node{padding:5px 10px;border:1px solid var(--rule);border-radius:3px;
-      background:var(--panel2);color:var(--mid)}
-.node.ok{border-color:rgba(95,190,142,.4);color:var(--good)}
-.node.bad{border-color:rgba(224,102,79,.5);color:var(--bad);
-          background:rgba(224,102,79,.08)}
-.arrow{color:var(--dim)}
-footer{margin-top:52px;padding-top:20px;border-top:1px solid var(--rule);
-       font-family:var(--mono);font-size:11px;color:var(--dim);line-height:1.8}
-@media(max-width:820px){.rates,.attest{grid-template-columns:1fr}}
+footer{margin-top:60px;padding-top:22px;border-top:1px solid var(--rule);
+       font-family:var(--mono);font-size:11px;color:var(--dim);line-height:1.9}
+@media(max-width:760px){.split{grid-template-columns:1fr}
+  .dline{flex-wrap:wrap}.dtext{min-width:0}}
 </style></head><body><div class="wrap">
 
-<header>
-  <div>
-    <div class="brand">Attest</div>
-    <div class="sub">Close pack for Acme Athleisure Private Limited. Reports what can be
-      proven, not what happened to match.</div>
-  </div>
-  <div class="meta">
-    <b>period</b> 2026-08<br>
-    <b>records</b> 3,043 from 7 sources<br>
-    <b>closed in</b> 0.008s<br>
-    <b>generated</b> 2026-09-03 17:23
-  </div>
-</header>
+<div class="brand">Attest</div>
+<div class="meta">Acme Athleisure Private Limited &nbsp;·&nbsp; 2026-08 &nbsp;·&nbsp;
+  3,043 records from 7 systems, closed in 0.008s</div>
 
-<h2>The three rates</h2>
-
-<div class="rates">
-  <div class="rate r1">
-    <div class="lbl">Match rate</div>
-    <div class="val">90.9%</div>
-    <div class="frac">20/22 batches tie to the bank</div>
-    <div class="bar"><i style="width:90.9%"></i></div>
-    <div class="say">What conventional reconciliation reports. Razorpay pays what
-      its own report says, so this agrees by construction.</div>
-  </div>
-  <div class="rate r2">
-    <div class="lbl">Proof rate</div>
-    <div class="val">73.0%</div>
-    <div class="frac">743/1018 lines fully traced</div>
-    <div class="bar"><i style="width:73.0%"></i></div>
-    <div class="say">Every link present: order &rarr; fee &rarr; tax &rarr; batch
-      &rarr; bank. Break one and the line is not proven.</div>
-  </div>
-  <div class="rate r3">
-    <div class="lbl">False-match rate</div>
-    <div class="val">68.2%</div>
-    <div class="frac">15/22 claims overturned</div>
-    <div class="bar"><i style="width:68.2%"></i></div>
-    <div class="say">Matches the adversarial pass broke. The number nobody
-      volunteers, published on purpose.</div>
-  </div>
+<div class="hero">
+  <h1>We found <b>₹88,103.47</b> you can still claim back
+    &mdash; and <i>₹5,365.00</i> of it dies if you close
+    monthly.</h1>
+  <p>This month's books tie to the bank. They are still wrong. Below is what was
+    taken that shouldn't have been, who to claim it from, and how long you have.</p>
 </div>
 
-<h2>One proof chain</h2>
-<div class="note" style="border-left-color:var(--bad)">
-  <b>pay_1a142bb1e0f5d0</b> — MDR 2921p charged, 2476p contracted
-  <div class="chain"><span class='node ok'>order</span><span class='arrow'>&rarr;</span><span class='node bad'>mdr</span><span class='arrow'>&rarr;</span><span class='node ok'>gst</span><span class='arrow'>&rarr;</span><span class='node ok'>net</span><span class='arrow'>&rarr;</span><span class='node ok'>credit</span></div>
-</div>
-
-<h2>Recovery &mdash; what is claimable, and for how much longer</h2>
-
-<div class="attest" style="grid-template-columns:1fr 1fr 1fr">
-  <div><div class="lbl">Recoverable</div>
+<div class="split">
+  <div><div class="l">Claimable now</div>
     <div class="v" style="color:var(--good)">₹88,103.47</div>
-    <div class="reason">298 items, claimable from a counterparty</div></div>
-  <div><div class="lbl">Expiring within 7 days</div>
+    <div class="n">across 298 items, from three counterparties</div></div>
+  <div><div class="l">Expires within 7 days</div>
     <div class="v" style="color:var(--warn)">₹71.58</div>
-    <div class="reason">3 items whose claim window is closing</div></div>
-  <div><div class="lbl">Cost of closing monthly</div>
+    <div class="n">3 claim windows closing</div></div>
+  <div><div class="l">Lost by closing monthly</div>
     <div class="v" style="color:var(--bad)">₹5,365.00</div>
-    <div class="reason">16 claims would expire unfiled if this
-      close ran on 2026-10-03 instead of 2026-09-03</div></div>
+    <div class="n">16 claims expire unfiled at a
+      2026-10-03 close</div></div>
 </div>
-<div class="note"><b>Why cadence is the product.</b> Courier disputes close in
-  14 days. A month-end close surfaces a day-8 finding on day 31, by which point
-  the money is gone and the report is an obituary. Running daily is not a
-  performance detail &mdash; it is the difference between finding money and
-  recovering it. &nbsp;bank <b style='color:var(--ink)'>₹71,245.75</b> &nbsp;·&nbsp; razorpay <b style='color:var(--ink)'>₹13,743.72</b> &nbsp;·&nbsp; courier <b style='color:var(--ink)'>₹3,114.00</b></div>
-<div class="tbl" style="margin-top:12px"><table>
-<thead><tr><th>Deadline</th><th class="n">Left</th><th>Class</th>
-<th class="n">Exposure</th><th>Counterparty</th></tr></thead>
-<tbody><tr><td class='mono'>2026-09-05</td><td class='n'><span class='tag t-miss'>2d</span></td><td class='k'>ADJUSTMENT</td><td class='n'>₹71.58</td><td>courier</td></tr><tr><td class='mono'>2026-09-12</td><td class='n'><span class='tag t-ok'>9d</span></td><td class='k'>ADJUSTMENT</td><td class='n'>₹149.43</td><td>courier</td></tr><tr><td class='mono'>2026-09-14</td><td class='n'><span class='tag t-ok'>11d</span></td><td class='k'>DUPLICATE_AWB</td><td class='n'>₹2,801.16</td><td>courier</td></tr><tr><td class='mono'>2026-09-19</td><td class='n'><span class='tag t-ok'>16d</span></td><td class='k'>ADJUSTMENT</td><td class='n'>₹91.83</td><td>courier</td></tr><tr><td class='mono'>2026-09-20</td><td class='n'><span class='tag t-ok'>17d</span></td><td class='k'>UNREFERENCED_ADJ</td><td class='n'>₹2,251.00</td><td>razorpay</td></tr><tr><td class='mono'>2026-10-03</td><td class='n'><span class='tag t-ok'>30d</span></td><td class='k'>SELF_REFERENTIAL_TIE</td><td class='n'>₹423.47</td><td>razorpay</td></tr></tbody></table></div>
 
-<h2>Exception register &mdash; ranked by rupee exposure</h2>
-<div class="tbl"><table>
-<thead><tr><th>Class</th><th class="n">Count</th><th class="n">Exposure</th>
-<th>Evidence required to close it</th></tr></thead>
-<tbody><tr><td class='k'>CREDIT</td><td class='n'>22</td><td class='n'>₹27,852.65</td><td>bank advice or Razorpay settlement trace for the missing credit</td></tr><tr><td class='k'>ORPHAN_BANK_CREDIT</td><td class='n'>1</td><td class='n'>₹27,173.60</td><td>counterparty confirmation</td></tr><tr><td class='k'>CREDIT</td><td class='n'>10</td><td class='n'>₹11,049.50</td><td>bank advice or Razorpay settlement trace for the missing credit</td></tr><tr><td class='k'>ORPHAN_BANK_CREDIT</td><td class='n'>1</td><td class='n'>₹5,170.00</td><td>counterparty confirmation</td></tr><tr><td class='k'>UNREFERENCED_ADJ</td><td class='n'>1</td><td class='n'>₹3,933.00</td><td>counterparty confirmation</td></tr><tr><td class='k'>REFUND_MISMATCH</td><td class='n'>1</td><td class='n'>₹3,386.53</td><td>counterparty confirmation</td></tr><tr><td class='k'>DUPLICATE_AWB</td><td class='n'>1</td><td class='n'>₹2,801.16</td><td>counterparty confirmation</td></tr><tr><td class='k'>UNREFERENCED_ADJ</td><td class='n'>1</td><td class='n'>₹2,251.00</td><td>counterparty confirmation</td></tr><tr><td class='k'>CHARGEBACK_ORPHAN</td><td class='n'>1</td><td class='n'>₹1,531.17</td><td>counterparty confirmation</td></tr><tr><td class='k'>DUPLICATE_SETTLEMENT_LINE</td><td class='n'>1</td><td class='n'>₹962.63</td><td>counterparty confirmation</td></tr><tr><td class='k'>SELF_REFERENTIAL_TIE</td><td class='n'>1</td><td class='n'>₹423.47</td><td>review the overturned match before posting</td></tr><tr><td class='k'>GST</td><td class='n'>2</td><td class='n'>₹412.16</td><td>corrected GST computation on MDR; also revise the ITC claimed</td></tr></tbody></table></div>
+<h2>The error a match rate can never find</h2>
+<p class="lede">One batch from this month, in full. It reconciles perfectly.</p>
 
-<h2>Accuracy against held-out ground truth</h2>
+<div class="case">
+  <div class="eq">
+    <div class="row"><span class="lab">Gateway fee overcharged on one line</span>
+      <span class="amt">+₹4.12</span></div>
+    <div class="row"><span class="lab">Refund under-deducted in the same batch</span>
+      <span class="amt g">&minus;₹4.10</span></div>
+    <div class="row tot"><span class="lab">What the batch total looks like</span>
+      <span class="amt">₹0.02 out</span></div>
+  </div>
+  <div class="verdict">
+    Two real errors. The batch is out by <b>₹0.02</b> &mdash; inside any
+    tolerance a finance team would set, so every automated check passes and the
+    money quietly leaves. Accounting calls this a <b>compensating error</b>, and a
+    total-level check cannot detect it by construction.
+    <br><br>
+    Attest catches it by rebuilding what the refund deduction <b>should</b> have
+    been from the merchant's own refund records and the netting rule in the
+    contract &mdash; never from the settlement report it is auditing. Batch
+    <span class="mono" style="color:var(--ink)">setl_bcac82b4f08674</span>.
+  </div>
+</div>
+
+<h2>So we stopped trusting the match rate</h2>
+<p class="lede">The same month, measured three ways. The number goes down as the
+  test gets harder &mdash; which is the point.</p>
+
+<div class="descent">
+  <div class="dline">
+    <span class="dnum c1">93.1%</span>
+    <span class="dtrack"><i class="c1t" style="width:93.1%"></i></span>
+    <span class="dtext"><b>Looks reconciled</b>
+      948 of 1,018 lines sit in a batch whose
+      total agrees with the bank.</span>
+  </div>
+  <div class="dline">
+    <span class="dnum c2">73.0%</span>
+    <span class="dtrack"><i class="c2t" style="width:73.0%"></i></span>
+    <span class="dtext"><b>Actually provable</b>
+      743 of 1,018 lines trace end to end: order &rarr; fee
+      &rarr; tax &rarr; batch &rarr; bank, with no link missing.</span>
+  </div>
+  <div class="dline">
+    <span class="dnum c3">15</span>
+    <span class="dtrack"><i class="c3t" style="width:68.2%"></i></span>
+    <span class="dtext"><b>Matches we broke on purpose</b>
+      Of 22 batches that passed, 15 failed adversarial
+      review &mdash; 68.2%. Published deliberately.</span>
+  </div>
+</div>
+<div class="note"><b>Why the first number is a lie.</b> Razorpay pays exactly what
+  its own settlement report says it will pay, so the bank and the report agree by
+  construction. That tie proves the money <i>arrived</i>. It proves nothing about
+  whether the deductions inside were <i>correct</i> &mdash; and it is the number
+  conventional reconciliation reports as success.</div>
+
+<h2>What to chase, and by when</h2>
+<p class="lede">Courier disputes close in 14 days. A month-end close surfaces a
+  day-8 finding on day 31, by which time the money is gone.</p>
 <div class="tbl"><table>
-<thead><tr><th>Defect class</th><th class="n">Planted</th><th class="n">Found</th>
+<thead><tr><th>Deadline</th><th class="n">Left</th><th>What happened</th>
+<th class="n">Amount</th><th>Claim from</th></tr></thead>
+<tbody><tr><td class='mono'>2026-09-05</td><td class='n'><span class='tag t-urg'>2 days</span></td><td class='k'>Courier paid short<small>An unexplained deduction with no AWB-level reason</small></td><td class='n'>₹71.58</td><td>courier</td></tr><tr><td class='mono'>2026-09-12</td><td class='n'><span class='tag t-ok'>9 days</span></td><td class='k'>Courier paid short<small>An unexplained deduction with no AWB-level reason</small></td><td class='n'>₹149.43</td><td>courier</td></tr><tr><td class='mono'>2026-09-14</td><td class='n'><span class='tag t-ok'>11 days</span></td><td class='k'>Shipment remitted twice<small>One AWB appears twice in a courier statement</small></td><td class='n'>₹2,801.16</td><td>courier</td></tr><tr><td class='mono'>2026-09-19</td><td class='n'><span class='tag t-ok'>16 days</span></td><td class='k'>Courier paid short<small>An unexplained deduction with no AWB-level reason</small></td><td class='n'>₹91.83</td><td>courier</td></tr><tr><td class='mono'>2026-09-20</td><td class='n'><span class='tag t-ok'>17 days</span></td><td class='k'>Adjustment with no reference<small>Money moved with no order or payment attached</small></td><td class='n'>₹2,251.00</td><td>razorpay</td></tr><tr><td class='mono'>2026-10-03</td><td class='n'><span class='tag t-ok'>30 days</span></td><td class='k'>Batch tied, but its fees are wrong<small>The bank matched the report — and the report was wrong</small></td><td class='n'>₹423.47</td><td>razorpay</td></tr></tbody></table></div>
+
+<h2>Everything unresolved</h2>
+<p class="lede">Each one says what evidence would close it &mdash; not just that it
+  didn't match.</p>
+<div class="tbl"><table>
+<thead><tr><th>What happened</th><th class="n">Items</th><th class="n">Exposure</th>
+<th>Evidence required</th></tr></thead>
+<tbody><tr><td class='k'>Settlement never reached the bank<small>The report says it was paid; no credit arrived</small></td><td class='n'>22</td><td class='n'>₹27,852.65</td><td>bank advice or Razorpay settlement trace for the missing credit</td></tr><tr><td class='k'>Money in with no explanation<small>A credit no settlement accounts for</small></td><td class='n'>1</td><td class='n'>₹27,173.60</td><td>counterparty confirmation</td></tr><tr><td class='k'>Settlement never reached the bank<small>The report says it was paid; no credit arrived</small></td><td class='n'>10</td><td class='n'>₹11,049.50</td><td>bank advice or Razorpay settlement trace for the missing credit</td></tr><tr><td class='k'>Money in with no explanation<small>A credit no settlement accounts for</small></td><td class='n'>1</td><td class='n'>₹5,170.00</td><td>counterparty confirmation</td></tr><tr><td class='k'>Adjustment with no reference<small>Money moved with no order or payment attached</small></td><td class='n'>1</td><td class='n'>₹3,933.00</td><td>counterparty confirmation</td></tr><tr><td class='k'>Refund deducted more than once<small>The same refund netted twice</small></td><td class='n'>1</td><td class='n'>₹3,386.53</td><td>counterparty confirmation</td></tr><tr><td class='k'>Shipment remitted twice<small>One AWB appears twice in a courier statement</small></td><td class='n'>1</td><td class='n'>₹2,801.16</td><td>counterparty confirmation</td></tr><tr><td class='k'>Adjustment with no reference<small>Money moved with no order or payment attached</small></td><td class='n'>1</td><td class='n'>₹2,251.00</td><td>counterparty confirmation</td></tr></tbody></table></div>
+
+<h2>Why you can trust these numbers</h2>
+<p class="lede">The test data was built truth-first: the real ledger was generated
+  and frozen, the documents derived from it, then errors injected into the
+  documents only. The pipeline never reads the answer key.</p>
+<div class="tbl"><table>
+<thead><tr><th>Error type</th><th class="n">Planted</th><th class="n">Found</th>
 <th class="n">Recall</th><th>Provenance</th></tr></thead>
-<tbody><tr class=''><td class='k'>CHARGEBACK_ORPHAN</td><td class='n'>1</td><td class='n'>1</td><td class='n'>100%</td><td><span class='tag t-ok'>designed for</span></td></tr><tr class=''><td class='k'>COD_SHORT</td><td class='n'>14</td><td class='n'>14</td><td class='n'>100%</td><td><span class='tag t-ok'>designed for</span></td></tr><tr class=''><td class='k'>COMPENSATING</td><td class='n'>2</td><td class='n'>2</td><td class='n'>100%</td><td><span class='tag t-ok'>designed for</span></td></tr><tr class='held'><td class='k'>DUPLICATE_AWB</td><td class='n'>1</td><td class='n'>1</td><td class='n'>100%</td><td><span class='tag t-held'>held out · found</span></td></tr><tr class='held'><td class='k'>DUPLICATE_SETTLEMENT_LINE</td><td class='n'>1</td><td class='n'>1</td><td class='n'>100%</td><td><span class='tag t-held'>held out · found</span></td></tr><tr class=''><td class='k'>GST_BASE</td><td class='n'>4</td><td class='n'>4</td><td class='n'>100%</td><td><span class='tag t-ok'>designed for</span></td></tr><tr class=''><td class='k'>MDR_RATE</td><td class='n'>23</td><td class='n'>23</td><td class='n'>100%</td><td><span class='tag t-ok'>designed for</span></td></tr><tr class=''><td class='k'>MISSING_CREDIT</td><td class='n'>1</td><td class='n'>1</td><td class='n'>100%</td><td><span class='tag t-ok'>designed for</span></td></tr><tr class='held'><td class='k'>ORPHAN_BANK_CREDIT</td><td class='n'>1</td><td class='n'>1</td><td class='n'>100%</td><td><span class='tag t-held'>held out · found</span></td></tr><tr class='miss'><td class='k'>OUT_OF_PERIOD_SETTLEMENT</td><td class='n'>1</td><td class='n'>0</td><td class='n'>0%</td><td><span class='tag t-miss'>held out · missed</span></td></tr><tr class=''><td class='k'>REFUND_DUPLICATE</td><td class='n'>2</td><td class='n'>2</td><td class='n'>100%</td><td><span class='tag t-ok'>designed for</span></td></tr><tr class=''><td class='k'>ROUNDING_DRIFT</td><td class='n'>1</td><td class='n'>1</td><td class='n'>100%</td><td><span class='tag t-ok'>designed for</span></td></tr><tr class=''><td class='k'>UNREFERENCED_ADJ</td><td class='n'>2</td><td class='n'>2</td><td class='n'>100%</td><td><span class='tag t-ok'>designed for</span></td></tr><tr class=''><td class='k'>UTR_UNRESOLVABLE</td><td class='n'>3</td><td class='n'>3</td><td class='n'>100%</td><td><span class='tag t-ok'>designed for</span></td></tr></tbody></table></div>
-<div class="note">
-  <b>Why these numbers can be trusted.</b> The corpus is generated truth-first:
-  the true ledger is built and frozen, documents are derived from it, and defects
-  are injected into the documents only. The labels are never read by the pipeline.
-  Four classes were planted with <b>no detector written for them</b> — recall on
-  those is 75.0%, and the class still missed is shown in red.
-  Designed-for recall is 100.0%, which on its own would prove
-  very little.
-</div>
-<div class='note'>17 refunds netting into the next period were classified as timing, not variance -- the classic false positive in this domain, correctly suppressed.</div><div class='note'>7 same-value same-day order pairs exist in the corpus. Resolution keys on settlement_id, so these never reach an amount-based tiebreak and no arbitrary pick is made.</div>
+<tbody><tr class=''><td class='k'>Shipment remitted twice</td><td class='n'>1</td><td class='n'>1</td><td class='n'>100%</td><td><span class='tag t-held'>held out &middot; found</span></td></tr><tr class=''><td class='k'>Payment settled twice</td><td class='n'>1</td><td class='n'>1</td><td class='n'>100%</td><td><span class='tag t-held'>held out &middot; found</span></td></tr><tr class=''><td class='k'>Money in with no explanation</td><td class='n'>1</td><td class='n'>1</td><td class='n'>100%</td><td><span class='tag t-held'>held out &middot; found</span></td></tr><tr class='miss'><td class='k'>Settlement outside the period</td><td class='n'>1</td><td class='n'>0</td><td class='n'>0%</td><td><span class='tag t-miss'>held out &middot; missed</span></td></tr><tr class=''><td class='k'>Chargeback with no dispute record</td><td class='n'>1</td><td class='n'>1</td><td class='n'>100%</td><td><span class='tag t-ok'>designed for</span></td></tr><tr class=''><td class='k'>Cod Short</td><td class='n'>14</td><td class='n'>14</td><td class='n'>100%</td><td><span class='tag t-ok'>designed for</span></td></tr><tr class=''><td class='k'>Compensating</td><td class='n'>2</td><td class='n'>2</td><td class='n'>100%</td><td><span class='tag t-ok'>designed for</span></td></tr><tr class=''><td class='k'>Gst Base</td><td class='n'>4</td><td class='n'>4</td><td class='n'>100%</td><td><span class='tag t-ok'>designed for</span></td></tr><tr class=''><td class='k'>Mdr Rate</td><td class='n'>23</td><td class='n'>23</td><td class='n'>100%</td><td><span class='tag t-ok'>designed for</span></td></tr><tr class=''><td class='k'>Missing Credit</td><td class='n'>1</td><td class='n'>1</td><td class='n'>100%</td><td><span class='tag t-ok'>designed for</span></td></tr><tr class=''><td class='k'>Refund Duplicate</td><td class='n'>2</td><td class='n'>2</td><td class='n'>100%</td><td><span class='tag t-ok'>designed for</span></td></tr><tr class=''><td class='k'>Rounding Drift</td><td class='n'>1</td><td class='n'>1</td><td class='n'>100%</td><td><span class='tag t-ok'>designed for</span></td></tr><tr class=''><td class='k'>Adjustment with no reference</td><td class='n'>2</td><td class='n'>2</td><td class='n'>100%</td><td><span class='tag t-ok'>designed for</span></td></tr><tr class=''><td class='k'>Utr Unresolvable</td><td class='n'>3</td><td class='n'>3</td><td class='n'>100%</td><td><span class='tag t-ok'>designed for</span></td></tr></tbody></table></div>
+<div class="note warnb"><b>The row in red is the honest one.</b> Four error types
+  were planted with <b>no detector written for them</b>. Three were caught anyway
+  by generic integrity checks &mdash; that is the only real evidence this
+  generalises. One was missed, and is reported as missed. Recall on the types we
+  designed for is 100.0%, which on its own would prove
+  nothing at all. Recall on the held-out types is
+  <b>75.0%</b>. That is the number that means something.</div>
 
 <h2>Attestation</h2>
-<div class="attest">
-  <div><div class="lbl">Period volume</div>
-       <div class="v">₹18,31,760.93</div></div>
-  <div><div class="lbl">Unexplained residual</div>
-       <div class="v">₹46,617.32</div>
-       <div class="reason">254.5 bps of volume</div></div>
-  <div><div class="lbl">Close status</div>
-       <div class="v status-no">
-         NOT ATTESTABLE</div>
-       <div class="reason">Residual exceeds the 25 bps limit. Refusing to certify is the point of an attestation — the close stays open until this is investigated.</div>
-  </div>
+<div class="status">
+  <span class="big">NOT ATTESTABLE</span>
+  <span class="why">₹46,617.32 of ₹18,31,760.93 cannot be
+    attributed to any cause &mdash; 254.5 bps of volume, against a
+    25 bps limit. The close stays open until that is investigated.
+    <b>Refusing to certify is the point of an attestation:</b> a system that always
+    signs is not attesting to anything.</span>
 </div>
 
 <footer>
   Attest &middot; Razorpay AI Buildathon, Track 4 &middot; synthetic corpus, no real
   merchant data<br>
-  Rules engine, zero runtime dependencies. Every figure reproducible from the
-  seeded corpus.
+  Deterministic engine, zero runtime dependencies. Every figure reproducible with
+  <span style="color:var(--mid)">python -m attest.generate --out data --orders 1200</span>
 </footer>
 </div></body></html>

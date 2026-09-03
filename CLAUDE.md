@@ -62,7 +62,7 @@ if it makes them look better.
 
 ```bash
 python3 -m attest.generate --out data --orders 1200
-python3 -m attest.run --data data --html docs/index.html
+python3 -m attest.run --data data --html web/close-pack.html
 ```
 
 Roughly (exact figures depend on seed):
@@ -95,14 +95,16 @@ regressed.** Those two numbers are the integrity check on the whole project.
    engine unavailable.
 
 2. **5-minute pitch video.** Structure: the queue → run the pipeline live in the
-   terminal (0.02s, proves it's real) → open `docs/index.html` → walk the descent
+   terminal (0.02s, proves it's real) → open the close pack → walk the descent
    90.9% → 73.0% → 68.2% → the compensating pair (₹4.12 vs ₹4.10) → the scorecard
    with the visible MISS → the ₹5,365 cost-of-monthly number → close.
 
 3. **Two form answers**: Project Objectives, and Build Challenges & Technical
    Obstacles.
 
-4. **GitHub Pages** — Settings → Pages → main → /docs, then put the URL in README.
+4. **Hosting** — `web/` is deployed on Vercel (project `attest`, root directory
+   `web`), linked to this repo, so every push to `main` redeploys. `docs/` was the
+   old GitHub Pages copy and has been removed; do not reintroduce it.
 
 ---
 

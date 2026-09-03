@@ -32,6 +32,13 @@ __pycache__/
 venv/
 env/
 
+# --- assistant scratch ------------------------------------------------------
+# Working files that are not part of the submission.
+.claude/
+Claude outputs/
+package-lock.json
+node_modules/
+
 # --- editors / OS -----------------------------------------------------------
 .vscode/
 .idea/

@@ -1,43 +1,9 @@
-"""Render the attestation as a single self-contained HTML close pack.
-
-No server, no build step, no dependencies. The data is inlined, so the file opens
-by double-clicking, commits to docs/ for GitHub Pages, or goes in an email.
-
-The page is written for someone who has never seen this project and has about
-sixty seconds. So it leads with the money, shows the one finding that makes the
-argument, and only then explains the method. Every technical class name carries a
-plain-English label; the code is secondary, for people who want it.
-"""
-from __future__ import annotations
-
-from .money import fmt
-
-# Plain-English names. The internal codes are precise and unreadable; a reader
-# should never have to decode SELF_REFERENTIAL_TIE to follow the page.
-LABELS = {
-    "MDR": ("Gateway fee charged above contract", "Razorpay applied a rate higher than the agreed one"),
-    "GST": ("Tax calculated on the wrong base", "GST computed on the transaction, not on the fee"),
-    "CREDIT": ("Settlement never reached the bank", "The report says it was paid; no credit arrived"),
-    "ADJUSTMENT": ("Courier paid short", "An unexplained deduction with no AWB-level reason"),
-    "NET": ("Line does not add up", "The stated net differs from its own components"),
-    "ORDER": ("No matching order", "The settled line refers to an order we cannot find"),
-    "COD_VALUE": ("COD value disagrees with manifest", "Remitted amount differs from what was shipped"),
-    "COD_FEE": ("COD fee above contract", "Courier fee higher than the agreed rate"),
-    "FREIGHT": ("Wrong return freight", "RTO freight charged where it should not apply"),
-    "SHIPMENT": ("AWB not in the manifest", "Courier billed for a shipment we have no record of"),
-    "SELF_REFERENTIAL_TIE": ("Batch tied, but its fees are wrong", "The bank matched the report — and the report was wrong"),
-    "OFFSETTING_PAIR": ("Two errors that cancelled out", "Invisible to every total-level check"),
-    "TOLERANCE_ABUSE": ("Rounding that always favours one side", "Individually tiny, systematically one-directional"),
-    "UNREFERENCED_ADJ": ("Adjustment with no reference", "Money moved with no order or payment attached"),
-    "CHARGEBACK_ORPHAN": ("Chargeback with no dispute record", "Deducted from settlement, absent from the dispute export"),
-    "REFUND_MISMATCH": ("Refund deducted more than once", "The same refund netted twice"),
-    "DUPLICATE_AWB": ("Shipment remitted twice", "One AWB appears twice in a courier statement"),
-    "DUPLICATE_SETTLEMENT_LINE": ("Payment settled twice", "Revenue counted twice across two batches"),
-    "ORPHAN_BANK_CREDIT": ("Money in with no explanation", "A credit no settlement accounts for"),
-    "OUT_OF_PERIOD_SETTLEMENT": ("Settlement outside the period", "Would overstate the month if pulled in"),
-}
-
-CSS = """
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Attest — close pack 2026-08</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   --paper:#FCFBF8; --surface:#F4F1EA; --raised:#EEEAE0;
@@ -161,130 +127,19 @@ footer{padding:38px 0 64px;font-family:var(--mono);font-size:11.5px;color:var(--
   line-height:1.9}
 @media(max-width:760px){.split{grid-template-columns:1fr}.dline{flex-wrap:wrap}
   .dtext{min-width:0}}
-"""
-
-
-def _pc(x: float) -> str:
-    return f"{x*100:.1f}%"
-
-
-def _label(cls: str) -> tuple[str, str]:
-    return LABELS.get(cls, (cls.replace("_", " ").title(), ""))
-
-
-def render(p: dict) -> str:
-    rc = p.get("recovery") or {}
-    comp = (p.get("compensating") or [{}])[0]
-
-    # --- the worked example, with real numbers from the run ----------------
-    if comp:
-        lv = abs(comp.get("line_variance_paise", 0))
-        rv = abs(comp.get("refund_variance_paise", 0))
-        res = comp.get("residual_paise", 0)
-        case = f"""
-<div class="case">
-  <div class="eq">
-    <div class="row"><span class="lab">Gateway fee overcharged on one line</span>
-      <span class="amt">+{fmt(lv)}</span></div>
-    <div class="row"><span class="lab">Refund under-deducted in the same batch</span>
-      <span class="amt g">&minus;{fmt(rv)}</span></div>
-    <div class="row tot"><span class="lab">What the batch total looks like</span>
-      <span class="amt">{fmt(abs(res))} out</span></div>
-  </div>
-  <div class="verdict">
-    Two real errors. The batch is out by <b>{fmt(abs(res))}</b> &mdash; inside any
-    tolerance a finance team would set, so every automated check passes and the
-    money quietly leaves. Accounting calls this a <b>compensating error</b>, and a
-    total-level check cannot detect it by construction.
-    <br><br>
-    Attest catches it by rebuilding what the refund deduction <b>should</b> have
-    been from the merchant's own refund records and the netting rule in the
-    contract &mdash; never from the settlement report it is auditing. Batch
-    <span class="mono" style="color:var(--ink)">{comp.get('target','')[:22]}</span>.
-  </div>
-</div>"""
-    else:
-        case = '<div class="case"><div class="verdict">No compensating pairs in this run.</div></div>'
-
-    # --- the descent, all three over the same population where possible ----
-    lm = p.get("line_match_rate", p["match_rate"])
-    descent = f"""
-<div class="descent">
-  <div class="dline">
-    <span class="dnum c1">{_pc(lm)}</span>
-    <span class="dtrack"><i class="c1t" style="width:{lm*100:.1f}%"></i></span>
-    <span class="dtext"><b>Looks reconciled</b>
-      {p.get('lines_in_tied', 0):,} of {p['lines']:,} lines sit in a batch whose
-      total agrees with the bank.</span>
-  </div>
-  <div class="dline">
-    <span class="dnum c2">{_pc(p['proof_rate'])}</span>
-    <span class="dtrack"><i class="c2t" style="width:{p['proof_rate']*100:.1f}%"></i></span>
-    <span class="dtext"><b>Actually provable</b>
-      {p['proven']:,} of {p['lines']:,} lines trace end to end: order &rarr; fee
-      &rarr; tax &rarr; batch &rarr; bank, with no link missing.</span>
-  </div>
-  <div class="dline">
-    <span class="dnum c3">{p['overturned']}</span>
-    <span class="dtrack"><i class="c3t" style="width:{p['false_match_rate']*100:.1f}%"></i></span>
-    <span class="dtext"><b>Matches we broke on purpose</b>
-      Of {p['tested']} batches that passed, {p['overturned']} failed adversarial
-      review &mdash; {_pc(p['false_match_rate'])}. Published deliberately.</span>
-  </div>
-</div>
-<div class="note"><b>Why the first number is a lie.</b> Razorpay pays exactly what
-  its own settlement report says it will pay, so the bank and the report agree by
-  construction. That tie proves the money <i>arrived</i>. It proves nothing about
-  whether the deductions inside were <i>correct</i> &mdash; and it is the number
-  conventional reconciliation reports as success.</div>"""
-
-    # --- what to do about it ----------------------------------------------
-    dl_rows = "".join(
-        f"<tr><td class='mono'>{d['deadline']}</td>"
-        f"<td class='n'><span class='tag "
-        f"{'t-urg' if d['urgency'] in ('critical','lapsed') else 't-soon' if d['urgency']=='urgent' else 't-ok'}'>"
-        f"{d['days']} days</span></td>"
-        f"<td class='k'>{_label(d['cls'])[0]}<small>{_label(d['cls'])[1]}</small></td>"
-        f"<td class='n'>{fmt(d['exposure'])}</td><td>{d['party']}</td></tr>"
-        for d in rc.get("deadlines", [])
-    )
-
-    ex_rows = "".join(
-        f"<tr><td class='k'>{_label(e['class'])[0]}<small>{_label(e['class'])[1]}</small></td>"
-        f"<td class='n'>{e['count']}</td><td class='n'>{fmt(e['exposure'])}</td>"
-        f"<td>{e['evidence_required']}</td></tr>"
-        for e in p["exceptions"][:8]
-    )
-
-    sc_rows = ""
-    for cls, s in sorted(p["scorecard"].items(), key=lambda x: (not x[1]["held_out"], x[0])):
-        held, missed = s["held_out"], s["detected"] == 0
-        tag = ("<span class='tag t-miss'>held out &middot; missed</span>" if held and missed
-               else "<span class='tag t-held'>held out &middot; found</span>" if held
-               else "<span class='tag t-ok'>designed for</span>")
-        sc_rows += (f"<tr class='{'miss' if held and missed else ''}'>"
-                    f"<td class='k'>{_label(cls)[0]}</td>"
-                    f"<td class='n'>{s['planted']}</td><td class='n'>{s['detected']}</td>"
-                    f"<td class='n'>{s['recall']*100:.0f}%</td><td>{tag}</td></tr>")
-
-    return f"""<!doctype html>
-<html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Attest — close pack {p['period']}</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
-<style>{CSS}</style></head><body>
+</style></head><body>
 
 <nav><div class="wrap">
   <a class="mark" href="index.html"><span class="glyph">A</span><span class="name">Attest</span></a>
-  <div class="meta">{p['merchant']}<br>{p['period']} &nbsp;·&nbsp; {p['records']:,} records
-    from 7 systems &nbsp;·&nbsp; closed in {p['seconds']}s</div>
+  <div class="meta">Acme Athleisure Private Limited<br>2026-08 &nbsp;·&nbsp; 3,043 records
+    from 7 systems &nbsp;·&nbsp; closed in 0.012s</div>
 </div></nav>
 
 <div class="wrap">
 <header class="page">
-  <p class="eyebrow">Close pack &middot; generated {p['generated']}</p>
-  <h1>We found <b>{fmt(rc.get('recoverable', 0))}</b> you can still claim back
-    &mdash; and <i>{fmt(rc.get('monthly_lapsed', 0))}</i> of it dies if you close
+  <p class="eyebrow">Close pack &middot; generated 2026-09-03 17:10</p>
+  <h1>We found <b>₹88,103.47</b> you can still claim back
+    &mdash; and <i>₹5,365.00</i> of it dies if you close
     monthly.</h1>
   <p>This month's books tie to the bank. They are still wrong. Below is what was
     taken that shouldn't have been, who to claim it from, and how long you have.</p>
@@ -292,25 +147,74 @@ def render(p: dict) -> str:
 
 <div class="split">
   <div><div class="l">Claimable now</div>
-    <div class="v" style="color:var(--good)">{fmt(rc.get('recoverable', 0))}</div>
-    <div class="n">across {rc.get('recoverable_count', 0)} items, from three counterparties</div></div>
+    <div class="v" style="color:var(--good)">₹88,103.47</div>
+    <div class="n">across 298 items, from three counterparties</div></div>
   <div><div class="l">Expires within 7 days</div>
-    <div class="v" style="color:var(--warn)">{fmt(rc.get('expiring_soon', 0))}</div>
-    <div class="n">{rc.get('expiring_count', 0)} claim windows closing</div></div>
+    <div class="v" style="color:var(--warn)">₹71.58</div>
+    <div class="n">3 claim windows closing</div></div>
   <div><div class="l">Lost by closing monthly</div>
-    <div class="v" style="color:var(--bad)">{fmt(rc.get('monthly_lapsed', 0))}</div>
-    <div class="n">{rc.get('monthly_lapsed_count', 0)} claims expire unfiled at a
-      {rc.get('late_date','')} close</div></div>
+    <div class="v" style="color:var(--bad)">₹5,365.00</div>
+    <div class="n">16 claims expire unfiled at a
+      2026-10-03 close</div></div>
 </div>
 
 <h2>The error a match rate can never find</h2>
 <p class="lede">One batch from this month, in full. It reconciles perfectly.</p>
-{case}
+
+<div class="case">
+  <div class="eq">
+    <div class="row"><span class="lab">Gateway fee overcharged on one line</span>
+      <span class="amt">+₹4.12</span></div>
+    <div class="row"><span class="lab">Refund under-deducted in the same batch</span>
+      <span class="amt g">&minus;₹4.10</span></div>
+    <div class="row tot"><span class="lab">What the batch total looks like</span>
+      <span class="amt">₹0.02 out</span></div>
+  </div>
+  <div class="verdict">
+    Two real errors. The batch is out by <b>₹0.02</b> &mdash; inside any
+    tolerance a finance team would set, so every automated check passes and the
+    money quietly leaves. Accounting calls this a <b>compensating error</b>, and a
+    total-level check cannot detect it by construction.
+    <br><br>
+    Attest catches it by rebuilding what the refund deduction <b>should</b> have
+    been from the merchant's own refund records and the netting rule in the
+    contract &mdash; never from the settlement report it is auditing. Batch
+    <span class="mono" style="color:var(--ink)">setl_bcac82b4f08674</span>.
+  </div>
+</div>
 
 <h2>So we stopped trusting the match rate</h2>
 <p class="lede">The same month, measured three ways. The number goes down as the
   test gets harder &mdash; which is the point.</p>
-{descent}
+
+<div class="descent">
+  <div class="dline">
+    <span class="dnum c1">93.1%</span>
+    <span class="dtrack"><i class="c1t" style="width:93.1%"></i></span>
+    <span class="dtext"><b>Looks reconciled</b>
+      948 of 1,018 lines sit in a batch whose
+      total agrees with the bank.</span>
+  </div>
+  <div class="dline">
+    <span class="dnum c2">73.0%</span>
+    <span class="dtrack"><i class="c2t" style="width:73.0%"></i></span>
+    <span class="dtext"><b>Actually provable</b>
+      743 of 1,018 lines trace end to end: order &rarr; fee
+      &rarr; tax &rarr; batch &rarr; bank, with no link missing.</span>
+  </div>
+  <div class="dline">
+    <span class="dnum c3">15</span>
+    <span class="dtrack"><i class="c3t" style="width:68.2%"></i></span>
+    <span class="dtext"><b>Matches we broke on purpose</b>
+      Of 22 batches that passed, 15 failed adversarial
+      review &mdash; 68.2%. Published deliberately.</span>
+  </div>
+</div>
+<div class="note"><b>Why the first number is a lie.</b> Razorpay pays exactly what
+  its own settlement report says it will pay, so the bank and the report agree by
+  construction. That tie proves the money <i>arrived</i>. It proves nothing about
+  whether the deductions inside were <i>correct</i> &mdash; and it is the number
+  conventional reconciliation reports as success.</div>
 
 <h2>What to chase, and by when</h2>
 <p class="lede">Courier disputes close in 14 days. A month-end close surfaces a
@@ -318,7 +222,7 @@ def render(p: dict) -> str:
 <div class="tbl"><table>
 <thead><tr><th>Deadline</th><th class="n">Left</th><th>What happened</th>
 <th class="n">Amount</th><th>Claim from</th></tr></thead>
-<tbody>{dl_rows}</tbody></table></div>
+<tbody><tr><td class='mono'>2026-09-05</td><td class='n'><span class='tag t-urg'>2 days</span></td><td class='k'>Courier paid short<small>An unexplained deduction with no AWB-level reason</small></td><td class='n'>₹71.58</td><td>courier</td></tr><tr><td class='mono'>2026-09-12</td><td class='n'><span class='tag t-ok'>9 days</span></td><td class='k'>Courier paid short<small>An unexplained deduction with no AWB-level reason</small></td><td class='n'>₹149.43</td><td>courier</td></tr><tr><td class='mono'>2026-09-14</td><td class='n'><span class='tag t-ok'>11 days</span></td><td class='k'>Shipment remitted twice<small>One AWB appears twice in a courier statement</small></td><td class='n'>₹2,801.16</td><td>courier</td></tr><tr><td class='mono'>2026-09-19</td><td class='n'><span class='tag t-ok'>16 days</span></td><td class='k'>Courier paid short<small>An unexplained deduction with no AWB-level reason</small></td><td class='n'>₹91.83</td><td>courier</td></tr><tr><td class='mono'>2026-09-20</td><td class='n'><span class='tag t-ok'>17 days</span></td><td class='k'>Adjustment with no reference<small>Money moved with no order or payment attached</small></td><td class='n'>₹2,251.00</td><td>razorpay</td></tr><tr><td class='mono'>2026-10-03</td><td class='n'><span class='tag t-ok'>30 days</span></td><td class='k'>Batch tied, but its fees are wrong<small>The bank matched the report — and the report was wrong</small></td><td class='n'>₹423.47</td><td>razorpay</td></tr></tbody></table></div>
 
 <h2>Everything unresolved</h2>
 <p class="lede">Each one says what evidence would close it &mdash; not just that it
@@ -326,7 +230,7 @@ def render(p: dict) -> str:
 <div class="tbl"><table>
 <thead><tr><th>What happened</th><th class="n">Items</th><th class="n">Exposure</th>
 <th>Evidence required</th></tr></thead>
-<tbody>{ex_rows}</tbody></table></div>
+<tbody><tr><td class='k'>Settlement never reached the bank<small>The report says it was paid; no credit arrived</small></td><td class='n'>22</td><td class='n'>₹27,852.65</td><td>bank advice or Razorpay settlement trace for the missing credit</td></tr><tr><td class='k'>Money in with no explanation<small>A credit no settlement accounts for</small></td><td class='n'>1</td><td class='n'>₹27,173.60</td><td>counterparty confirmation</td></tr><tr><td class='k'>Settlement never reached the bank<small>The report says it was paid; no credit arrived</small></td><td class='n'>10</td><td class='n'>₹11,049.50</td><td>bank advice or Razorpay settlement trace for the missing credit</td></tr><tr><td class='k'>Money in with no explanation<small>A credit no settlement accounts for</small></td><td class='n'>1</td><td class='n'>₹5,170.00</td><td>counterparty confirmation</td></tr><tr><td class='k'>Adjustment with no reference<small>Money moved with no order or payment attached</small></td><td class='n'>1</td><td class='n'>₹3,933.00</td><td>counterparty confirmation</td></tr><tr><td class='k'>Refund deducted more than once<small>The same refund netted twice</small></td><td class='n'>1</td><td class='n'>₹3,386.53</td><td>counterparty confirmation</td></tr><tr><td class='k'>Shipment remitted twice<small>One AWB appears twice in a courier statement</small></td><td class='n'>1</td><td class='n'>₹2,801.16</td><td>counterparty confirmation</td></tr><tr><td class='k'>Adjustment with no reference<small>Money moved with no order or payment attached</small></td><td class='n'>1</td><td class='n'>₹2,251.00</td><td>counterparty confirmation</td></tr></tbody></table></div>
 
 <h2>Why you can trust these numbers</h2>
 <p class="lede">The test data was built truth-first: the real ledger was generated
@@ -335,20 +239,20 @@ def render(p: dict) -> str:
 <div class="tbl"><table>
 <thead><tr><th>Error type</th><th class="n">Planted</th><th class="n">Found</th>
 <th class="n">Recall</th><th>Provenance</th></tr></thead>
-<tbody>{sc_rows}</tbody></table></div>
+<tbody><tr class=''><td class='k'>Shipment remitted twice</td><td class='n'>1</td><td class='n'>1</td><td class='n'>100%</td><td><span class='tag t-held'>held out &middot; found</span></td></tr><tr class=''><td class='k'>Payment settled twice</td><td class='n'>1</td><td class='n'>1</td><td class='n'>100%</td><td><span class='tag t-held'>held out &middot; found</span></td></tr><tr class=''><td class='k'>Money in with no explanation</td><td class='n'>1</td><td class='n'>1</td><td class='n'>100%</td><td><span class='tag t-held'>held out &middot; found</span></td></tr><tr class='miss'><td class='k'>Settlement outside the period</td><td class='n'>1</td><td class='n'>0</td><td class='n'>0%</td><td><span class='tag t-miss'>held out &middot; missed</span></td></tr><tr class=''><td class='k'>Chargeback with no dispute record</td><td class='n'>1</td><td class='n'>1</td><td class='n'>100%</td><td><span class='tag t-ok'>designed for</span></td></tr><tr class=''><td class='k'>Cod Short</td><td class='n'>14</td><td class='n'>14</td><td class='n'>100%</td><td><span class='tag t-ok'>designed for</span></td></tr><tr class=''><td class='k'>Compensating</td><td class='n'>2</td><td class='n'>2</td><td class='n'>100%</td><td><span class='tag t-ok'>designed for</span></td></tr><tr class=''><td class='k'>Gst Base</td><td class='n'>4</td><td class='n'>4</td><td class='n'>100%</td><td><span class='tag t-ok'>designed for</span></td></tr><tr class=''><td class='k'>Mdr Rate</td><td class='n'>23</td><td class='n'>23</td><td class='n'>100%</td><td><span class='tag t-ok'>designed for</span></td></tr><tr class=''><td class='k'>Missing Credit</td><td class='n'>1</td><td class='n'>1</td><td class='n'>100%</td><td><span class='tag t-ok'>designed for</span></td></tr><tr class=''><td class='k'>Refund Duplicate</td><td class='n'>2</td><td class='n'>2</td><td class='n'>100%</td><td><span class='tag t-ok'>designed for</span></td></tr><tr class=''><td class='k'>Rounding Drift</td><td class='n'>1</td><td class='n'>1</td><td class='n'>100%</td><td><span class='tag t-ok'>designed for</span></td></tr><tr class=''><td class='k'>Adjustment with no reference</td><td class='n'>2</td><td class='n'>2</td><td class='n'>100%</td><td><span class='tag t-ok'>designed for</span></td></tr><tr class=''><td class='k'>Utr Unresolvable</td><td class='n'>3</td><td class='n'>3</td><td class='n'>100%</td><td><span class='tag t-ok'>designed for</span></td></tr></tbody></table></div>
 <div class="note warnb"><b>The row in red is the honest one.</b> Four error types
   were planted with <b>no detector written for them</b>. Three were caught anyway
   by generic integrity checks &mdash; that is the only real evidence this
   generalises. One was missed, and is reported as missed. Recall on the types we
-  designed for is {_pc(p['designed_recall'])}, which on its own would prove
+  designed for is 100.0%, which on its own would prove
   nothing at all. Recall on the held-out types is
-  <b>{_pc(p['holdout_recall'])}</b>. That is the number that means something.</div>
+  <b>75.0%</b>. That is the number that means something.</div>
 
 <h2>Attestation</h2>
 <div class="status">
-  <span class="big">{'SIGNED' if p['signed'] else 'NOT ATTESTABLE'}</span>
-  <span class="why">{fmt(p['residual_paise'])} of {fmt(p['volume'])} cannot be
-    attributed to any cause &mdash; {p['residual_bps']} bps of volume, against a
+  <span class="big">NOT ATTESTABLE</span>
+  <span class="why">₹46,617.32 of ₹18,31,760.93 cannot be
+    attributed to any cause &mdash; 254.5 bps of volume, against a
     25 bps limit. The close stays open until that is investigated.
     <b>Refusing to certify is the point of an attestation:</b> a system that always
     signs is not attesting to anything.</span>
@@ -361,4 +265,4 @@ def render(p: dict) -> str:
   <span style="color:var(--ink2)">python -m attest.generate --out data --orders 1200</span><br>
   <a href="index.html">&larr; What Attest is</a>
 </footer>
-</div></body></html>"""
+</div></body></html>

@@ -119,11 +119,23 @@ Zero dependencies. Python 3.10+.
 
 ```bash
 # generate the corpus (sources + held-out ground truth)
-python -m attest.generate --out data --orders 1200
+python3 -m attest.generate --out data --orders 1200
 
-# run the pipeline
-python -m attest.run --data data
+# run the pipeline, and write the close pack the landing page links to
+python3 -m attest.run --data data --html web/close-pack.html
 ```
+
+### One command that checks the whole thing
+
+```bash
+python3 scripts/verify.py
+```
+
+It regenerates the corpus, runs the pipeline, and then asserts the three numbers
+that carry the argument — proof rate **below** match rate, held-out recall
+**strictly between 0 and 100%**, false positives **at zero**. Those are integrity
+checks, not smoke tests: a change that improves every other number while pushing
+held-out recall to 100% has broken the project, and this command fails on it.
 
 ## Environment and secrets
 

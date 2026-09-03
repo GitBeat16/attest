@@ -206,6 +206,16 @@ def main() -> None:
 
     payload = _payload(corpus, res, aud, card, exceptions, elapsed, volume,
                        residual, residual_bps, signed, tied, proven, total)
+    tied_ids = {sid for sid, ok in res.batch_ties.items() if ok}
+    lines_in_tied = sum(
+        1 for c in res.gateway_chains if c.stages.get("_batch_id") in tied_ids
+    ) + len(res.cod_chains)
+    payload["lines_in_tied"] = lines_in_tied
+    payload["line_match_rate"] = lines_in_tied / total if total else 0
+    payload["compensating"] = [
+        {"target": a.target, "reasoning": a.reasoning, **a.evidence}
+        for a in aud.overturned if a.hypothesis == "offsetting_pair"
+    ]
     payload["recovery"] = {
         "as_at": today.isoformat(),
         "recoverable": rec["recoverable"], "recoverable_count": rec["recoverable_count"],
