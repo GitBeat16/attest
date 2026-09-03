@@ -1,0 +1,12 @@
+# The core pipeline has ZERO runtime dependencies -- it is pure Python stdlib.
+# Nothing below is needed to generate the corpus, run reconciliation, build
+# proof chains, or produce any metric.
+
+# Optional: the console UI (added later in the build)
+# streamlit>=1.38
+
+# Optional: the AI reasoning layer. Only one of these, only if you enable it.
+# google-genai>=0.3        # Gemini free tier
+# openai>=1.40             # paid
+# anthropic>=0.34          # paid
+# (Ollama needs no package -- it is a plain HTTP call to localhost)

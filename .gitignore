@@ -1,0 +1,39 @@
+# --- secrets: never commit these -------------------------------------------
+# An API key pushed to a public repo is scraped by bots within minutes and
+# billed to you. Keep real keys in .env, which is ignored here. Commit only
+# .env.example, which contains placeholders.
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+secrets.json
+credentials.json
+
+# --- generated data ---------------------------------------------------------
+# The corpus is reproducible from a seed, so it does not belong in git.
+# `python -m attest.generate --out data --orders 1200` recreates it exactly.
+data/
+out/
+*.sqlite
+*.db
+
+# --- caches -----------------------------------------------------------------
+.llm_cache/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# --- environments -----------------------------------------------------------
+.venv/
+venv/
+env/
+
+# --- editors / OS -----------------------------------------------------------
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
