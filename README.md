@@ -49,22 +49,31 @@ Break any link and the line is not proven, however well the totals agree.
 
 ## Current results
 
-Run against the generated corpus (1,200 orders, 3,040 source records, five systems):
+Run against the generated corpus (1,200 orders, 3,043 source records, five systems):
 
 ```
-processed 3,040 records in 0.02s
+processed 3,043 records in 0.01s
 
-BATCHES TIED (conventional check)    21/22    =  95.5%
-LINES PROVEN (evidence chain)       751/1016  =  73.9%
+BATCHES TIED (conventional check)     20/22   =  90.9%
+LINES PROVEN (evidence chain)        743/1018 =  73.0%
+MATCHES OVERTURNED (adversarial)      15/22   =  68.2%
 
 where proof broke:
   mdr           225 lines    ₹121.90     fee rate + tolerance drift
-  credit         22 lines    ₹27,852.65  batch that never reached the bank
+  credit         32 lines    ₹38,902.15  batches that never reached the bank
   adjustment     14 lines    ₹312.84     COD short-remittance
   gst             4 lines    ₹710.59     tax computed on the wrong base
+
+recall, held-out defect classes            75.0%   (3 of 4 found, 1 missed)
+false positives                                0
 ```
 
-The 21-point gap between those two rates is the point of the project.
+The 18-point gap between the first two rates is the point of the project, and the
+third rate is why: of the 22 claims put under test — the 20 tied batches plus two
+period-level hypotheses — 15 were overturned by the adversarial pass. The held-out
+recall is reported here rather than buried, because a scorecard that only grades
+the defects its own author wrote detectors for proves nothing; the one missed
+class is left visible for the same reason.
 
 ## Why the numbers are trustworthy
 
