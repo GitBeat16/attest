@@ -125,6 +125,79 @@ python -m attest.generate --out data --orders 1200
 python -m attest.run --data data
 ```
 
+## Environment and secrets
+
+`.env.example` is committed and is the source of truth for **which** variables
+exist. `.env` holds the real values, is gitignored, and is never committed.
+
+```bash
+python3 scripts/sync_env.py           # bring .env in step with the template
+python3 scripts/sync_env.py --check   # report drift only, change nothing (CI)
+python3 -m attest.config              # what is configured, without secrets
+```
+
+The sync tool is **append-only by design**. It never rewrites, reorders or
+reformats `.env`, because that file holds live credentials and every rewrite is a
+chance to corrupt one. Specifically:
+
+- creates `.env` from the template if absent, with **every value blank** — a new
+  `.env` never carries a placeholder that could be mistaken for a real credential
+- appends variables newly added to the template, with empty values, carrying
+  their documentation comment across
+- leaves every existing value byte-for-byte untouched
+- **reports** variables that have left the template and **keeps** them; a
+  template can be out of date, and silently deleting a working credential is a
+  worse failure than carrying a stale one
+- prints variable **names** only. No value is ever written to stdout, and no
+  value is copied anywhere
+
+Validation is contextual rather than global. **The core pipeline requires no
+configuration at all** — no key, no account, no network — so a missing Razorpay
+credential is only an error if you actually invoke the Razorpay path:
+
+```
+Cannot use 'razorpay' — 2 environment variable(s) missing.
+
+  RAZORPAY_KEY_ID
+    what it does : identifies your Razorpay account
+    where to get : dashboard.razorpay.com > Settings > API Keys (Test Mode)
+```
+
+## Running against real Razorpay data
+
+`attest/sources/razorpay_api.py` calls the live Settlement Recon API over HTTP
+Basic auth, using only the standard library:
+
+```
+GET https://api.razorpay.com/v1/settlements/recon/combined?year=YYYY&month=MM
+```
+
+```bash
+python3 -m attest.connect --year 2026 --month 8 --ping   # check credentials
+python3 -m attest.connect --year 2026 --month 8          # pull and audit a month
+```
+
+Test keys (`rzp_test_…`) and live keys (`rzp_live_…`) use the identical code
+path; only the key decides which data returns.
+
+Two things about the real API shaped the design. Amounts arrive as **integers in
+paise**, which is why Attest is integer-paise throughout and no float touches the
+money. And every row carries **both `settlement_id` and `settlement_utr`** — the
+UTR is issued by the correspondent bank, is not a Razorpay key, and grouping on
+it produces confident wrong batches. Attest groups on `settlement_id` and keeps
+the UTR for the audit trail only.
+
+Before reconciling anything, the importer audits the source data itself: whether
+Razorpay's own `credit` agrees with `amount − fee − tax`, and whether any two
+batches share a UTR. Both are reported rather than smoothed over.
+
+**The synthetic corpus remains, and must.** Accuracy can only be measured against
+data whose truth you constructed. On live settlements you can report that
+something does not reconcile — never whether you were *right*, because nobody
+knows the correct answer. Recall needs an answer key. So the live path is real
+ingestion; the accuracy benchmark is synthetic by necessity.
+
+
 ## Repository layout
 
 ```
