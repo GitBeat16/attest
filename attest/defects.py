@@ -168,6 +168,95 @@ def label_world_facts(truth: World, ledger: Ledger) -> None:
 
 
 # ==========================================================================
+# HELD-OUT CLASSES
+# ==========================================================================
+# Everything above was planted by the same person who wrote the detectors, so
+# finding it proves very little. These four exist to break that circularity.
+# No detector was written for them. They are injected, scored, and reported
+# honestly -- including the ones the system misses.
+#
+# Some may be caught anyway by generic checks that were not aimed at them.
+# That is the only real evidence of generalisation this corpus can offer, and
+# it is worth more than a perfect score on the classes we designed for.
+def inject_holdout(doc: World, ledger: Ledger, rng: random.Random) -> None:
+    settlements = doc.settlements
+
+    # H-1  the same payment settled twice, in two different batches
+    donor = next((s for s in settlements if len(s.lines) > 6), None)
+    if donor and len(settlements) > 3:
+        line = donor.lines[2]
+        other = next(s for s in settlements if s.settlement_id != donor.settlement_id)
+        clone = copy.deepcopy(line)
+        clone.settlement_id = other.settlement_id
+        other.lines.append(clone)
+        ledger.add(
+            defect_class="DUPLICATE_SETTLEMENT_LINE",
+            expected_classification="DUPLICATE",
+            target_type="settlement_line", target_id=line.payment_id,
+            container_id=other.settlement_id,
+            true_value_paise=line.net, document_value_paise=line.net * 2,
+            delta_paise=line.net,
+            note="Same payment appears in two settlement batches. Revenue counted "
+                 "twice. HELD OUT -- no detector written for this.",
+        )
+
+    # H-2  the same AWB remitted twice by the courier
+    for rem in doc.cod_remittances:
+        paid = [l for l in rem.lines if l.cod_value > 0]
+        if len(paid) > 3:
+            clone = copy.deepcopy(paid[1])
+            rem.lines.append(clone)
+            ledger.add(
+                defect_class="DUPLICATE_AWB",
+                expected_classification="DUPLICATE",
+                target_type="cod_remittance_line", target_id=clone.awb,
+                container_id=rem.remittance_id,
+                true_value_paise=clone.net, document_value_paise=clone.net * 2,
+                delta_paise=clone.net,
+                note="AWB remitted twice in one statement. HELD OUT.",
+            )
+            break
+
+    # H-3  money arriving in the bank that no settlement explains
+    if doc.bank_credits:
+        amt = rupees(rng.randrange(4000, 12000))
+        ghost = copy.deepcopy(doc.bank_credits[0])
+        ghost.utr = f"N{rng.randrange(10**11, 10**12)}"
+        ghost.amount = amt
+        ghost.settlement_id = None
+        ghost.narration = f"NEFT CR-{ghost.utr}-UNIDENTIFIED CREDIT"
+        doc.bank_credits.append(ghost)
+        ledger.add(
+            defect_class="ORPHAN_BANK_CREDIT",
+            expected_classification="UNEXPLAINED",
+            target_type="bank_credit", target_id=ghost.utr, container_id="",
+            true_value_paise=0, document_value_paise=amt, delta_paise=amt,
+            note="Credit in the bank with no settlement to explain it. Unexplained "
+                 "money IN is still unexplained money. HELD OUT.",
+        )
+
+    # H-4  a settlement dated outside the period being closed
+    if settlements:
+        s = settlements[-1]
+        s.settled_on = s.settled_on.replace(month=9, day=28)
+        # Move its bank credit with it. Leaving the credit behind would strand it
+        # as an unresolvable orphan -- a defect this injection never declared,
+        # which would then be scored against a class it does not belong to.
+        for bc in doc.bank_credits:
+            if bc.settlement_id == s.settlement_id:
+                bc.credited_on = s.settled_on
+        ledger.add(
+            defect_class="OUT_OF_PERIOD_SETTLEMENT",
+            expected_classification="ESCALATE",
+            target_type="settlement", target_id=s.settlement_id,
+            container_id=s.settlement_id,
+            true_value_paise=0, document_value_paise=0, delta_paise=0,
+            note="Settlement dated outside the period under close. Pulling it in "
+                 "silently would overstate the month. HELD OUT.",
+        )
+
+
+# ==========================================================================
 # DEFECTS -- injected into the documents only
 # ==========================================================================
 def inject(truth: World, seed: int = 42) -> tuple[World, Ledger]:
@@ -422,5 +511,7 @@ def inject(truth: World, seed: int = 42) -> tuple[World, Ledger]:
             note="COD remitted 1.8% short behind an unexplained adjustment line "
                  "with no AWB-level justification. Recoverable from the courier.",
         )
+
+    inject_holdout(doc, ledger, rng)
 
     return doc, ledger

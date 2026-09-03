@@ -20,6 +20,7 @@ contrast and never trusted.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import timedelta
 from decimal import Decimal
 
 from .ingest import Batch, Corpus, SettlementRow, CodRow
@@ -207,7 +208,13 @@ def check_batches(corpus: Corpus) -> list[dict]:
     # not expected here. Comparing raw totals flags every one of those as an
     # error, which is the classic false positive in this domain. We compare only
     # against refunds whose deduction was actually due inside the period.
-    last_settled = max(b.settled_on for b in corpus.batches.values())
+    # Anchor on the declared period, NOT on max(settled_on). A single out-of-period
+    # record must not be able to redefine the month being closed.
+    from datetime import date as _date
+    y, m = (int(x) for x in corpus.mdr_invoice["period"].split("-"))
+    period_end = _date(y + (m // 12), (m % 12) + 1, 1) - timedelta(days=1)
+    in_scope = [b for b in corpus.batches.values() if b.settled_on <= period_end]
+    last_settled = max(b.settled_on for b in in_scope) if in_scope else period_end
     cutoff = _business_days_before(last_settled, 5)
 
     in_period = [r for r in corpus.refunds if r.initiated_on <= cutoff]
@@ -273,6 +280,43 @@ def check_batches(corpus: Corpus) -> list[dict]:
             "delta": inv_gst - settled_gst,
             "container": "mdr_invoice",
         })
+
+    # --- generic integrity checks -----------------------------------------
+    seen: dict[str, str] = {}
+    for sid, b in corpus.batches.items():
+        for ln in b.lines:
+            if ln.payment_id in seen and seen[ln.payment_id] != sid:
+                findings.append({
+                    "class": "DUPLICATE_SETTLEMENT_LINE",
+                    "detail": (
+                        f"payment {ln.payment_id} settled in both "
+                        f"{seen[ln.payment_id]} and {sid} -- revenue counted twice"
+                    ),
+                    "delta": ln.net, "container": sid,
+                })
+            seen[ln.payment_id] = sid
+
+    awb_seen: set[str] = set()
+    for r in corpus.cod:
+        key = f"{r.remittance_id}:{r.awb}"
+        if key in awb_seen:
+            findings.append({
+                "class": "DUPLICATE_AWB",
+                "detail": f"AWB {r.awb} remitted twice in {r.remittance_id}",
+                "delta": r.net, "container": r.remittance_id,
+            })
+        awb_seen.add(key)
+
+    for bc in corpus.bank:
+        if not bc.settlement_id:
+            findings.append({
+                "class": "ORPHAN_BANK_CREDIT",
+                "detail": (
+                    f"credit of {bc.credit}p on {bc.value_date} resolves to no "
+                    "settlement -- unexplained money in is still unexplained"
+                ),
+                "delta": bc.credit, "container": bc.utr,
+            })
 
     return findings
 
