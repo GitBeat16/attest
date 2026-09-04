@@ -127,6 +127,72 @@ reconciliation demos have no concept of a false positive at all.
 for a real month; a tool that quotes you recall on your own data is quoting a
 number it cannot have measured. The close pack says so on its face.
 
+## The AI Finance Controller
+
+The AI does not compute a number here. It decides **what to investigate next**.
+
+```
+        AI CONTROLLER          "what should I look at?"      chooses actions
+              |
+        DETERMINISTIC TOOLS    "what did the evidence show?"  returns facts
+              |
+        EVIDENCE               ids, amounts in paise, provenance
+              |
+        POLICY ENGINE          "what may be certified?"       returns a verdict
+              |
+      CERTIFIABLE  /  NOT ATTESTABLE  /  HUMAN REVIEW
+```
+
+Run it:
+
+```bash
+python3 -m attest.controller --demo            # investigate the demo month
+python3 -m attest.agentbench                   # benchmark the controller
+```
+
+On the demo month the controller chooses this path on its own — nothing below is
+scripted, and removing the fee discrepancy changes the route:
+
+```
+ →  inspect_close_state        2 of 3 batches tie; 40 of 159 lines proven
+ →  list_exceptions            rank by exposure, investigate the largest first
+ →  check_fee_contract         100 lines off-contract, ₹3,600.00 over
+ →  check_refund_netting       a tie plus a fee error means something absorbed it
+ →  find_compensating_errors   confirmed: they cancel to ₹0.20
+ →  run_adversarial_check      2 of 4 passing claims overturned
+ →  find_unexplained_residual  ₹4,30,592.40 unattributed
+ ●  conclude
+
+    POLICY:  NOT_ATTESTABLE — 1414.34 bps against a 25 bps limit
+```
+
+**What the controller may not do.** There is no action that certifies — asking
+for one is rejected, and so is `sign`, `approve` or `attest`. It cannot widen a
+threshold, cite an evidence id no tool returned, or put a number into a finding.
+Budgets stop it; an exhausted budget escalates rather than guessing. Every one of
+those is a test in `tests/test_controller.py`, driven by a scripted hostile
+planner.
+
+**Two planners, one safety envelope.** A `ModelPlanner` emits the action schema
+from an LLM; a `RulesPlanner` emits the same schema deterministically. Both go
+through the same validator, tools and policy gate, so the safety properties do
+not depend on which is driving — and the demo needs no API key. The interface
+says which one ran, because claiming "AI" while a rules planner drives would be
+the exact overclaim this project argues against.
+
+| Metric (6 scenarios, `python3 -m attest.agentbench`) | |
+|---|---|
+| False certification rate | **0%** |
+| Correct escalation rate | 100% |
+| Correct tool selection | 100% |
+| AI-assisted safe resolution rate | 100% |
+| Unnecessary tool calls | 41.3% |
+| Average steps / tool calls | 8.7 / 7.7 |
+
+Six scenarios is a small sample and the perfect scores should be read that way.
+The unnecessary-call rate is the honest weak spot: the deterministic planner
+sweeps more broadly than it needs to, and it is reported rather than tuned away.
+
 ## Where AI is used, and where it is deliberately not
 
 | Component | AI? | Why |

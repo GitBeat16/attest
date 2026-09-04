@@ -86,6 +86,16 @@ class ReasoningEngine:
         """Bank narration -> {counterparty, reference, intent}. A language task."""
         raise NotImplementedError
 
+    def plan(self, system: str, observation: str) -> str:
+        """Choose the next investigation action, as raw text.
+
+        The controller parses and validates whatever comes back, so an engine
+        that cannot plan simply returns nothing and the controller falls back
+        to its deterministic planner. No engine is ever trusted to be correct
+        here -- only to be a source of suggestions.
+        """
+        return ""
+
     def explain_variance(self, finding: dict) -> Explanation:
         """Turn a typed variance into a sentence a finance person would write."""
         raise NotImplementedError
@@ -195,10 +205,11 @@ class _HTTPEngine(ReasoningEngine):
     debug = False
     last_error: str | None = None
 
-    def _ask(self, task: str, prompt: str) -> str | None:
-        hit = self._cached(task, prompt)
-        if hit is not None:
-            return hit
+    def _ask(self, task: str, prompt: str, cache: bool = True) -> str | None:
+        if cache:
+            hit = self._cached(task, prompt)
+            if hit is not None:
+                return hit
         try:
             text = (self._generate(prompt) or "").strip()
         except urllib.error.HTTPError as e:
@@ -215,7 +226,8 @@ class _HTTPEngine(ReasoningEngine):
             return None                      # silent, deliberate: fall back
         if not text:
             return None
-        self._store(task, prompt, text)
+        if cache:
+            self._store(task, prompt, text)
         return text
 
     # -- the narrow interface ---------------------------------------------
@@ -250,6 +262,12 @@ class _HTTPEngine(ReasoningEngine):
             "sign-off, no preamble."
         ))
         return Explanation(out, self.name) if out else self.fallback.explain_variance(f)
+
+    def plan(self, system: str, observation: str) -> str:
+        """One planning turn. Not cached: the whole point is that the next
+        action depends on what the last tool returned."""
+        return self._ask("plan", f"{system}\n\nCURRENT STATE:\n{observation}",
+                         cache=False) or ""
 
     def draft_claim(self, c: dict) -> Explanation:
         out = self._ask("claim", (

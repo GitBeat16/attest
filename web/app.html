@@ -149,6 +149,62 @@ section{margin-top:46px}
 .bigcatch .x{color:#B9BDC6;font-size:.95rem;flex:1;min-width:250px;line-height:1.5}
 @media(max-width:760px){.versus{grid-template-columns:1fr}}
 
+
+/* -------------------------------------------------- the controller timeline */
+.ctrl{border:1px solid var(--rule);margin-top:26px;background:var(--paper)}
+.ctrl .hd{padding:16px 22px;border-bottom:1px solid var(--rule);background:var(--ink);
+  color:#F4F1EA;display:flex;align-items:center;justify-content:space-between;
+  gap:12px;flex-wrap:wrap}
+.ctrl .hd .t{font-family:var(--mono);font-size:11px;letter-spacing:.18em;
+  text-transform:uppercase}
+.ctrl .hd .g{color:#B9BDC6;font-size:.86rem}
+.ctrl .bd{padding:6px 0}
+.tl{display:grid;grid-template-columns:26px 1fr auto;gap:14px;padding:11px 22px;
+  align-items:start;border-bottom:1px solid var(--rule)}
+.tl:last-child{border-bottom:none}
+.tl .ic{font-family:var(--mono);font-size:13px;text-align:center;line-height:1.5}
+.tl .who{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;
+  text-transform:uppercase;padding:2px 6px;border-radius:2px;white-space:nowrap;
+  align-self:center}
+.tl .ttl{font-weight:500}
+.tl .why{color:var(--ink3);font-size:.87rem;margin-top:3px;font-style:italic}
+.tl .res{color:var(--ink2);font-size:.89rem;margin-top:4px}
+.tl .ev{font-family:var(--mono);font-size:10.5px;color:var(--ink3);margin-top:5px;
+  word-break:break-all}
+.tl.ask{background:var(--accent-soft)}
+.tl.ask .ic{color:var(--accent)}
+.tl.found{background:var(--warn-soft)}
+.tl.found .ic{color:var(--warn)}
+.tl.clean .ic{color:var(--good)}
+.tl.bad{background:var(--bad-soft)}
+.tl.bad .ic{color:var(--bad)}
+.who.ai{background:var(--accent-soft);color:var(--accent)}
+.who.engine{background:var(--good-soft);color:var(--good)}
+.who.policy{background:var(--ink);color:#F4F1EA}
+.decision{padding:24px 22px;border-top:2px solid var(--ink);background:var(--surface)}
+.decision .v{font-family:var(--mono);font-size:1.5rem;font-weight:600;
+  letter-spacing:.02em}
+.decision.no .v{color:var(--bad)} .decision.yes .v{color:var(--good)}
+.decision.rev .v{color:var(--warn)}
+.decision .r{color:var(--ink2);margin-top:9px;max-width:70ch}
+.decision .budget{font-family:var(--mono);font-size:10.5px;color:var(--ink3);
+  margin-top:14px;letter-spacing:.06em}
+.resolve{margin-top:20px;border:1px solid var(--rule);background:var(--paper)}
+.resolve .h{padding:13px 20px;border-bottom:1px solid var(--rule);
+  background:var(--surface);font-family:var(--mono);font-size:10.5px;
+  letter-spacing:.13em;text-transform:uppercase;color:var(--ink3)}
+.resolve ul{list-style:none;padding:14px 20px}
+.resolve li{padding:7px 0 7px 18px;position:relative;color:var(--ink2);font-size:.92rem}
+.resolve li::before{content:"\2192";position:absolute;left:0;color:var(--accent)}
+.resolve li b{color:var(--ink)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;
+  font-family:var(--mono);font-size:10px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--ink3)}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend i{width:10px;height:10px;border-radius:2px;display:inline-block}
+@media(max-width:640px){.tl{grid-template-columns:22px 1fr;gap:10px;padding:11px 14px}
+  .tl .who{grid-column:2;justify-self:start;margin-top:4px}}
+
 /* -------------------------------------------------- evidence chain */
 .chain{margin-top:24px;border:1px solid var(--rule);background:var(--paper)}
 .cstep{display:grid;grid-template-columns:132px 1fr auto;gap:18px;padding:15px 20px;
@@ -480,6 +536,45 @@ footer p{color:var(--ink3);font-size:.88rem;max-width:38ch;line-height:1.55;marg
     <div class="bigcatch">
       <span class="n" id="v-mult"></span>
       <span class="x" id="v-mult-x"></span>
+    </div>
+  </section>
+
+
+  <!-- the controller -->
+  <section id="ctrl-wrap" hidden>
+    <p class="kicker">The AI contribution</p>
+    <h2>What the controller chose to investigate</h2>
+    <p class="sub">The controller decides <b>what to look at next</b>.
+      Deterministic tools decide <b>what is true</b>. A policy engine decides
+      <b>what may be certified</b> — and there is no action available to the
+      controller that certifies anything.</p>
+    <div class="note" id="ctrl-planner"></div>
+
+    <div class="ctrl">
+      <div class="hd">
+        <span class="t">Attest Controller</span>
+        <span class="g" id="ctrl-goal"></span>
+      </div>
+      <div class="bd" id="timeline"></div>
+      <div class="decision" id="ctrl-decision">
+        <div class="v" id="ctrl-verdict"></div>
+        <div class="r" id="ctrl-reason"></div>
+        <div class="budget" id="ctrl-budget"></div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span><i style="background:var(--accent-soft);border:1px solid #C9D9E7"></i>
+        Controller — what should I investigate?</span>
+      <span><i style="background:var(--good-soft);border:1px solid #C4DED2"></i>
+        Deterministic verifier — what did the evidence prove?</span>
+      <span><i style="background:var(--ink)"></i>
+        Policy — what am I allowed to certify?</span>
+    </div>
+
+    <div class="resolve" id="resolve" hidden>
+      <div class="h">What evidence would resolve this?</div>
+      <ul id="resolve-list"></ul>
     </div>
   </section>
 
@@ -875,6 +970,78 @@ function render(out, mode) {
       `${money(a.exposure_paise)} wrong. That gap is the entire reason this exists.`;
     show('versus-wrap');
   } else show('versus-wrap', false);
+
+
+  // --- the controller timeline ------------------------------------------
+  const inv = out.investigation;
+  if (inv && inv.steps && inv.steps.length) {
+    $('ctrl-goal').textContent = inv.goal;
+
+    // Label honestly. Saying "AI" when a deterministic planner is driving
+    // would be exactly the overclaim this product exists to argue against.
+    const isModel = inv.planner === 'model';
+    const plannerLabel = isModel ? 'AI controller' : 'Controller \u00b7 rules';
+    $('ctrl-planner').innerHTML = isModel
+      ? 'A language model is choosing each next action, within the budget and '
+        + 'the action schema below.'
+      : '<b>No model is configured, so the deterministic planner is driving.</b> '
+        + 'It follows the same investigation policy, emits the same validated '
+        + 'actions, and is held to the same limits — which is the point: the '
+        + 'safety properties belong to the validator, the tools and the policy '
+        + 'gate, not to whatever is choosing. Set an API key and a model takes '
+        + 'this seat with nothing else changing.';
+
+    const ICON = { ok: '\u2713', discrepancy_found: '\u26a0',
+                   rejected: '\u2717', not_found: '\u2717',
+                   insufficient_evidence: '\u26a0', concluded: '\u25cf',
+                   escalated: '\u25b3', evidence_requested: '?' };
+    const CLS = { ok: 'clean', discrepancy_found: 'found', rejected: 'bad',
+                  not_found: 'bad', insufficient_evidence: 'found',
+                  concluded: '', escalated: 'found', evidence_requested: 'ask' };
+
+    $('timeline').innerHTML = inv.steps.map(st => {
+      // Two rows per step: what the controller decided to do, then what the
+      // deterministic tool actually returned. Keeping them visually distinct is
+      // the whole point of the panel.
+      const ask = `<div class="tl ask">
+        <span class="ic">\u2192</span>
+        <span><span class="ttl">${st.tool || st.action}</span>
+          <span class="why">${st.reason || ''}</span></span>
+        <span class="who ai">${plannerLabel}</span></div>`;
+      const got = `<div class="tl ${CLS[st.status] || ''}">
+        <span class="ic">${ICON[st.status] || '\u00b7'}</span>
+        <span><span class="res">${st.rejected
+            ? '<b style="color:var(--bad)">REJECTED</b> ' + st.rejected
+            : (st.summary || st.status)}</span>
+          ${st.evidence_ids && st.evidence_ids.length
+            ? `<span class="ev">evidence: ${st.evidence_ids.join(' \u00b7 ')}</span>` : ''}
+        </span>
+        <span class="who ${st.rejected ? 'policy' : 'engine'}">${
+          st.rejected ? 'Rejected' : 'Attest engine'}</span></div>`;
+      return ask + got;
+    }).join('');
+
+    const v = inv.policy.verdict;
+    const box = $('ctrl-decision');
+    box.className = 'decision ' + (v === 'CERTIFIABLE' ? 'yes'
+      : v === 'NOT_ATTESTABLE' ? 'no' : 'rev');
+    $('ctrl-verdict').textContent =
+      (v === 'CERTIFIABLE' ? '\u2713 ' : v === 'NOT_ATTESTABLE' ? '\u25cf ' : '\u25b3 ') + v;
+    $('ctrl-reason').textContent = inv.policy.reason;
+    $('ctrl-budget').textContent =
+      `${inv.steps.length} steps \u00b7 ${inv.tool_calls} tool calls \u00b7 ` +
+      `${inv.model_calls} model calls \u00b7 ${inv.seconds}s \u00b7 ` +
+      `planner: ${inv.planner === 'model' ? 'language model' : 'deterministic'} \u00b7 ` +
+      `stopped because ${inv.stopped_because}`;
+
+    const needed = (inv.resolution && inv.resolution.needed) || [];
+    if (needed.length) {
+      $('resolve-list').innerHTML = needed.map(n =>
+        `<li><b>${n.evidence}</b><br>for ${n.for} (${n.exposure_display}), reference ${n.reference}</li>`).join('');
+      show('resolve');
+    } else show('resolve', false);
+    show('ctrl-wrap');
+  } else show('ctrl-wrap', false);
 
   // --- evidence chain ---------------------------------------------------
   if (out.chain?.length) {

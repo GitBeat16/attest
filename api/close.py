@@ -154,6 +154,22 @@ def from_razorpay(key_id: str, key_secret: str, year: int, month: int) -> str:
     return "\n".join(out)
 
 
+def _investigate(src) -> dict | None:
+    """Run the controller over the same close, for the investigation timeline.
+
+    Failure here must never take the close down with it: the reconciliation
+    result is the product, and the controller sits above it. If the loop cannot
+    run, the close is still returned and the panel is simply absent.
+    """
+    try:
+        from attest.controller import Budget, run as controller_run
+        return controller_run(src, planner_name="auto",
+                              budget=Budget(max_steps=12, max_tool_calls=20,
+                                            timeout_seconds=12))
+    except Exception:                                        # noqa: BLE001
+        return None
+
+
 def _top(exceptions: list[dict], claims=None, today=None) -> list[dict]:
     """The exception register, ranked by rupee exposure, in the merchant's
     language and with the counterparty and claim window attached."""
@@ -209,12 +225,14 @@ def handle(body: dict) -> dict:
             corpus = result["corpus"]
             nv = naive_view(corpus, result["res"], result["aud"])
             chain = evidence_chain(corpus, nv["worst_line"]) if nv else []
+            investigation = _investigate(src)
         s = result["summary"]
         s["exceptions_top"] = _top(s["exceptions"], result["claims"], result["today"])
         s.pop("exceptions", None)
         s["demo"] = True
         s["close_id"] = None
         return {"ok": True, "summary": s, "naive": nv, "chain": chain,
+                "investigation": investigation,
                 "pack_html": render(result["payload"]), "saved": False}
 
     if not token:
@@ -248,6 +266,7 @@ def handle(body: dict) -> dict:
         corpus = result["corpus"]
         nv = naive_view(corpus, result["res"], result["aud"])
         chain = evidence_chain(corpus, nv["worst_line"]) if nv else []
+        investigation = _investigate(src)
 
     s = result["summary"]
     pack = render(result["payload"])
@@ -305,6 +324,7 @@ def handle(body: dict) -> dict:
     s.pop("exceptions", None)
     s["close_id"] = close_id
     return {"ok": True, "summary": s, "naive": nv, "chain": chain,
+            "investigation": investigation,
             "pack_html": pack, "saved": bool(close_id)}
 
 
