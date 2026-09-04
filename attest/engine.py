@@ -266,11 +266,16 @@ def check_batches(corpus: Corpus) -> list[dict]:
 
     # The GST the merchant will claim as input credit must tie to the GST
     # actually deducted across the month's settlements.
-    inv_gst = int(Decimal(corpus.mdr_invoice["total_tax"]) * 100)
+    # A merchant closing their own month may not have the tax invoice to hand.
+    # The check is then skipped rather than faked: synthesising the invoice from
+    # the settlements it is supposed to test would make it pass by construction,
+    # which is the exact self-referential tie this project exists to expose.
+    inv_gst = (int(Decimal(corpus.mdr_invoice["total_tax"]) * 100)
+               if str(corpus.mdr_invoice.get("total_tax", "")).strip() else None)
     settled_gst = sum(
         l.gst_on_mdr for b in corpus.batches.values() for l in b.lines
     )
-    if inv_gst != settled_gst:
+    if inv_gst is not None and inv_gst != settled_gst:
         findings.append({
             "class": "ITC_MISMATCH",
             "detail": (

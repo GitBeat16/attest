@@ -1,0 +1,594 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Attest — close your month</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --paper:#FCFBF8; --surface:#F4F1EA; --raised:#EEEAE0;
+  --ink:#16181D; --ink2:#4A4E58; --ink3:#7B808C;
+  --rule:#E3DED3; --rule2:#CFC8B8;
+  --accent:#1B4B73; --accent-soft:#E7EDF3;
+  --good:#1D6B4F; --good-soft:#E4EFE9;
+  --warn:#8A5A12; --warn-soft:#F5EDDC;
+  --bad:#A03A22; --bad-soft:#F7E7E1;
+  --serif:Newsreader,Georgia,serif;
+  --sans:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);
+  font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:960px;margin:0 auto;padding:0 28px}
+@media(max-width:640px){.wrap{padding:0 18px}}
+a{color:var(--accent)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+nav{border-bottom:1px solid var(--rule);position:sticky;top:0;z-index:40;
+  background:rgba(252,251,248,.95);backdrop-filter:blur(8px)}
+nav .wrap{display:flex;align-items:center;justify-content:space-between;height:60px;gap:16px}
+.mark{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink)}
+.mark .glyph{width:25px;height:25px;border:1.5px solid var(--accent);border-radius:3px;
+  display:grid;place-items:center;font-family:var(--mono);font-size:12px;font-weight:600;
+  color:var(--accent)}
+.mark .name{font-family:var(--mono);font-size:13px;letter-spacing:.22em;
+  text-transform:uppercase;font-weight:600}
+nav .who{font-family:var(--mono);font-size:12px;color:var(--ink3);
+  display:flex;align-items:center;gap:14px}
+
+.btn{display:inline-block;background:var(--accent);color:#fff;border:1px solid var(--accent);
+  padding:9px 17px;border-radius:4px;font:500 14px/1.2 var(--sans);cursor:pointer;
+  text-decoration:none;transition:background .15s,transform .12s}
+.btn:hover{background:#15395a}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn.ghost:hover{background:var(--accent-soft)}
+.btn.sm{padding:6px 12px;font-size:13px}
+.linkish{background:none;border:none;color:var(--accent);font:inherit;cursor:pointer;
+  padding:0;text-decoration:underline}
+
+h1{font-family:var(--serif);font-size:2.1rem;font-weight:500;letter-spacing:-.02em;
+  line-height:1.14}
+h2{font-family:var(--serif);font-size:1.4rem;font-weight:500;letter-spacing:-.015em}
+.kicker{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--ink3);margin-bottom:12px}
+.sub{color:var(--ink2);max-width:62ch;margin-top:10px}
+
+.card{border:1px solid var(--rule);background:var(--paper);padding:26px;margin-top:24px}
+.card.tint{background:var(--surface)}
+label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--ink3);margin-bottom:6px}
+input[type=text],input[type=email],input[type=password],input[type=month],input[type=number]{
+  width:100%;padding:10px 12px;border:1px solid var(--rule2);border-radius:4px;
+  background:var(--paper);font:400 14px/1.4 var(--sans);color:var(--ink)}
+input:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+.field{margin-bottom:16px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.row4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media(max-width:640px){.row2,.row4{grid-template-columns:1fr}}
+
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--rule);margin-bottom:22px}
+.tab{background:none;border:none;border-bottom:2px solid transparent;padding:10px 2px;
+  margin-right:26px;font:500 14px var(--sans);color:var(--ink3);cursor:pointer}
+.tab[aria-selected=true]{color:var(--ink);border-bottom-color:var(--accent)}
+
+.slots{border:1px solid var(--rule);margin-top:6px}
+.slot{display:flex;align-items:center;gap:14px;padding:12px 16px;
+  border-bottom:1px solid var(--rule);flex-wrap:wrap}
+.slot:last-child{border-bottom:none}
+.slot .nm{flex:1;min-width:190px}
+.slot .nm b{font-weight:500}
+.slot .nm small{display:block;font-family:var(--mono);font-size:11px;color:var(--ink3)}
+.slot .st{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  padding:3px 8px;border-radius:3px;white-space:nowrap}
+.st.req{background:var(--bad-soft);color:var(--bad)}
+.st.opt{background:var(--surface);color:var(--ink3)}
+.st.got{background:var(--good-soft);color:var(--good)}
+.slot input[type=file]{font-size:12px;max-width:230px}
+
+.rates{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--rule);
+  border:1px solid var(--rule);margin-top:22px}
+.rates>div{background:var(--paper);padding:22px 20px}
+.rates .t{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink3);margin-bottom:12px}
+.rates .n{font-family:var(--mono);font-size:2.1rem;font-weight:600;letter-spacing:-.03em;
+  line-height:1;font-variant-numeric:tabular-nums}
+.rates .d{color:var(--ink2);font-size:.87rem;margin-top:10px;line-height:1.45}
+.r1 .n{color:var(--ink3)} .r2 .n{color:var(--good)} .r3 .n{color:var(--bad)}
+@media(max-width:720px){.rates{grid-template-columns:1fr}}
+
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th{background:var(--surface);text-align:left;font-family:var(--mono);font-size:10.5px;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);font-weight:500;
+  padding:10px 14px;border-bottom:1px solid var(--rule2)}
+td{padding:11px 14px;border-bottom:1px solid var(--rule);color:var(--ink2)}
+tr:last-child td{border-bottom:none}
+td.k{color:var(--ink);font-weight:500}
+td.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.tbl{border:1px solid var(--rule);margin-top:18px;overflow-x:auto}
+
+.note{padding:16px 18px;border-left:2px solid var(--rule2);background:var(--surface);
+  margin-top:20px;font-size:.92rem;color:var(--ink2)}
+.note b{color:var(--ink)}
+.note.warn{border-left-color:var(--warn);background:var(--warn-soft)}
+.note.bad{border-left-color:var(--bad);background:var(--bad-soft);color:var(--ink)}
+.note.good{border-left-color:var(--good);background:var(--good-soft)}
+
+.status{display:flex;align-items:baseline;gap:18px;margin-top:22px;padding:20px;
+  border:1px solid var(--rule);background:var(--surface);flex-wrap:wrap}
+.status .big{font-family:var(--mono);font-size:1.25rem;font-weight:600;letter-spacing:.02em}
+.status.no .big{color:var(--bad)} .status.yes .big{color:var(--good)}
+.status .why{color:var(--ink2);font-size:.9rem;flex:1;min-width:240px}
+
+/* ---- the coin, same one as the landing page ---- */
+.coin{width:52px;height:52px;position:relative;transform-style:preserve-3d;
+  animation:turn 1.6s cubic-bezier(.42,0,.58,1) infinite}
+.coin .face{position:absolute;inset:0;border-radius:50%;display:grid;place-items:center;
+  backface-visibility:hidden;transform:translateZ(1.5px);
+  font-family:var(--mono);font-weight:600;font-size:20px;color:#6A4707;
+  background:radial-gradient(circle at 32% 28%,#FBE9A8 0%,#F2CB5C 34%,#DFA82A 62%,#B87C15 100%);
+  box-shadow:inset 0 0 0 3px rgba(255,255,255,.42),inset 0 -6px 10px rgba(120,78,10,.28),
+             0 8px 18px rgba(150,105,20,.22)}
+.coin .face.b{transform:rotateY(180deg) translateZ(1.5px)}
+.coin .rim{position:absolute;inset:0;border-radius:50%;opacity:0;
+  background:linear-gradient(90deg,#8A5A12,#E8C25A 45%,#8A5A12);
+  transform:rotateY(90deg);animation:rim 1.6s linear infinite}
+@keyframes turn{from{transform:rotateY(0)}to{transform:rotateY(360deg)}}
+@keyframes rim{0%,18%{opacity:0}25%{opacity:1}32%,68%{opacity:0}75%{opacity:1}82%,100%{opacity:0}}
+.busy{display:grid;place-items:center;gap:18px;padding:56px 0}
+.busy .cap{font-family:var(--mono);font-size:11px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--ink3)}
+
+.hist{border:1px solid var(--rule);margin-top:16px}
+.hist .h{display:flex;align-items:center;gap:16px;padding:13px 16px;
+  border-bottom:1px solid var(--rule);flex-wrap:wrap}
+.hist .h:last-child{border-bottom:none}
+.hist .h .p{font-family:var(--mono);font-weight:600;min-width:78px}
+.hist .h .m{flex:1;min-width:150px;color:var(--ink2)}
+.hist .h .r{font-family:var(--mono);font-size:12.5px;color:var(--ink3);
+  font-variant-numeric:tabular-nums}
+.tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;
+  padding:3px 8px;border-radius:3px}
+.tag.yes{background:var(--good-soft);color:var(--good)}
+.tag.no{background:var(--bad-soft);color:var(--bad)}
+
+.err{margin-top:16px;padding:13px 16px;border-left:2px solid var(--bad);
+  background:var(--bad-soft);color:var(--ink);font-size:.92rem}
+[hidden]{display:none!important}
+footer{padding:44px 0 66px;margin-top:44px;border-top:1px solid var(--rule);
+  color:var(--ink3);font-size:.85rem}
+@media(prefers-reduced-motion:reduce){.coin,.coin .rim{animation:none}}
+</style></head>
+<body>
+
+<nav><div class="wrap">
+  <a class="mark" href="/"><span class="glyph">A</span><span class="name">Attest</span></a>
+  <div class="who">
+    <span id="who"></span>
+    <button class="btn ghost sm" id="signout" hidden>Sign out</button>
+  </div>
+</div></nav>
+
+<div class="wrap">
+
+<!-- ============================ signed out ============================ -->
+<section id="gate" hidden>
+  <div style="padding:56px 0 10px">
+    <p class="kicker">Your account</p>
+    <h1>Close a month, and see what it can prove.</h1>
+    <p class="sub">Upload your Razorpay settlement report and your bank statement.
+      Attest runs the same engine as the benchmark and gives you three numbers
+      instead of one. Your closes are visible only to you.</p>
+  </div>
+
+  <div class="card" style="max-width:440px">
+    <div class="field">
+      <label for="email">Email</label>
+      <input type="email" id="email" autocomplete="email" placeholder="you@company.in">
+    </div>
+    <div class="field">
+      <label for="pw">Password</label>
+      <input type="password" id="pw" autocomplete="current-password" placeholder="at least 8 characters">
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <button class="btn" id="signin">Sign in</button>
+      <button class="btn ghost" id="signup">Create an account</button>
+    </div>
+    <div class="err" id="autherr" hidden></div>
+  </div>
+
+  <div class="note" style="max-width:640px">
+    <b>Attest never stores a Razorpay secret key.</b> If you connect a test key it
+    is used for that one request and discarded — it is not written to the database
+    or to a log. Live keys are refused here on purpose: a key that can move your
+    money has no business sitting in a web app. For live data, run the CLI on your
+    own machine.
+  </div>
+</section>
+
+<!-- ============================ signed in ============================= -->
+<section id="app" hidden>
+  <div style="padding:44px 0 4px">
+    <p class="kicker">New close</p>
+    <h1 id="apptitle">Close a month.</h1>
+    <p class="sub">Give it what you have. Every source you leave out lowers the
+      proof rate rather than being quietly assumed — which is the point.</p>
+  </div>
+
+  <div class="card">
+    <div class="row2">
+      <div class="field">
+        <label for="merchant">Registered business name</label>
+        <input type="text" id="merchant" placeholder="Acme Athleisure Private Limited">
+      </div>
+      <div class="field">
+        <label for="period">Month being closed</label>
+        <input type="month" id="period" value="2026-08">
+      </div>
+    </div>
+
+    <div class="tabs" role="tablist">
+      <button class="tab" id="tab-upload" role="tab" aria-selected="true">Upload your exports</button>
+      <button class="tab" id="tab-key" role="tab" aria-selected="false">Connect Razorpay (test)</button>
+    </div>
+
+    <div id="pane-upload">
+      <div class="slots" id="slots"></div>
+      <div class="note" style="margin-top:18px">
+        Files stay in memory for the length of the request. Attest keeps the close
+        pack it produces, not your raw statements.
+      </div>
+    </div>
+
+    <div id="pane-key" hidden>
+      <div class="row2">
+        <div class="field">
+          <label for="keyid">Key id</label>
+          <input type="text" id="keyid" placeholder="rzp_test_…" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="field">
+          <label for="keysecret">Key secret</label>
+          <input type="password" id="keysecret" autocomplete="off" spellcheck="false">
+        </div>
+      </div>
+      <div class="note warn">
+        <b>Test keys only.</b> A live secret can create refunds on your account, so
+        this app refuses one. Razorpay can give you your settlements — it cannot
+        give you your bank statement, so upload that below or your proof rate will
+        be zero however well the totals tie. That is not a bug: <b>Razorpay cannot
+        prove Razorpay.</b>
+      </div>
+      <div class="slots" id="slots-key" style="margin-top:18px"></div>
+    </div>
+
+    <details style="margin-top:22px">
+      <summary style="cursor:pointer;font-family:var(--mono);font-size:11px;
+        letter-spacing:.13em;text-transform:uppercase;color:var(--ink3)">
+        Contract terms</summary>
+      <div class="row4" style="margin-top:16px">
+        <div class="field"><label for="t-mdr">MDR %</label>
+          <input type="number" id="t-mdr" value="2.00" step="0.01"></div>
+        <div class="field"><label for="t-gst">GST on MDR %</label>
+          <input type="number" id="t-gst" value="18.00" step="0.01"></div>
+        <div class="field"><label for="t-cod">COD fee %</label>
+          <input type="number" id="t-cod" value="1.50" step="0.01"></div>
+        <div class="field"><label for="t-rto">RTO freight ₹</label>
+          <input type="number" id="t-rto" value="85.00" step="0.01"></div>
+      </div>
+      <p style="color:var(--ink3);font-size:.86rem">These come off your Razorpay
+        contract and your courier agreement. They are what "overcharged" is
+        measured against, so a wrong rate here produces wrong findings.</p>
+    </details>
+
+    <div style="margin-top:22px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <button class="btn" id="run">Close the month</button>
+      <span style="color:var(--ink3);font-size:.86rem">Nothing posts to your ledger.</span>
+    </div>
+    <div class="err" id="runerr" hidden></div>
+  </div>
+
+  <div class="busy" id="busy" hidden>
+    <div class="coin"><span class="face">₹</span><span class="rim"></span><span class="face b">₹</span></div>
+    <div class="cap" id="busycap">Closing the month</div>
+  </div>
+
+  <!-- results -->
+  <section id="result" hidden style="margin-top:40px">
+    <p class="kicker">Result</p>
+    <h2 id="rtitle"></h2>
+    <div class="rates">
+      <div class="r1"><div class="t">Match rate</div><div class="n" id="m-match"></div>
+        <div class="d" id="d-match"></div></div>
+      <div class="r2"><div class="t">Proof rate</div><div class="n" id="m-proof"></div>
+        <div class="d" id="d-proof"></div></div>
+      <div class="r3"><div class="t">False-match rate</div><div class="n" id="m-fmr"></div>
+        <div class="d" id="d-fmr"></div></div>
+    </div>
+
+    <div id="gaps"></div>
+
+    <div class="tbl" id="exwrap" hidden>
+      <table><thead><tr><th>What happened</th><th class="n">Items</th>
+        <th class="n">Exposure</th></tr></thead>
+        <tbody id="extable"></tbody></table>
+    </div>
+
+    <div class="status" id="statusbox">
+      <span class="big" id="s-big"></span>
+      <span class="why" id="s-why"></span>
+    </div>
+
+    <div style="margin-top:22px;display:flex;gap:12px;flex-wrap:wrap">
+      <button class="btn" id="openpack">Open the full close pack</button>
+      <button class="btn ghost" id="another">Close another month</button>
+    </div>
+  </section>
+
+  <!-- history -->
+  <section style="margin-top:52px">
+    <p class="kicker">Your closes</p>
+    <div class="hist" id="hist"><div class="h"><span class="m"
+      style="color:var(--ink3)">Nothing closed yet.</span></div></div>
+  </section>
+</section>
+
+<footer class="wrap" style="padding-left:0;padding-right:0">
+  Attest · Razorpay AI Buildathon, Track 4 &nbsp;·&nbsp;
+  <a href="/">What Attest is</a> &nbsp;·&nbsp;
+  <a href="/close-pack.html">Benchmark close pack</a>
+</footer>
+</div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const SUPABASE_URL = 'https://fsqozbfghumfconnhowq.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_tO-3LIT3VVJNzFUtWsZNvw_4ePwcohx';
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const $ = id => document.getElementById(id);
+const pc = x => (x * 100).toFixed(1) + '%';
+
+// Every source the engine can read, and what leaving it out actually costs.
+const SOURCES = [
+  ['razorpay_settlements.csv', 'Razorpay settlement report', 'Dashboard → Settlements → Recon report', true],
+  ['bank_statement.csv',       'Bank statement',             'Your bank, as CSV', false],
+  ['orders.csv',               'Order export',               'Your storefront or ERP', false],
+  ['refunds.csv',              'Refund export',              'Dashboard → Refunds', false],
+  ['cod_remittances.csv',      'Courier COD remittances',    'Your courier panel', false],
+  ['shipments.csv',            'Shipment / AWB export',      'Your courier panel', false],
+  ['disputes.csv',             'Chargebacks and disputes',   'Dashboard → Disputes', false],
+  ['razorpay_mdr_invoice.json','Razorpay MDR tax invoice',   'Dashboard → Invoices (JSON)', false],
+];
+
+const files = {};                       // name -> text, cleared on each run
+
+function slotRow(name, label, where, required, host) {
+  const d = document.createElement('div');
+  d.className = 'slot';
+  d.innerHTML = `<span class="nm"><b>${label}</b><small>${where}</small></span>
+    <span class="st ${required ? 'req' : 'opt'}" data-st="${name}">${required ? 'required' : 'optional'}</span>`;
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = name.endsWith('.json') ? '.json' : '.csv,text/csv';
+  inp.addEventListener('change', async () => {
+    const f = inp.files[0];
+    if (!f) { delete files[name]; return paintSlot(name, required); }
+    files[name] = await f.text();
+    paintSlot(name, required, f.name);
+  });
+  d.appendChild(inp);
+  host.appendChild(d);
+}
+
+function paintSlot(name, required, got) {
+  document.querySelectorAll(`[data-st="${name}"]`).forEach(el => {
+    el.className = 'st ' + (got ? 'got' : required ? 'req' : 'opt');
+    el.textContent = got ? 'loaded' : required ? 'required' : 'optional';
+  });
+}
+
+// The upload pane lists everything; the Razorpay pane lists everything except
+// the settlement report, which the API is fetching for you.
+SOURCES.forEach(([n, l, w, r]) => slotRow(n, l, w, r, $('slots')));
+SOURCES.slice(1).forEach(([n, l, w, r]) => slotRow(n, l, w, r, $('slots-key')));
+
+let mode = 'upload';
+$('tab-upload').onclick = () => setMode('upload');
+$('tab-key').onclick = () => setMode('razorpay_test');
+function setMode(m) {
+  mode = m;
+  $('tab-upload').setAttribute('aria-selected', m === 'upload');
+  $('tab-key').setAttribute('aria-selected', m === 'razorpay_test');
+  $('pane-upload').hidden = m !== 'upload';
+  $('pane-key').hidden = m === 'upload';
+}
+
+// ---------------------------------------------------------------- auth
+function showErr(el, msg) { el.textContent = msg; el.hidden = false; }
+
+$('signin').onclick = () => auth('signInWithPassword');
+$('signup').onclick = () => auth('signUp');
+async function auth(method) {
+  $('autherr').hidden = true;
+  const email = $('email').value.trim(), password = $('pw').value;
+  if (!email || password.length < 8)
+    return showErr($('autherr'), 'Enter an email and a password of at least 8 characters.');
+  const { error } = await sb.auth[method]({ email, password });
+  if (error) return showErr($('autherr'), error.message);
+  if (method === 'signUp')
+    showErr($('autherr'), 'Account created. If your project requires email confirmation, check your inbox, then sign in.');
+}
+$('signout').onclick = async () => { await sb.auth.signOut(); };
+
+sb.auth.onAuthStateChange((_e, session) => paint(session));
+sb.auth.getSession().then(({ data }) => paint(data.session));
+
+function paint(session) {
+  const on = !!session;
+  $('gate').hidden = on;
+  $('app').hidden = !on;
+  $('signout').hidden = !on;
+  $('who').textContent = on ? session.user.email : '';
+  if (on) loadHistory();
+}
+
+// ---------------------------------------------------------------- run
+let lastPack = '';
+$('run').onclick = run;
+$('another').onclick = () => { $('result').hidden = true; window.scrollTo({ top: 0, behavior: 'smooth' }); };
+
+async function run() {
+  $('runerr').hidden = true;
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return showErr($('runerr'), 'Your session expired. Sign in again.');
+
+  const merchant = $('merchant').value.trim();
+  const period = $('period').value;
+  if (!merchant) return showErr($('runerr'), 'Enter the registered business name — it goes on the close pack.');
+  if (!period) return showErr($('runerr'), 'Pick the month you are closing.');
+  if (mode === 'upload' && !files['razorpay_settlements.csv'])
+    return showErr($('runerr'), 'The settlement report is required — without it there is nothing to reconcile against.');
+  if (mode === 'razorpay_test' && !$('keyid').value.trim())
+    return showErr($('runerr'), 'Enter your test key id and secret, or switch to uploading a settlement report.');
+
+  $('busy').hidden = false;
+  $('result').hidden = true;
+  $('run').disabled = true;
+  $('busycap').textContent = mode === 'razorpay_test' ? 'Fetching settlements' : 'Closing the month';
+
+  const body = {
+    token: session.access_token, merchant, period, mode,
+    files: mode === 'razorpay_test'
+      ? Object.fromEntries(Object.entries(files).filter(([k]) => k !== 'razorpay_settlements.csv'))
+      : files,
+    terms: {
+      contracted_mdr_rate_pct: $('t-mdr').value,
+      gst_on_mdr_rate_pct: $('t-gst').value,
+      courier_cod_fee_pct: $('t-cod').value,
+      courier_rto_freight_inr: $('t-rto').value,
+    },
+  };
+  if (mode === 'razorpay_test') {
+    body.key_id = $('keyid').value.trim();
+    body.key_secret = $('keysecret').value;
+  }
+
+  let out;
+  try {
+    const r = await fetch('/api/close', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    out = await r.json();
+  } catch (e) {
+    out = { ok: false, error: 'Could not reach the server. Check your connection and try again.' };
+  } finally {
+    // The secret never lives longer than the request on this side either.
+    $('keysecret').value = '';
+    $('busy').hidden = true;
+    $('run').disabled = false;
+  }
+
+  if (!out.ok) return showErr($('runerr'), out.error || 'The close failed.');
+  render(out);
+  loadHistory();
+}
+
+function render(out) {
+  const s = out.summary;
+  lastPack = out.pack_html;
+
+  $('rtitle').textContent = `${s.merchant} · ${s.period}`;
+  $('m-match').textContent = pc(s.match_rate);
+  $('m-proof').textContent = pc(s.proof_rate);
+  $('m-fmr').textContent = pc(s.false_match_rate);
+  $('d-match').textContent =
+    `${s.batches_tied} of ${s.batches_total} batches tie to the bank. This is the number every tool reports.`;
+  $('d-proof').textContent =
+    `${s.lines_proven.toLocaleString()} of ${s.lines_total.toLocaleString()} lines trace end to end through an unbroken evidence chain.`;
+  $('d-fmr').textContent =
+    `${s.claims_overturned} of ${s.claims_tested} passing claims were overturned by the adversarial pass.`;
+
+  // Evidence gaps, stated as what they cost rather than as a nag.
+  const g = $('gaps');
+  g.innerHTML = '';
+  if (s.evidence_cost && s.evidence_cost.length) {
+    const div = document.createElement('div');
+    div.className = 'note warn';
+    div.innerHTML = '<b>What was missing, and what it cost.</b><br>' +
+      s.evidence_cost.map(c => `<span class="mono" style="font-size:.85em">${c.source}</span> — ${c.cost}`).join('<br>');
+    g.appendChild(div);
+  } else {
+    const div = document.createElement('div');
+    div.className = 'note good';
+    div.innerHTML = '<b>Every source supplied.</b> Nothing in the proof rate is explained by missing evidence.';
+    g.appendChild(div);
+  }
+
+  const rows = (s.exceptions_top || []);
+  $('exwrap').hidden = !rows.length;
+  $('extable').innerHTML = rows.map(e =>
+    `<tr><td class="k">${e.label}</td><td class="n">${e.count}</td><td class="n">${e.exposure}</td></tr>`).join('');
+
+  const box = $('statusbox');
+  box.className = 'status ' + (s.attestable ? 'yes' : 'no');
+  $('s-big').textContent = s.attestable ? 'SIGNED' : 'NOT ATTESTABLE';
+  $('s-why').textContent = s.attestable
+    ? `The unexplained residual is ${s.residual_bps} bps of ${s.volume_display}, inside the 25 bps limit.`
+    : `${s.residual_bps} bps of ${s.volume_display} cannot be attributed to any cause, against a 25 bps limit. `
+      + `Refusing to certify is the point of an attestation: a system that always signs is not attesting to anything.`;
+
+  $('result').hidden = false;
+  $('result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+$('openpack').onclick = () => openPack(lastPack);
+function openPack(html) {
+  if (!html) return;
+  const w = window.open('', '_blank');
+  if (!w) return;
+  w.document.open(); w.document.write(html); w.document.close();
+}
+
+// ---------------------------------------------------------------- history
+async function loadHistory() {
+  const { data, error } = await sb.from('attest_closes')
+    .select('id,merchant,period,created_at,batches_tied,batches_total,lines_proven,lines_total,attestable,residual_bps')
+    .order('created_at', { ascending: false }).limit(12);
+  const host = $('hist');
+  if (error || !data || !data.length) {
+    host.innerHTML = `<div class="h"><span class="m" style="color:var(--ink3)">${
+      error ? 'Could not load your closes.' : 'Nothing closed yet.'}</span></div>`;
+    return;
+  }
+  host.innerHTML = '';
+  data.forEach(c => {
+    const d = document.createElement('div');
+    d.className = 'h';
+    const match = c.batches_total ? pc(c.batches_tied / c.batches_total) : '—';
+    const proof = c.lines_total ? pc(c.lines_proven / c.lines_total) : '—';
+    d.innerHTML = `<span class="p">${c.period}</span>
+      <span class="m">${c.merchant}</span>
+      <span class="r">match ${match} · proof ${proof} · ${c.residual_bps} bps</span>
+      <span class="tag ${c.attestable ? 'yes' : 'no'}">${c.attestable ? 'signed' : 'open'}</span>`;
+    const b = document.createElement('button');
+    b.className = 'linkish'; b.textContent = 'open pack';
+    b.onclick = async () => {
+      b.textContent = 'opening…';
+      const { data: full } = await sb.from('attest_closes')
+        .select('pack_html').eq('id', c.id).single();
+      b.textContent = 'open pack';
+      openPack(full && full.pack_html);
+    };
+    d.appendChild(b);
+    host.appendChild(d);
+  });
+}
+</script>
+</body></html>

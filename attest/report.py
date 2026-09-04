@@ -257,7 +257,8 @@ def render(p: dict) -> str:
     )
 
     sc_rows = ""
-    for cls, s in sorted(p["scorecard"].items(), key=lambda x: (not x[1]["held_out"], x[0])):
+    for cls, s in sorted((p.get("scorecard") or {}).items(),
+                         key=lambda x: (not x[1]["held_out"], x[0])):
         held, missed = s["held_out"], s["detected"] == 0
         tag = ("<span class='tag t-miss'>held out &middot; missed</span>" if held and missed
                else "<span class='tag t-held'>held out &middot; found</span>" if held
@@ -266,6 +267,36 @@ def render(p: dict) -> str:
                     f"<td class='k'>{_label(cls)[0]}</td>"
                     f"<td class='n'>{s['planted']}</td><td class='n'>{s['detected']}</td>"
                     f"<td class='n'>{s['recall']*100:.0f}%</td><td>{tag}</td></tr>")
+
+    if p.get("scorecard"):
+        accuracy_section = f"""<h2>Why you can trust these numbers</h2>
+<p class="lede">The test data was built truth-first: the real ledger was generated
+  and frozen, the documents derived from it, then errors injected into the
+  documents only. The pipeline never reads the answer key.</p>
+<div class="tbl"><table>
+<thead><tr><th>Error type</th><th class="n">Planted</th><th class="n">Found</th>
+<th class="n">Recall</th><th>Provenance</th></tr></thead>
+<tbody>{sc_rows}</tbody></table></div>
+<div class="note warnb"><b>The row in red is the honest one.</b> Four error types
+  were planted with <b>no detector written for them</b>. Three were caught anyway
+  by generic integrity checks &mdash; that is the only real evidence this
+  generalises. One was missed, and is reported as missed. Recall on the types we
+  designed for is {_pc(p['designed_recall'])}, which on its own would prove
+  nothing at all. Recall on the held-out types is
+  <b>{_pc(p['holdout_recall'])}</b>. That is the number that means something.</div>"""
+    else:
+        accuracy_section = """<h2>What this close pack does not claim</h2>
+<p class="lede">This ran against your own data, so there is no answer key. Attest
+  can tell you that something does not reconcile. It cannot tell you it found
+  <i>everything</i> &mdash; nobody knows the correct answer for a real month, and
+  any tool that quotes you an accuracy figure on your own data is quoting you a
+  number it cannot possibly have measured.</p>
+<div class="note warnb"><b>Recall is measured once, on a corpus whose truth was
+  constructed.</b> On that benchmark, four error types were planted with no
+  detector written for them; three were caught by generic checks and one was
+  missed and is published as missed. That figure belongs to the benchmark and is
+  not transferred to this page. What is on this page is evidence: what tied, what
+  traced end to end, and what did not.</div>"""
 
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
@@ -328,21 +359,7 @@ def render(p: dict) -> str:
 <th>Evidence required</th></tr></thead>
 <tbody>{ex_rows}</tbody></table></div>
 
-<h2>Why you can trust these numbers</h2>
-<p class="lede">The test data was built truth-first: the real ledger was generated
-  and frozen, the documents derived from it, then errors injected into the
-  documents only. The pipeline never reads the answer key.</p>
-<div class="tbl"><table>
-<thead><tr><th>Error type</th><th class="n">Planted</th><th class="n">Found</th>
-<th class="n">Recall</th><th>Provenance</th></tr></thead>
-<tbody>{sc_rows}</tbody></table></div>
-<div class="note warnb"><b>The row in red is the honest one.</b> Four error types
-  were planted with <b>no detector written for them</b>. Three were caught anyway
-  by generic integrity checks &mdash; that is the only real evidence this
-  generalises. One was missed, and is reported as missed. Recall on the types we
-  designed for is {_pc(p['designed_recall'])}, which on its own would prove
-  nothing at all. Recall on the held-out types is
-  <b>{_pc(p['holdout_recall'])}</b>. That is the number that means something.</div>
+{accuracy_section}
 
 <h2>Attestation</h2>
 <div class="status">

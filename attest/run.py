@@ -272,14 +272,17 @@ def _payload(corpus, res, aud, card, exceptions, elapsed, volume, residual,
         "false_match_rate": aud.false_match_rate(),
         "overturned": len(aud.overturned), "tested": aud.tested,
         "exceptions": exceptions,
-        "scorecard": {
+        # card is None when closing a merchant's own month: there is no answer
+        # key, so there is no scorecard, and the pack says so rather than
+        # showing a table it cannot fill honestly.
+        "scorecard": ({
             k: {"held_out": v.held_out, "planted": v.planted,
                 "detected": v.detected, "recall": v.recall}
             for k, v in card.by_class.items()
-        },
-        "designed_recall": card.designed_recall(),
-        "holdout_recall": card.holdout_recall(),
-        "notes": card.notes,
+        } if card else None),
+        "designed_recall": card.designed_recall() if card else None,
+        "holdout_recall": card.holdout_recall() if card else None,
+        "notes": card.notes if card else [],
         "volume": volume, "residual_paise": residual,
         "residual_bps": round(residual_bps, 1), "signed": signed,
         "chain_nodes": stage_order,
