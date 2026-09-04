@@ -212,16 +212,18 @@ tr.zero td.n{font-weight:600;color:var(--bad)}
 .note.warn{border-left-color:var(--warn);background:var(--warn-soft)}
 
 /* ---------- reveal + parallax motion ---------- */
-.rise{opacity:0;transform:translateY(16px);
+/* Visible without JS. html.js hides until IntersectionObserver can reveal. */
+.rise{opacity:1;transform:none}
+html.js .rise{opacity:0;transform:translateY(16px);
   transition:opacity .6s cubic-bezier(.22,.61,.36,1),transform .6s cubic-bezier(.22,.61,.36,1)}
-.rise.in{opacity:1;transform:none}
+html.js .rise.in{opacity:1;transform:none}
 .d1{transition-delay:.07s} .d2{transition-delay:.14s}
 .d3{transition-delay:.21s} .d4{transition-delay:.28s}
 .px{will-change:transform}
 
-.ledger .row{opacity:0;transform:translateY(8px);
+html.js .ledger .row{opacity:0;transform:translateY(8px);
   transition:opacity .5s ease,transform .5s ease}
-.ledger.in .row{opacity:1;transform:none}
+html.js .ledger.in .row{opacity:1;transform:none}
 .ledger.in .row:nth-child(1){transition-delay:.10s}
 .ledger.in .row:nth-child(2){transition-delay:.55s}
 .ledger.in .row.total{transition-delay:1.15s}
@@ -252,7 +254,8 @@ html.js #boot{display:grid}
   background:radial-gradient(circle at 32% 28%,#FBE9A8 0%,#F2CB5C 34%,#DFA82A 62%,#B87C15 100%);
   box-shadow:inset 0 0 0 3px rgba(255,255,255,.42),
              inset 0 -6px 10px rgba(120,78,10,.28),
-             0 8px 18px rgba(150,105,20,.22)}
+             0 8px 18px rgba(150,105,20,.22);
+  transition:background .6s ease,color .6s ease,box-shadow .6s ease}
 .coin .face.b{transform:rotateY(180deg) translateZ(1.5px)}
 .coin .rim{position:absolute;inset:0;border-radius:50%;
   background:linear-gradient(90deg,#8A5A12,#E8C25A 45%,#8A5A12);
@@ -265,14 +268,52 @@ html.js #boot{display:grid}
 @keyframes squash{0%,50%,100%{transform:scaleX(1);opacity:.5}
   25%,75%{transform:scaleX(.34);opacity:.85}}
 
+/* Coin as instrument: state modifiers on the same 3D object */
+.coin.is-idle{animation:coin-idle 7.5s cubic-bezier(.42,0,.58,1) infinite}
+.coin.is-idle .rim{animation:none;opacity:0}
+@keyframes coin-idle{
+  0%,100%{transform:rotateY(-16deg) rotateX(8deg)}
+  50%{transform:rotateY(22deg) rotateX(4deg)}
+}
+.coin.is-investigating{animation:turn 1.6s cubic-bezier(.42,0,.58,1) infinite}
+.coin.is-investigating .rim{animation:rim 1.6s linear infinite}
+.coin.is-evidence-found{animation:coin-hitch 1.8s cubic-bezier(.22,.61,.36,1) 1 both}
+.coin.is-evidence-found .rim{animation:rim 1.6s linear infinite}
+@keyframes coin-hitch{
+  0%{transform:rotateY(0)}
+  18%{transform:rotateY(42deg) scale(1.05)}
+  36%{transform:rotateY(-12deg)}
+  100%{transform:rotateY(360deg)}
+}
+.coin.is-verified{animation:none;transform:rotateY(0) rotateX(0)}
+.coin.is-verified .rim{animation:none;opacity:0}
+.coin.is-verified .face{
+  box-shadow:inset 0 0 0 3px rgba(255,255,255,.5),
+             inset 0 -6px 10px rgba(29,107,79,.18),
+             0 8px 18px rgba(29,107,79,.16)
+}
+.coin.is-not-attestable{animation:none;transform:rotateY(86deg) rotateX(6deg)}
+.coin.is-not-attestable .rim{animation:none;opacity:.85}
+.coin.is-not-attestable .face{
+  color:#3A1812;
+  background:radial-gradient(circle at 32% 28%,#E8C9A8 0%,#C4844A 36%,#A03A22 68%,#5C2218 100%);
+  box-shadow:inset 0 0 0 3px rgba(255,255,255,.2),
+             inset 0 -8px 12px rgba(60,20,12,.4),
+             0 10px 22px rgba(160,58,34,.22)
+}
+
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
   .rise,.ledger .row{opacity:1!important;transform:none!important;transition:none!important}
   .ledger.in .row.total .amt{animation:none}
   .coin,.coin .rim,#boot .shadow{animation:none}
   .coin .rim{opacity:0}
+  .coin.is-idle,.coin.is-investigating,.coin.is-evidence-found{animation:none;transform:none}
+  .coin.is-not-attestable{animation:none;transform:none}
+  .pg-pulse{animation:none!important;left:58%!important;background:var(--bad)!important;border-color:var(--bad)!important}
   .px{transform:none!important}
   .fstep:hover,.btn:hover{transform:none}
+  .beat{min-height:0;padding:48px 0}
 }
 
 footer{padding:52px 0 72px;font-size:.88rem;color:var(--ink3)}
@@ -345,6 +386,119 @@ footer a{color:var(--ink2)}
   .btn{padding:12px 16px;font-size:14px}
 }
 
+/* ---------- scroll story: instrument + case file ---------- */
+.story{position:relative;border-bottom:1px solid var(--rule);overflow:hidden}
+.story-shell{display:grid;grid-template-columns:240px minmax(0,1fr);gap:48px;
+  max-width:1180px;margin:0 auto;padding:0 32px;align-items:start}
+.story-rail{position:sticky;top:76px;height:calc(100vh - 96px);
+  display:flex;flex-direction:column;justify-content:center;gap:28px;
+  padding:20px 0 40px;z-index:4}
+.core{display:flex;flex-direction:column;align-items:center;gap:16px}
+.core .coin{width:132px;height:132px}
+.core .coin .face{font-size:50px;transform:translateZ(3px)}
+.core .coin .face.b{transform:rotateY(180deg) translateZ(3px)}
+.core-state{font-family:var(--mono);font-size:11px;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--ink3);min-height:1.2em;text-align:center}
+.core-state[data-mode="investigating"]{color:var(--accent)}
+.core-state[data-mode="evidence-found"]{color:var(--warn)}
+.core-state[data-mode="not-attestable"]{color:var(--bad)}
+.core-state[data-mode="verified"]{color:var(--good)}
+.spine{list-style:none;border-left:1px solid var(--rule);padding:4px 0 4px 16px}
+.spine li{font-family:var(--mono);font-size:10px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink3);padding:7px 0;line-height:1.35;
+  transition:color .35s ease}
+.spine li.on{color:var(--ink);font-weight:600}
+.spine li.on[data-for="verdict"]{color:var(--bad)}
+.beats{min-width:0}
+.beat{min-height:100vh;display:flex;flex-direction:column;justify-content:center;
+  padding:72px 0;scroll-margin-top:72px;position:relative}
+.beat#top{padding-top:88px}
+.beat-kicker{font-family:var(--mono);font-size:11.5px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:18px}
+.beat h1,.beat-title{font-family:var(--serif);font-size:clamp(2.4rem,6.2vw,4.4rem);
+  line-height:1.04;font-weight:500;letter-spacing:-.03em;max-width:16ch}
+.beat h1 em{font-style:italic;color:var(--accent)}
+.beat-lede{color:var(--ink2);max-width:46ch;margin-top:22px;font-size:1.12rem;line-height:1.55}
+.figure{font-family:var(--mono);font-weight:600;letter-spacing:-.04em;
+  font-variant-numeric:tabular-nums;line-height:.9;
+  font-size:clamp(3.4rem,12vw,7.2rem);color:var(--ink)}
+.figure.exposure{color:var(--warn);font-size:clamp(2.8rem,9vw,5.6rem)}
+.figure.refuse{color:var(--bad);font-size:clamp(2.2rem,7vw,4.6rem);letter-spacing:-.03em}
+.figure-cap{font-family:var(--mono);font-size:13px;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--ink3);margin-top:18px}
+.instrument{margin-top:36px;max-width:420px;border-top:1px solid var(--ink);
+  border-bottom:1px solid var(--ink)}
+.instrument .row{display:flex;justify-content:space-between;gap:20px;
+  padding:14px 0;border-bottom:1px dotted var(--rule2);
+  font-family:var(--mono);font-size:15px}
+.instrument .row:last-child{border-bottom:none}
+.instrument .lab{color:var(--ink2)}
+.instrument .amt{font-weight:600;white-space:nowrap}
+.instrument .row.total{padding-top:16px;margin-top:4px;border-top:1.5px solid var(--ink);
+  border-bottom:none}
+.instrument .row.total .lab,.instrument .row.total .amt{color:var(--ink)}
+.probe{margin-top:40px;display:grid;gap:0;max-width:520px;border-left:1px solid var(--rule2)}
+.probe .step{padding:14px 0 14px 20px;border-bottom:1px dotted var(--rule)}
+.probe .step:last-child{border-bottom:none}
+.probe .w{font-family:var(--mono);font-size:10px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink3);margin-bottom:4px}
+.probe .t{font-family:var(--serif);font-size:1.35rem;font-weight:500;letter-spacing:-.02em}
+.probe .step.engine .w{color:var(--good)}
+.probe .step.ask .w{color:var(--accent)}
+.pg{position:relative;margin-top:42px;padding-top:8px}
+.pg-track{position:absolute;left:0;right:0;top:36px;height:1px;background:var(--rule2)}
+.pg-pulse{position:absolute;top:-4px;left:0;width:9px;height:9px;
+  border:1px solid var(--gold);background:var(--paper);opacity:0}
+.beat.is-live .pg-pulse{opacity:1;animation:pg-run 3.2s cubic-bezier(.45,0,.55,1) 1 forwards}
+@keyframes pg-run{
+  0%{left:0;background:var(--paper);border-color:var(--gold)}
+  40%{left:38%;background:var(--gold)}
+  100%{left:58%;background:var(--bad);border-color:var(--bad)}
+}
+.pg-row{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;
+  position:relative;z-index:1;overflow-x:auto}
+.pg-node{flex:1;min-width:72px;text-align:center;padding:10px 6px 12px;
+  border:1px solid var(--rule2);background:var(--paper);
+  font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink3)}
+.pg-node b{display:block;font-size:11px;letter-spacing:0;text-transform:none;
+  font-weight:600;margin-top:8px;color:var(--ink)}
+.pg-node.ok{border-color:#C4DED2;color:var(--good)}
+.pg-node.ok b{color:var(--good)}
+.pg-node.break{border-color:var(--bad);background:var(--bad-soft);color:var(--bad)}
+.pg-node.break b{color:var(--bad)}
+.pg-node.unproven{border-style:dashed;color:var(--warn)}
+.pg-node.unproven b{color:var(--warn)}
+.instrument .up{color:var(--bad)} .instrument .dn{color:var(--good)}
+.hold{margin-top:28px;max-width:36ch;color:var(--ink2);font-size:.98rem}
+.cta-story{margin-top:36px}
+
+@media(max-width:900px){
+  .story-shell{grid-template-columns:1fr;padding:0 20px;gap:0}
+  .story-rail{position:sticky;top:64px;height:auto;flex-direction:row;
+    align-items:center;justify-content:flex-start;gap:18px;
+    background:rgba(252,251,248,.94);backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--rule);padding:10px 0;margin:0 -20px;
+    padding-left:20px;padding-right:20px}
+  .core{flex-direction:row;gap:12px}
+  .core .coin{width:52px;height:52px}
+  .core .coin .face{font-size:20px;transform:translateZ(1.5px)}
+  .core .coin .face.b{transform:rotateY(180deg) translateZ(1.5px)}
+  .core-state{text-align:left;font-size:10px}
+  .spine{display:none}
+  .beat{min-height:auto;padding:56px 0 64px}
+  .beat#top{padding-top:28px}
+  .figure{font-size:clamp(2.6rem,16vw,4.2rem)}
+  .pg-node{min-width:64px;font-size:9px}
+}
+
+@media(max-width:640px){
+  .story-shell{padding:0 18px}
+  .story-rail{margin:0 -18px;padding-left:18px;padding-right:18px}
+  .beat-lede{font-size:1.02rem}
+  .probe .t{font-size:1.15rem}
+}
+
 /* ---------- footer ---------- */
 footer{background:var(--surface);border-top:1px solid var(--rule);
   padding:56px 0 0;font-size:.92rem;color:var(--ink2);margin-top:0}
@@ -385,6 +539,7 @@ footer a:hover{color:var(--accent);text-decoration:underline}
 <nav><div class="wrap">
   <a class="mark" href="#top"><svg class="logo" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M8 20.6 L16 4.6 L24 20.6" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M11.4 15.7 H20.6" stroke="currentColor" stroke-width="2.7" stroke-linecap="round"/><path d="M8 24.6 H24" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M8 27.8 H24" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg><span class="name">Attest</span></a>
   <div class="links">
+    <a href="#top">The close</a>
     <a href="#start">How it works</a>
     <a href="#who">Who it's for</a>
     <a href="close-pack.html">Example close pack</a>
@@ -392,30 +547,112 @@ footer a:hover{color:var(--accent);text-decoration:underline}
   </div>
 </div></nav>
 
-<header id="top">
+<section class="story" id="proof" aria-label="How a tied close fails attestation">
   <div class="wm px" data-px="0.18" aria-hidden="true">₹</div>
-  <div class="wrap">
-    <p class="eyebrow rise">Proof of close · Indian merchants · Razorpay settlements</p>
-    <h1 class="rise d1 px" data-px="-0.06">Razorpay tells you what happened.
-      Attest proves whether it <em>should have.</em></h1>
-    <p class="lede rise d2"><b>A settlement can tie and still be wrong.</b> Razorpay
-      pays exactly what its own report specifies, so the report and the bank agree
-      by construction. That tie proves the money arrived. It proves nothing about
-      whether the deductions inside were correct — and it is the number every
-      reconciliation tool reports as success.</p>
-    <div class="cta rise d3">
-      <a href="app.html" class="btn"><span>Try the demo</span><span class="arw">→</span></a>
-      <a href="app.html" class="btn ghost">Connect Razorpay Test Mode</a>
-      <span class="aside">The demo needs no account and no credentials.</span>
-    </div>
-    <div class="trust rise d4">
-      <span><b>3,043</b> records closed in <b>0.01s</b></span>
-      <span><b>14</b> defect classes, <b>4</b> held out</span>
-      <span><b>0</b> false positives</span>
-      <span>Live Razorpay Settlement Recon API</span>
+  <div class="story-shell">
+    <aside class="story-rail" aria-hidden="false">
+      <div class="core">
+        <div class="coin is-idle" id="storycoin">
+          <span class="face">₹</span><span class="rim"></span><span class="face b">₹</span>
+        </div>
+        <p class="core-state" id="corestate" data-mode="idle" aria-live="polite">Idle</p>
+      </div>
+      <ol class="spine" id="spine">
+        <li data-for="thesis">Thesis</li>
+        <li data-for="close">Tied close</li>
+        <li data-for="zero">₹0 variance</li>
+        <li data-for="investigate">AI investigates</li>
+        <li data-for="chain">Proof gap found</li>
+        <li data-for="exposure">Hidden exposure</li>
+        <li data-for="verdict">Not attestable</li>
+      </ol>
+    </aside>
+
+    <div class="beats">
+      <article class="beat" id="top" data-beat="thesis" data-coin="idle" data-label="Idle">
+        <p class="beat-kicker">Proof of close · Indian merchants · Razorpay settlements</p>
+        <h1>A close isn't proven because the numbers match.<br>
+          It's proven when the <em>evidence</em> does.</h1>
+        <p class="beat-lede">Razorpay tells you what happened. Attest proves whether
+          it should have. Scroll the instrument — the argument is in the figures.</p>
+        <div class="cta cta-story">
+          <a href="app.html" class="btn"><span>Run the demo close</span><span class="arw">→</span></a>
+          <a href="app.html" class="btn ghost">Connect Razorpay Test Mode</a>
+        </div>
+      </article>
+
+      <article class="beat" data-beat="close" data-coin="idle" data-label="Idle">
+        <p class="beat-kicker">Settlement batch · August 2026</p>
+        <p class="beat-title">A clean close, on paper.</p>
+        <div class="instrument">
+          <div class="row"><span class="lab">Settlement</span><span class="amt">tied</span></div>
+          <div class="row"><span class="lab">Bank credit</span><span class="amt">tied</span></div>
+          <div class="row total"><span class="lab">Every automated check</span><span class="amt">pass</span></div>
+        </div>
+      </article>
+
+      <article class="beat" data-beat="zero" data-coin="idle" data-label="Idle">
+        <p class="figure zero">₹0.00</p>
+        <p class="figure-cap">Variance</p>
+      </article>
+
+      <article class="beat" data-beat="investigate" data-coin="investigating" data-label="Investigating">
+        <p class="beat-kicker">Controller · what to look at next</p>
+        <p class="figure" style="font-size:clamp(2rem,6vw,3.6rem);letter-spacing:-.03em">AI investigates</p>
+        <div class="probe">
+          <div class="step ask">
+            <div class="w">Observation</div>
+            <div class="t">Aggregate agreement detected.</div>
+          </div>
+          <div class="step ask">
+            <div class="w">Hypothesis</div>
+            <div class="t">Compensating errors may be hiding inside the tie.</div>
+          </div>
+          <div class="step engine">
+            <div class="w">Deterministic action</div>
+            <div class="t">Rebuild the fee from the contract. Rebuild the refund from the export. Never from the report under audit.</div>
+          </div>
+        </div>
+      </article>
+
+      <article class="beat" data-beat="chain" data-coin="evidence-found" data-label="Evidence found">
+        <p class="beat-kicker">Proof chain</p>
+        <p class="beat-title">Proof gap found.</p>
+        <div class="pg">
+          <div class="pg-track"><i class="pg-pulse"></i></div>
+          <div class="pg-row">
+            <div class="pg-node ok">Order<b>held</b></div>
+            <div class="pg-node ok">Payment<b>held</b></div>
+            <div class="pg-node break">Fee<b>break</b></div>
+            <div class="pg-node break">Refund<b>break</b></div>
+            <div class="pg-node ok">Settlement<b>tied</b></div>
+            <div class="pg-node unproven">Bank<b>unproven</b></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="beat" data-beat="exposure" data-coin="evidence-found" data-label="Evidence found">
+        <p class="figure exposure">₹8,495.80</p>
+        <p class="figure-cap">Hidden exposure · unproven</p>
+        <div class="instrument">
+          <div class="row"><span class="lab">Gateway fee overcharged</span><span class="amt up">+ ₹4,248.00</span></div>
+          <div class="row"><span class="lab">Refund under-deducted</span><span class="amt dn">− ₹4,247.80</span></div>
+          <div class="row total"><span class="lab">What the batch total looks like</span><span class="amt">₹0.20 out</span></div>
+        </div>
+      </article>
+
+      <article class="beat" data-beat="verdict" data-coin="not-attestable" data-label="Not attestable">
+        <p class="figure refuse">Not attestable</p>
+        <p class="figure-cap">The totals agree. The evidence does not.</p>
+        <p class="hold">Twenty paise of visible variance against ₹8,495.80 of real error — understated 42,479×. Inside any tolerance. The close is refused.</p>
+        <div class="cta cta-story">
+          <a href="app.html" class="btn"><span>Run this exact close</span><span class="arw">→</span></a>
+          <a href="#start" class="btn ghost">How it works</a>
+        </div>
+      </article>
     </div>
   </div>
-</header>
+</section>
 
 <!-- ==================== START HERE ==================== -->
 <section id="start" class="tint"><div class="wrap">
@@ -423,6 +660,12 @@ footer a:hover{color:var(--accent);text-decoration:underline}
   <h2>What you actually do</h2>
   <p class="sub">You do not need to understand reconciliation to use this. You need
     two files you already have, and about two minutes.</p>
+  <div class="trust" style="margin-top:0;margin-bottom:8px;padding-top:0;border:0">
+    <span><b>3,043</b> records closed in <b>0.01s</b></span>
+    <span><b>14</b> defect classes, <b>4</b> held out</span>
+    <span><b>0</b> false positives</span>
+    <span>Live Razorpay Settlement Recon API</span>
+  </div>
 
   <div class="flow">
     <div class="fstep rise">
@@ -835,11 +1078,10 @@ footer a:hover{color:var(--accent);text-decoration:underline}
 
   document.querySelectorAll('.rise, #ledger').forEach(function (el) { io.observe(el); });
 
-  // The hero reveals as the coin clears rather than on scroll, otherwise it
-  // animates behind the overlay and is missed.
+  // The first beat is already in the document; the boot overlay is what hides it.
   window.attestReady(function () {
     requestAnimationFrame(function () {
-      document.querySelectorAll('header .rise').forEach(function (el) {
+      document.querySelectorAll('.beat#top .rise, header .rise').forEach(function (el) {
         el.classList.add('in');
       });
     });
@@ -892,6 +1134,61 @@ footer a:hover{color:var(--accent);text-decoration:underline}
   if (qa) new IntersectionObserver(function (es, ob) {
     if (es[0].isIntersecting) { countUp(); ob.disconnect(); }
   }, { threshold: 0.3 }).observe(qa);
+
+  // ---- story coin + beat sync ---------------------------------------
+  // Presentation only: the figures are the ones already on this page.
+  var storyCoin = document.getElementById('storycoin');
+  var coreState = document.getElementById('corestate');
+  var beats = [].slice.call(document.querySelectorAll('.beat[data-beat]'));
+  var lastBeat = '';
+
+  function applyBeat(beat) {
+    if (!beat) return;
+    var id = beat.getAttribute('data-beat');
+    if (id === lastBeat) return;
+    lastBeat = id;
+    var mode = beat.getAttribute('data-coin') || 'idle';
+    var label = beat.getAttribute('data-label') || mode;
+    if (storyCoin) storyCoin.className = 'coin is-' + mode;
+    if (coreState) {
+      coreState.textContent = label;
+      coreState.setAttribute('data-mode', mode);
+    }
+    document.querySelectorAll('#spine li').forEach(function (li) {
+      li.classList.toggle('on', li.getAttribute('data-for') === id);
+    });
+    beats.forEach(function (b) { b.classList.toggle('is-live', b === beat); });
+  }
+
+  function nearestBeat() {
+    var mid = window.innerHeight * 0.42;
+    var best = null, bestDist = Infinity;
+    beats.forEach(function (b) {
+      var r = b.getBoundingClientRect();
+      if (r.bottom < 90 || r.top > window.innerHeight - 40) return;
+      var d = Math.abs((r.top + r.height / 2) - mid);
+      if (d < bestDist) { bestDist = d; best = b; }
+    });
+    return best || beats[0];
+  }
+
+  if (!beats.length) return;
+  if (reduced) {
+    var chainBeat = document.querySelector('.beat[data-beat="chain"]');
+    if (chainBeat) chainBeat.classList.add('is-live');
+    applyBeat(beats[0]);
+  } else {
+    var storyTick = false;
+    function storyFrame() {
+      applyBeat(nearestBeat());
+      storyTick = false;
+    }
+    window.addEventListener('scroll', function () {
+      if (!storyTick) { storyTick = true; requestAnimationFrame(storyFrame); }
+    }, { passive: true });
+    window.attestReady(function () { storyFrame(); });
+    storyFrame();
+  }
 })();
 </script>
 </body></html>
