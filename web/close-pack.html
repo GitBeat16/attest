@@ -2,6 +2,9 @@
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Attest — close pack 2026-08</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="favicon-32.png" sizes="32x32">
+<meta name="theme-color" content="#1B4B73">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -169,10 +172,22 @@ h2{scroll-margin-top:70px}
   .tbl td.n{text-align:left;font-size:1.08rem;font-weight:600}
   .tbl tr.miss{background:var(--bad-soft)}
 }
+
+.logo{width:24px;height:24px;color:var(--accent);flex:none}
+footer .fgrid{display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:34px;padding-bottom:34px}
+footer h5{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink3);font-weight:500;margin-bottom:13px}
+footer ul{list-style:none;margin:0;padding:0}
+footer li{margin-bottom:8px}
+footer .fbrand p{color:var(--ink3);font-size:.88rem;max-width:36ch;line-height:1.55;margin-top:10px}
+footer .fbase{border-top:1px solid var(--rule);padding-top:18px;display:flex;
+  justify-content:space-between;gap:18px;flex-wrap:wrap;font-family:var(--mono);
+  font-size:11px;color:var(--ink3)}
+@media(max-width:700px){footer .fgrid{grid-template-columns:1fr;gap:26px}}
 </style></head><body>
 
 <nav><div class="wrap">
-  <a class="mark" href="index.html"><span class="glyph">A</span><span class="name">Attest</span></a>
+  <a class="mark" href="index.html"><svg class="logo" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M8 20.6 L16 4.6 L24 20.6" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M11.4 15.7 H20.6" stroke="currentColor" stroke-width="2.7" stroke-linecap="round"/><path d="M8 24.6 H24" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M8 27.8 H24" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg><span class="name">Attest</span></a>
   <div class="meta">Acme Athleisure Private Limited<br>2026-08 &nbsp;·&nbsp; 3,043 records
     from 7 systems &nbsp;·&nbsp; closed in 0.01s</div>
 </div></nav>
@@ -304,7 +319,7 @@ h2{scroll-margin-top:70px}
 <p class="lede">Every figure above is covered by this digest. Change one rupee
   anywhere on the page and it stops matching.</p>
 <div class="sealbox">
-  <div class="sd">7e6077c5 28c09fae 1b84556a c3f53148</div>
+  <div class="sd">af8bb302 31446635 6faf19d6 de1dd920</div>
   <div class="sm">SHA-256 over 3,043 records ·
     20/22 batches tied ·
     743/1018 lines proven ·
@@ -320,12 +335,35 @@ h2{scroll-margin-top:70px}
   by its owner or by us. An auditor asks one question of it: was this exact
   digest recorded, and when?</div>
 
-<!--attest-seal:v1 7e6077c528c09fae1b84556ac3f531481a70250064689bdff5be084ed9aea7fc {"attestable":false,"batches":22,"exceptions":[["ADJUSTMENT",3,7158],["ADJUSTMENT",5,9183],["ADJUSTMENT",6,14943],["CHARGEBACK_ORPHAN",1,153117],["CREDIT",10,1104950],["CREDIT",22,2785265],["DUPLICATE_AWB",1,280116],["DUPLICATE_SETTLEMENT_LINE",1,96263],["GST",1,11740],["GST",1,18103],["GST",2,41216],["MDR",1,412],["MDR",1,412],["MDR",4,4],["MDR",5,733],["MDR",6,6],["MDR",6,550],["MDR",7,7],["MDR",7,7],["MDR",7,717],["MDR",7,1010],["MDR",8,8],["MDR",8,8],["MDR",8,8],["MDR",8,530],["MDR",9,9],["MDR",10,10],["MDR",13,1901],["MDR",15,194],["MDR",19,976],["MDR",20,2191],["MDR",27,596],["MDR",29,1901],["OFFSETTING_PAIR",1,822],["OFFSETTING_PAIR",1,822],["ORPHAN_BANK_CREDIT",1,517000],["ORPHAN_BANK_CREDIT",1,2717360],["REFUND_MISMATCH",1,338653],["SELF_REFERENTIAL_TIE",1,212],["SELF_REFERENTIAL_TIE",1,412],["SELF_REFERENTIAL_TIE",1,412],["SELF_REFERENTIAL_TIE",1,617],["SELF_REFERENTIAL_TIE",1,643],["SELF_REFERENTIAL_TIE",1,675],["SELF_REFERENTIAL_TIE",1,839],["SELF_REFERENTIAL_TIE",1,862],["SELF_REFERENTIAL_TIE",1,1186],["SELF_REFERENTIAL_TIE",1,14307],["SELF_REFERENTIAL_TIE",1,20334],["SELF_REFERENTIAL_TIE",1,42347],["TOLERANCE_ABUSE",1,200],["UNREFERENCED_ADJ",1,225100],["UNREFERENCED_ADJ",1,393300]],"lines":1018,"merchant":"Acme Athleisure Private Limited","overturned":15,"period":"2026-08","proven":743,"records":3043,"residual_paise":4661732,"tested":22,"tied":20,"v":1,"volume_paise":183176093} :attest-seal-->
+<!--attest-seal:v1 af8bb302314466356faf19d6de1dd920d1716813ca2fcc9c54fabf5869c45528 {"attestable":false,"batches":22,"exceptions":[["ADJUSTMENT",3,7158],["ADJUSTMENT",5,9183],["ADJUSTMENT",6,14943],["CHARGEBACK_ORPHAN",1,153117],["CREDIT",10,1104950],["CREDIT",22,2785265],["DUPLICATE_AWB",1,280116],["DUPLICATE_SETTLEMENT_LINE",1,96263],["GST",1,11740],["GST",1,18103],["GST",2,41216],["MDR",1,412],["MDR",1,412],["MDR",4,4],["MDR",5,733],["MDR",6,6],["MDR",6,550],["MDR",7,7],["MDR",7,7],["MDR",7,717],["MDR",7,1010],["MDR",8,8],["MDR",8,8],["MDR",8,8],["MDR",8,530],["MDR",9,9],["MDR",10,10],["MDR",13,1901],["MDR",15,194],["MDR",19,976],["MDR",20,2191],["MDR",27,596],["MDR",29,1901],["OFFSETTING_PAIR",1,822],["OFFSETTING_PAIR",1,822],["ORPHAN_BANK_CREDIT",1,517000],["ORPHAN_BANK_CREDIT",1,2717360],["REFUND_MISMATCH",1,338653],["SELF_REFERENTIAL_TIE",1,212],["SELF_REFERENTIAL_TIE",1,412],["SELF_REFERENTIAL_TIE",1,412],["SELF_REFERENTIAL_TIE",1,617],["SELF_REFERENTIAL_TIE",1,643],["SELF_REFERENTIAL_TIE",1,675],["SELF_REFERENTIAL_TIE",1,839],["SELF_REFERENTIAL_TIE",1,862],["SELF_REFERENTIAL_TIE",1,1186],["SELF_REFERENTIAL_TIE",1,14307],["SELF_REFERENTIAL_TIE",1,20334],["SELF_REFERENTIAL_TIE",1,42347],["TOLERANCE_ABUSE",1,200],["UNREFERENCED_ADJ",1,225100],["UNREFERENCED_ADJ",1,393300]],"lines":1018,"merchant":"Acme Athleisure Private Limited","overturned":15,"period":"2026-08","proven":743,"records":3043,"residual_paise":4661732,"tested":22,"tied":20,"v":1,"volume_paise":183176093} :attest-seal-->
 
 <footer>
-  Attest &middot; Razorpay AI Buildathon, Track 4<br>
-  Deterministic engine, zero runtime dependencies. Every figure reproducible with
-  <span style="color:var(--ink2)">python -m attest.generate --out data --orders 1200</span><br>
-  <a href="index.html">&larr; What Attest is</a>
+<div class="fgrid">
+  <div class="fbrand">
+    <b style="color:var(--ink)">Attest</b>
+    <p>Reports what a close can prove, not what it happened to match.
+      Deterministic engine, zero runtime dependencies, every figure reproducible.</p>
+  </div>
+  <div>
+    <h5>This pack</h5>
+    <ul>
+      <li><a href="index.html">What Attest is</a></li>
+      <li><a href="app.html">Close your own month</a></li>
+      <li><a href="index.html#seal">How the seal works</a></li>
+    </ul>
+  </div>
+  <div>
+    <h5>Reproduce it</h5>
+    <ul>
+      <li><span style="color:var(--ink2)">python3 -m attest.generate --out data</span></li>
+      <li><span style="color:var(--ink2)">python3 -m attest.run --data data</span></li>
+      <li><span style="color:var(--ink2)">python3 -m attest.seal --verify</span></li>
+    </ul>
+  </div>
+</div>
+<div class="fbase">
+  <span>Attest &middot; Razorpay AI Buildathon 2026, Track 4</span>
+  <span>Synthetic benchmark corpus &middot; no real merchant data</span>
+</div>
 </footer>
 </div></body></html>

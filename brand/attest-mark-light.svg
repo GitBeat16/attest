@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32"
+     fill="none" role="img" aria-label="Attest">
+  <title>Attest</title>
+  <path d="M8 20.6 L16 4.6 L24 20.6" stroke="#F4F1EA" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M11.4 15.7 H20.6" stroke="#F4F1EA" stroke-width="2.7" stroke-linecap="round"/>
+  <path d="M8 24.6 H24" stroke="#F4F1EA" stroke-width="1.9" stroke-linecap="round"/>
+  <path d="M8 27.8 H24" stroke="#F4F1EA" stroke-width="1.9" stroke-linecap="round"/>
+</svg>

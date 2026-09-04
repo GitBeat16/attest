@@ -203,6 +203,18 @@ h2{scroll-margin-top:70px}
   .tbl td.n{text-align:left;font-size:1.08rem;font-weight:600}
   .tbl tr.miss{background:var(--bad-soft)}
 }
+
+.logo{width:24px;height:24px;color:var(--accent);flex:none}
+footer .fgrid{display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:34px;padding-bottom:34px}
+footer h5{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink3);font-weight:500;margin-bottom:13px}
+footer ul{list-style:none;margin:0;padding:0}
+footer li{margin-bottom:8px}
+footer .fbrand p{color:var(--ink3);font-size:.88rem;max-width:36ch;line-height:1.55;margin-top:10px}
+footer .fbase{border-top:1px solid var(--rule);padding-top:18px;display:flex;
+  justify-content:space-between;gap:18px;flex-wrap:wrap;font-family:var(--mono);
+  font-size:11px;color:var(--ink3)}
+@media(max-width:700px){footer .fgrid{grid-template-columns:1fr;gap:26px}}
 """
 
 
@@ -367,11 +379,14 @@ def render(p: dict) -> str:
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Attest — close pack {esc(p['period'])}</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="favicon-32.png" sizes="32x32">
+<meta name="theme-color" content="#1B4B73">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>{CSS}</style></head><body>
 
 <nav><div class="wrap">
-  <a class="mark" href="index.html"><span class="glyph">A</span><span class="name">Attest</span></a>
+  <a class="mark" href="index.html"><svg class="logo" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M8 20.6 L16 4.6 L24 20.6" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M11.4 15.7 H20.6" stroke="currentColor" stroke-width="2.7" stroke-linecap="round"/><path d="M8 24.6 H24" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M8 27.8 H24" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg><span class="name">Attest</span></a>
   <div class="meta">{esc(p['merchant'])}<br>{esc(p['period'])} &nbsp;·&nbsp; {p['records']:,} records
     from 7 systems &nbsp;·&nbsp; closed in {p['seconds']}s</div>
 </div></nav>
@@ -459,10 +474,33 @@ def render(p: dict) -> str:
 {seal_blob}
 
 <footer>
-  Attest &middot; Razorpay AI Buildathon, Track 4<br>
-  Deterministic engine, zero runtime dependencies. Every figure reproducible with
-  <span style="color:var(--ink2)">python -m attest.generate --out data --orders 1200</span><br>
-  <a href="index.html">&larr; What Attest is</a>
+<div class="fgrid">
+  <div class="fbrand">
+    <b style="color:var(--ink)">Attest</b>
+    <p>Reports what a close can prove, not what it happened to match.
+      Deterministic engine, zero runtime dependencies, every figure reproducible.</p>
+  </div>
+  <div>
+    <h5>This pack</h5>
+    <ul>
+      <li><a href="index.html">What Attest is</a></li>
+      <li><a href="app.html">Close your own month</a></li>
+      <li><a href="index.html#seal">How the seal works</a></li>
+    </ul>
+  </div>
+  <div>
+    <h5>Reproduce it</h5>
+    <ul>
+      <li><span style="color:var(--ink2)">python3 -m attest.generate --out data</span></li>
+      <li><span style="color:var(--ink2)">python3 -m attest.run --data data</span></li>
+      <li><span style="color:var(--ink2)">python3 -m attest.seal --verify</span></li>
+    </ul>
+  </div>
+</div>
+<div class="fbase">
+  <span>Attest &middot; Razorpay AI Buildathon 2026, Track 4</span>
+  <span>Synthetic benchmark corpus &middot; no real merchant data</span>
+</div>
 </footer>
 </div></body></html>"""
     from .seal import stamp

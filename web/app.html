@@ -4,6 +4,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Attest — close your month</title>
 <meta name="robots" content="noindex">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#1B4B73">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap">
@@ -32,9 +36,8 @@ nav{border-bottom:1px solid var(--rule);position:sticky;top:0;z-index:40;
   background:rgba(252,251,248,.95);backdrop-filter:blur(8px)}
 nav .wrap{display:flex;align-items:center;justify-content:space-between;height:60px;gap:16px}
 .mark{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink)}
-.mark .glyph{width:25px;height:25px;border:1.5px solid var(--accent);border-radius:3px;
-  display:grid;place-items:center;font-family:var(--mono);font-size:12px;font-weight:600;
-  color:var(--accent)}
+.logo{width:25px;height:25px;color:var(--accent);flex:none}
+.mark{display:flex;align-items:center;gap:11px;text-decoration:none;color:var(--ink)}
 .mark .name{font-family:var(--mono);font-size:13px;letter-spacing:.22em;
   text-transform:uppercase;font-weight:600}
 nav .who{font-family:var(--mono);font-size:12px;color:var(--ink3);
@@ -236,11 +239,39 @@ footer{padding:34px 0 66px;margin-top:52px;border-top:1px solid var(--rule);
   .tbl td:first-child::before{content:none}
   .tbl td.n{text-align:left;font-weight:600}
 }
+
+/* ---------- footer ---------- */
+footer{background:var(--surface);border-top:1px solid var(--rule);
+  padding:56px 0 0;font-size:.92rem;color:var(--ink2);margin-top:0}
+.fgrid{display:grid;grid-template-columns:1.5fr 1fr 1fr 1.2fr;gap:38px;
+  padding-bottom:44px}
+.fbrand .mark{margin-bottom:14px}
+.fbrand p{color:var(--ink3);font-size:.9rem;max-width:34ch;line-height:1.55}
+.fseal{margin-top:18px;padding-top:14px;border-top:1px solid var(--rule2)}
+.fseal .lab{font-family:var(--mono);font-size:10px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink3)}
+.fseal .val{font-family:var(--mono);font-size:11.5px;color:var(--ink2);
+  word-break:break-all;margin-top:5px}
+footer h5{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink3);font-weight:500;margin-bottom:14px}
+footer ul{list-style:none}
+footer li{margin-bottom:9px}
+footer a{color:var(--ink2);text-decoration:none;transition:color .15s}
+footer a:hover{color:var(--accent);text-decoration:underline}
+.frefuse li{color:var(--ink3);font-size:.87rem;line-height:1.5;padding-left:15px;
+  position:relative;margin-bottom:11px}
+.frefuse li::before{content:"\00d7";position:absolute;left:0;color:var(--bad);font-weight:600}
+.fbase{border-top:1px solid var(--rule2);padding:20px 0 40px;display:flex;
+  justify-content:space-between;gap:20px;flex-wrap:wrap;
+  font-family:var(--mono);font-size:11.5px;color:var(--ink3)}
+@media(max-width:860px){.fgrid{grid-template-columns:1fr 1fr;gap:30px}}
+@media(max-width:560px){.fgrid{grid-template-columns:1fr;gap:26px;padding-bottom:34px}
+  footer{padding-top:42px}}
 </style></head>
 <body>
 
 <nav><div class="wrap">
-  <a class="mark" href="/"><span class="glyph">A</span><span class="name">Attest</span></a>
+  <a class="mark" href="/"><svg class="logo" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M8 20.6 L16 4.6 L24 20.6" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M11.4 15.7 H20.6" stroke="currentColor" stroke-width="2.7" stroke-linecap="round"/><path d="M8 24.6 H24" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M8 27.8 H24" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg><span class="name">Attest</span></a>
   <div class="who">
     <span id="who"></span>
     <button class="btn ghost sm" id="signout" hidden>Sign out</button>
@@ -432,11 +463,60 @@ footer{padding:34px 0 66px;margin-top:52px;border-top:1px solid var(--rule);
   </section>
 </section>
 
-<footer class="wrap" style="padding-left:0;padding-right:0">
-  Attest · Razorpay AI Buildathon, Track 4 &nbsp;·&nbsp;
-  <a href="/">What Attest is</a> &nbsp;·&nbsp;
-  <a href="/close-pack.html">Benchmark close pack</a>
-</footer>
+<footer><div class="wrap">
+  <div class="fgrid">
+    <div class="fbrand">
+      <a class="mark" href="/"><span style="color:var(--accent)"><svg class="logo" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M8 20.6 L16 4.6 L24 20.6" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M11.4 15.7 H20.6" stroke="currentColor" stroke-width="2.7" stroke-linecap="round"/><path d="M8 24.6 H24" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M8 27.8 H24" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></span>
+        <span class="name">Attest</span></a>
+      <p>A finance-ops agent that reports what it can <i>prove</i>, not what it
+        happened to match. Built for Indian merchants closing a month on Razorpay
+        settlements.</p>
+      <div class="fseal">
+        <div class="lab">Benchmark close pack · sealed</div>
+        <div class="val">af8bb302 31446635 6faf19d6 de1dd920</div>
+      </div>
+    </div>
+
+    <div>
+      <h5>Product</h5>
+      <ul>
+        <li><a href="app.html">Close your own month</a></li>
+        <li><a href="close-pack.html">Example close pack</a></li>
+        <li><a href="index.html#start">How it works</a></li>
+        <li><a href="index.html#ladder">What each file buys you</a></li>
+        <li><a href="index.html#who">Who it's for</a></li>
+      </ul>
+    </div>
+
+    <div>
+      <h5>The build</h5>
+      <ul>
+        <li><a href="https://github.com/GitBeat16/attest">Source on GitHub</a></li>
+        <li><a href="https://github.com/GitBeat16/attest/blob/main/ARCHITECTURE.md">Architecture</a></li>
+        <li><a href="https://github.com/GitBeat16/attest/blob/main/USE-CASES.md">Use cases</a></li>
+        <li><a href="https://github.com/GitBeat16/attest/blob/main/README.md">Read me</a></li>
+        <li><a href="index.html#seal">How the seal works</a></li>
+      </ul>
+    </div>
+
+    <div>
+      <h5>What Attest will not do</h5>
+      <ul class="frefuse">
+        <li>Store your Razorpay secret key. Live keys are refused outright.</li>
+        <li>Quote an accuracy figure on your own data — there is no answer key
+          for a real month.</li>
+        <li>Post anything to your ledger. Every claim is drafted for a human.</li>
+        <li>Sign a close it cannot support.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="fbase">
+    <span>Attest · Razorpay AI Buildathon 2026, Track 4 — AI Finance Controller</span>
+    <span>MIT licence &nbsp;·&nbsp; benchmark figures are synthetic by necessity,
+      and say so on their face</span>
+  </div>
+</div></footer>
 </div>
 
 <script type="module">
