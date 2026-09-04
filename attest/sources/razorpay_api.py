@@ -44,7 +44,7 @@ class ReconRow:
     entity_id: str
     type: str                     # payment | refund | transfer | adjustment
     debit: int
-    credit: int
+    credit: int | None            # None means the API did not report one; 0 is a value
     amount: int
     currency: str
     fee: int                      # MDR, in paise
@@ -83,12 +83,23 @@ class ReconRow:
         minus tax and compare. A disagreement is not something to smooth over --
         it is exactly the class of finding this whole system exists to surface, so
         it is reported rather than silently trusted.
+
+        The `is None` test is load-bearing. A credit of exactly zero is a real
+        and common value -- a fully refunded payment, an adjustment that nets
+        out -- and treating it as "missing" would silently substitute a computed
+        figure for a reported one, which is the precise failure this module
+        exists to detect. Falsiness is not absence.
         """
-        return self.credit if self.credit else (self.amount - self.fee - self.tax)
+        if self.credit is None:
+            return self.amount - self.fee - self.tax
+        return self.credit
 
     @property
     def net_disagrees_by(self) -> int:
-        if not self.credit:
+        """Zero when Razorpay reported no credit -- there is nothing to disagree
+        with. A reported zero that differs from amount - fee - tax is a genuine
+        disagreement and is returned as one."""
+        if self.credit is None:
             return 0
         return self.credit - (self.amount - self.fee - self.tax)
 
@@ -107,7 +118,9 @@ class ReconBatch:
         return (
             sum(r.net for r in self.payments)
             - sum(r.amount for r in self.refunds)
-            + sum(r.credit - r.debit for r in self.adjustments)
+            # r.net falls back to amount - fee - tax only when the API reported
+            # no credit at all; a reported zero stays a zero.
+            + sum(r.net - r.debit for r in self.adjustments)
         )
 
     @property
@@ -188,7 +201,7 @@ def _row(i: dict) -> ReconRow:
         entity_id=i.get("entity_id", ""),
         type=i.get("type", ""),
         debit=int(i.get("debit") or 0),
-        credit=int(i.get("credit") or 0),
+        credit=(int(i["credit"]) if i.get("credit") is not None else None),
         amount=int(i.get("amount") or 0),
         currency=i.get("currency", "INR"),
         fee=int(i.get("fee") or 0),

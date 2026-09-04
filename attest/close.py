@@ -27,7 +27,7 @@ from pathlib import Path
 from . import audit as audit_mod
 from . import engine as engine_mod
 from .ingest import load, resolve, resolve_naive
-from .money import fmt
+from .money import fmt, pct
 from .recovery import build_claims, summarise
 from .run import build_exceptions, _payload
 
@@ -107,9 +107,30 @@ def stage(files: dict[str, str], merchant: str, period: str,
     dest.mkdir(parents=True, exist_ok=True)
     supplied, missing = [], []
 
-    for name, _label, required in SOURCES:
+    for name, label, required in SOURCES:
         body = (files.get(name) or "").strip()
         if body:
+            # Check the header before the engine does. A missing column would
+            # otherwise surface as a KeyError several layers down, which tells a
+            # merchant nothing about which file they uploaded or what is wrong
+            # with it.
+            if name.endswith(".csv"):
+                want = set(HEADERS[name].split(","))
+                got = {h.strip().lstrip("\ufeff")
+                       for h in body.splitlines()[0].split(",")}
+                gap = want - got
+                if gap:
+                    raise CloseError(
+                        f"{label} is missing {len(gap)} column"
+                        f"{'' if len(gap) == 1 else 's'}: "
+                        f"{', '.join(sorted(gap))}. Expected the header "
+                        f"{HEADERS[name]}")
+            elif name.endswith(".json"):
+                try:
+                    json.loads(body)
+                except json.JSONDecodeError as e:
+                    raise CloseError(f"{label} is not valid JSON ({e.msg} at "
+                                     f"line {e.lineno}).") from None
             supplied.append(name)
             (dest / name).write_text(body + "\n", encoding="utf-8")
             continue
@@ -254,4 +275,124 @@ def close(src: Path, supplied: list[str], missing: list[str]) -> dict:
         "exceptions": exceptions,
     }
     return {"summary": summary, "payload": payload, "claims": claims,
-            "today": today}
+            "today": today, "corpus": corpus, "res": res, "aud": aud}
+
+# ==========================================================================
+# What a conventional tool would have reported, and the evidence that it is
+# wrong. Both are derived from the same corpus the engine read -- nothing here
+# is narrated, asserted or stored; it is the same arithmetic presented the way
+# each audience would present it.
+# ==========================================================================
+def naive_view(corpus, res, aud) -> dict | None:
+    """The batch a total-level check waves through, and what is inside it.
+
+    Returns None when the run contains no compensating pair, because inventing
+    one would be exactly the dishonesty this project exists to argue against.
+    """
+    pairs = [a for a in aud.overturned if a.hypothesis == "offsetting_pair"]
+    if not pairs:
+        return None
+    worst = max(pairs, key=lambda a: a.delta)
+    ev = worst.evidence
+    b = corpus.batches.get(worst.target)
+    if b is None:
+        return None
+
+    line_var = ev["line_variance_paise"]
+    refund_var = ev["refund_variance_paise"]
+    residual = ev["residual_paise"]
+    exposure = abs(line_var) + abs(refund_var)
+
+    gross = sum(l.gross for l in b.lines)
+    charged_fee = sum(l.mdr for l in b.lines)
+    charged_tax = sum(l.gst_on_mdr for l in b.lines)
+    mdr_rate = Decimal(corpus.terms["contracted_mdr_rate_pct"])
+    gst_rate = Decimal(corpus.terms["gst_on_mdr_rate_pct"])
+    true_fee = sum(pct(l.gross, mdr_rate) for l in b.lines)
+    true_tax = sum(pct(pct(l.gross, mdr_rate), gst_rate) for l in b.lines)
+    settled_net = sum(l.net for l in b.lines) + b.refund_adj
+    credit = next((x.credit for x in corpus.bank if x.settlement_id == worst.target), 0)
+
+    eff = (Decimal(charged_fee) / Decimal(gross) * 100) if gross else Decimal(0)
+
+    return {
+        "batch": worst.target,
+        "settled_on": b.settled_on.isoformat(),
+        "lines": len(b.lines),
+        # --- what a conventional reconciliation reports -------------------
+        "naive": {
+            "settlement_paise": settled_net,
+            "bank_paise": credit,
+            "variance_paise": abs(settled_net - credit),
+            "verdict": "Reconciled — within tolerance",
+        },
+        # --- what is actually inside it -----------------------------------
+        "attest": {
+            "findings": 2,
+            "mdr_overcharge_paise": charged_fee - true_fee,
+            "gst_overcharge_paise": charged_tax - true_tax,
+            "fee_overcharge_paise": abs(line_var),
+            "refund_variance_paise": abs(refund_var),
+            "residual_paise": abs(residual),
+            "exposure_paise": exposure,
+            "effective_mdr_pct": f"{eff:.2f}",
+            "contract_mdr_pct": str(mdr_rate),
+            "understated_by": exposure // max(abs(residual), 1),
+            "verdict": "Ties, but is not clean",
+        },
+        "worst_line": ev.get("worst_line", ""),
+        "reasoning": worst.reasoning,
+    }
+
+
+def evidence_chain(corpus, payment_id: str) -> list[dict]:
+    """Every link between a customer's order and the money in the bank, with
+    the broken link named. This is the whole meaning of the product: not
+    "there is a discrepancy" but "here is the record that proves it"."""
+    mdr_rate = Decimal(corpus.terms["contracted_mdr_rate_pct"])
+    gst_rate = Decimal(corpus.terms["gst_on_mdr_rate_pct"])
+
+    for sid, b in corpus.batches.items():
+        for ln in b.lines:
+            if ln.payment_id != payment_id:
+                continue
+            order = corpus.orders.get(ln.order_id)
+            bank = next((x for x in corpus.bank if x.settlement_id == sid), None)
+            exp_mdr = pct(ln.gross, mdr_rate)
+            exp_gst = pct(exp_mdr, gst_rate)
+            eff = (Decimal(ln.mdr) / Decimal(ln.gross) * 100) if ln.gross else Decimal(0)
+
+            return [
+                {"stage": "Order", "id": ln.order_id,
+                 "value": fmt(order.gross) if order else "not in export",
+                 "note": (f"placed {order.placed_on.isoformat()} · {order.channel}"
+                          if order else "no order export supplied"),
+                 "status": "ok" if order and order.gross == ln.gross else "gap"},
+                {"stage": "Payment", "id": ln.payment_id, "value": fmt(ln.gross),
+                 "note": "captured amount agrees with the order",
+                 "status": "ok"},
+                {"stage": "Fee charged", "id": f"{eff:.2f}% effective",
+                 "value": fmt(ln.mdr),
+                 "note": "what Razorpay deducted on this line",
+                 "status": "break" if ln.mdr != exp_mdr else "ok"},
+                {"stage": "Fee contracted", "id": f"{mdr_rate}% agreed",
+                 "value": fmt(exp_mdr),
+                 "note": "what the contract says it should have been",
+                 "status": "break" if ln.mdr != exp_mdr else "ok"},
+                {"stage": "GST on the fee", "id": f"{gst_rate}%",
+                 "value": fmt(ln.gst_on_mdr),
+                 "note": (f"{fmt(exp_gst)} on the contracted fee — the tax "
+                          "inherits the error")
+                          if ln.gst_on_mdr != exp_gst else "computed on the correct base",
+                 "status": "break" if ln.gst_on_mdr != exp_gst else "ok"},
+                {"stage": "Settlement", "id": sid, "value": fmt(ln.net),
+                 "note": f"batch settled {b.settled_on.isoformat()}",
+                 "status": "ok"},
+                {"stage": "Bank", "id": bank.utr if bank else "no credit found",
+                 "value": fmt(bank.credit) if bank else "—",
+                 "note": (f"credited {bank.value_date.isoformat()} — the batch "
+                          "total agrees") if bank
+                         else "settled by Razorpay, never credited",
+                 "status": "ok" if bank else "break"},
+            ]
+    return []

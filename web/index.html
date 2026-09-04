@@ -396,15 +396,17 @@ footer a:hover{color:var(--accent);text-decoration:underline}
   <div class="wm px" data-px="0.18" aria-hidden="true">₹</div>
   <div class="wrap">
     <p class="eyebrow rise">Proof of close · Indian merchants · Razorpay settlements</p>
-    <h1 class="rise d1 px" data-px="-0.06">Your books tie to the bank. They are <em>still wrong.</em></h1>
-    <p class="lede rise d2">Razorpay pays exactly what its own settlement report specifies, so
-      the two agree by construction. That tie proves the money arrived. It proves
-      nothing about whether the deductions inside were correct — and it is the number
-      every reconciliation tool reports as success.</p>
+    <h1 class="rise d1 px" data-px="-0.06">Razorpay tells you what happened.
+      Attest proves whether it <em>should have.</em></h1>
+    <p class="lede rise d2"><b>A settlement can tie and still be wrong.</b> Razorpay
+      pays exactly what its own report specifies, so the report and the bank agree
+      by construction. That tie proves the money arrived. It proves nothing about
+      whether the deductions inside were correct — and it is the number every
+      reconciliation tool reports as success.</p>
     <div class="cta rise d3">
-      <a href="app.html" class="btn"><span>Close your own month</span><span class="arw">→</span></a>
-      <a href="close-pack.html" class="btn ghost">See an example close pack</a>
-      <span class="aside">Two files. About two minutes.</span>
+      <a href="app.html" class="btn"><span>Try the demo</span><span class="arw">→</span></a>
+      <a href="app.html" class="btn ghost">Connect Razorpay Test Mode</a>
+      <span class="aside">The demo needs no account and no credentials.</span>
     </div>
     <div class="trust rise d4">
       <span><b>3,043</b> records closed in <b>0.01s</b></span>
@@ -531,32 +533,38 @@ footer a:hover{color:var(--accent);text-decoration:underline}
 <section id="exhibit" class="tint"><div class="wrap">
   <p class="kicker">Exhibit — one batch from a real month</p>
   <h2>The error a match rate can never find</h2>
-  <p class="sub">This batch reconciles perfectly. Every automated check passes. Two
-    real errors are sitting inside it.</p>
+  <p class="sub">This is the batch in the demo, and these are the figures the engine
+    produces from it. Settlement and bank agree <b>exactly</b>. Every automated
+    check passes. Two real errors are sitting inside it.</p>
 
   <div class="exhibit rise px" data-px="-0.02">
     <div class="head"><span>Settlement batch · August 2026</span>
-      <span>36 lines · reconciled ✓</span></div>
+      <span>100 lines · reconciled ✓ · variance ₹0.00</span></div>
     <div class="body">
       <div class="ledger" id="ledger">
-        <div class="row"><span class="lab">Gateway fee overcharged on one line</span>
-          <span class="amt up">+ ₹4.12</span></div>
+        <div class="row"><span class="lab">Gateway fee overcharged — 2.18% against a contracted 2.00%</span>
+          <span class="amt up">+ ₹4,248.00</span></div>
         <div class="row"><span class="lab">Refund under-deducted in the same batch</span>
-          <span class="amt dn">− ₹4.10</span></div>
+          <span class="amt dn">− ₹4,247.80</span></div>
         <div class="row total"><span class="lab">What the batch total looks like</span>
-          <span class="amt">₹0.02 out</span></div>
+          <span class="amt">₹0.20 out</span></div>
       </div>
-      <p class="verdict">Two paise. Inside any tolerance a finance team would set,
-        so it passes silently and the money leaves. Accounting calls this a
-        <strong>compensating error</strong>, and a total-level check cannot detect
-        it by construction — which is why a match rate is not evidence of a correct
-        close.
+      <p class="verdict">Twenty paise, against <strong>₹8,495.80</strong> of real
+        error inside — an understatement of <strong>42,479×</strong>. Inside any
+        tolerance a finance team would set, so it passes silently and the money
+        leaves. Accounting calls this a <strong>compensating error</strong>, and a
+        total-level check cannot detect it by construction — which is why a match
+        rate is not evidence of a correct close.
         <br><br>
         Attest catches it by rebuilding what the refund deduction <strong>should</strong>
         have been from your own refund records and the netting rule in your
         contract — never from the settlement report it is auditing. Use the audited
         document to check itself and the error cancels out of the very test built to
         find it.</p>
+      <div class="cta" style="margin-top:26px">
+        <a href="app.html" class="btn"><span>Run this exact close</span><span class="arw">→</span></a>
+        <span class="aside">No account, no credentials — it takes a second.</span>
+      </div>
     </div>
   </div>
 </div></section>
@@ -605,7 +613,7 @@ footer a:hover{color:var(--accent);text-decoration:underline}
 
   <div class="seal rise">
     <div>
-      <div class="digest">af8bb302 31446635 6faf19d6 de1dd920</div>
+      <div class="digest">db8bca13 0cb27e21 68066944 403d71f4</div>
       <div class="cmd">$ python3 -m attest.seal --verify close-pack.html</div>
       <p><span class="ok">INTACT</span> — the whole document hashes to its printed
         digest. Change one rupee, one date, one letter of the business name, and it
@@ -719,7 +727,7 @@ footer a:hover{color:var(--accent);text-decoration:underline}
         settlements.</p>
       <div class="fseal">
         <div class="lab">Benchmark close pack · sealed</div>
-        <div class="val">af8bb302 31446635 6faf19d6 de1dd920</div>
+        <div class="val">db8bca13 0cb27e21 68066944 403d71f4</div>
       </div>
     </div>
 

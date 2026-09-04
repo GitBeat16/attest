@@ -30,7 +30,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from attest.close import CloseError, close, stage           # noqa: E402
+from attest.close import (CloseError, close, evidence_chain,  # noqa: E402
+                          naive_view, stage)
 from attest.report import render                            # noqa: E402
 
 # Both of these are public by design. The project URL and the publishable key
@@ -46,6 +47,14 @@ SUPABASE_ANON = os.environ.get(
     "SUPABASE_ANON_KEY", "sb_publishable_tO-3LIT3VVJNzFUtWsZNvw_4ePwcohx")
 
 MAX_BODY = 6 * 1024 * 1024
+COUNTERPARTY = {
+    "MDR": "Razorpay", "GST": "Razorpay", "CREDIT": "Razorpay",
+    "REFUND_DUPLICATE": "Razorpay", "ITC_MISMATCH": "Razorpay",
+    "DUPLICATE_SETTLEMENT_LINE": "Razorpay", "UNREFERENCED_ADJ": "Razorpay",
+    "ADJUSTMENT": "Courier", "RTO_FREIGHT": "Courier", "FREIGHT": "Courier",
+    "COD_FEE": "Courier", "COD_VALUE": "Courier", "DUPLICATE_AWB": "Courier",
+    "CHARGEBACK_ORPHAN": "Card network", "ORPHAN_BANK_CREDIT": "Bank",
+}
 LABELS = {
     "MDR": "Gateway fee overcharged",
     "GST": "Tax computed on the wrong base",
@@ -59,7 +68,19 @@ LABELS = {
     "DUPLICATE_AWB": "Same shipment remitted twice",
     "ORPHAN_BANK_CREDIT": "Bank credit no batch explains",
     "RTO_FREIGHT": "Return freight charged",
+    "FREIGHT": "Return freight charged on a delivered order",
+    "COD_FEE": "COD fee charged off-contract",
+    "COD_VALUE": "COD value does not match the manifest",
     "TIMING_NOT_ERROR": "Timing, not an error",
+    # Verdicts from the adversarial pass. These describe money already listed
+    # above under the finding that produced it, so they are never claimable.
+    "OFFSETTING_PAIR": "Two errors cancelling inside one batch",
+    "SELF_REFERENTIAL_TIE": "Batch ties, but the fees inside disagree",
+    "REFUND_MISMATCH": "Refund deduction does not match the refund export",
+    "TOLERANCE_ABUSE": "Rounding that always favours one side",
+    "COINCIDENTAL_EQUALITY": "Two records equal by coincidence, not by identity",
+    "AMBIGUOUS_COLLAPSE": "More than one batch could explain this credit",
+    "KEY_SUBSTITUTION": "Matched on a key that is not a key",
 }
 
 
@@ -133,9 +154,69 @@ def from_razorpay(key_id: str, key_secret: str, year: int, month: int) -> str:
     return "\n".join(out)
 
 
+def _top(exceptions: list[dict], claims=None, today=None) -> list[dict]:
+    """The exception register, ranked by rupee exposure, in the merchant's
+    language and with the counterparty and claim window attached."""
+    from attest.money import fmt
+    # Attach the clock. A claim window that has already closed must say so
+    # rather than sit in the list looking recoverable -- the whole cadence
+    # argument is that findings surfaced late are findings surfaced too late.
+    clock = {}
+    if claims and today:
+        for c in claims:
+            prev = clock.get(c.exception_class)
+            if prev is None or c.deadline < prev[0]:
+                clock[c.exception_class] = (c.deadline, c.days_left(today),
+                                            c.urgency(today), c.counterparty)
+
+    claimable = [e for e in exceptions if e.get("kind") != "verdict"][:8]
+    verdicts = [e for e in exceptions if e.get("kind") == "verdict"][:4]
+    out = []
+    for e in claimable + verdicts:
+        out.append({
+            "class": e["class"],
+            "kind": e.get("kind", "chain"),
+            "label": LABELS.get(e["class"], e["class"].replace("_", " ").title()),
+            "count": e["count"],
+            "exposure": fmt(e["exposure"]),
+            "exposure_paise": e["exposure"],
+            "evidence": e.get("evidence_required", ""),
+            "reasoning": e.get("reasoning", ""),
+            "counterparty": COUNTERPARTY.get(e["class"], "Razorpay"),
+            **({"deadline": clock[e["class"]][0].isoformat(),
+                "days_left": clock[e["class"]][1],
+                "urgency": clock[e["class"]][2]}
+               if e["class"] in clock else {}),
+        })
+    return out
+
+
 # --------------------------------------------------------------------------
 def handle(body: dict) -> dict:
     token = (body.get("token") or "").strip()
+    mode = body.get("mode") or "upload"
+
+    # The demo needs no account and writes nothing. A judge should be able to
+    # see the whole argument in one click; requiring a signup first would put a
+    # form between them and the only screen that matters.
+    if mode == "demo":
+        from attest.demo import MERCHANT, PERIOD, build
+        files, merchant, period = build(), MERCHANT, PERIOD
+        with tempfile.TemporaryDirectory() as td:
+            src = Path(td) / "sources"
+            supplied, missing = stage(files, merchant, period, None, src)
+            result = close(src, supplied, missing)
+            corpus = result["corpus"]
+            nv = naive_view(corpus, result["res"], result["aud"])
+            chain = evidence_chain(corpus, nv["worst_line"]) if nv else []
+        s = result["summary"]
+        s["exceptions_top"] = _top(s["exceptions"], result["claims"], result["today"])
+        s.pop("exceptions", None)
+        s["demo"] = True
+        s["close_id"] = None
+        return {"ok": True, "summary": s, "naive": nv, "chain": chain,
+                "pack_html": render(result["payload"]), "saved": False}
+
     if not token:
         raise CloseError("not signed in.")
 
@@ -148,7 +229,6 @@ def handle(body: dict) -> dict:
     year, month = int(period[:4]), int(period[5:])
 
     files = {k: v for k, v in (body.get("files") or {}).items() if isinstance(v, str)}
-    mode = body.get("mode") or "upload"
     key_masked = None
 
     if mode == "razorpay_test":
@@ -165,6 +245,9 @@ def handle(body: dict) -> dict:
         src = Path(td) / "sources"
         supplied, missing = stage(files, merchant, period, body.get("terms"), src)
         result = close(src, supplied, missing)
+        corpus = result["corpus"]
+        nv = naive_view(corpus, result["res"], result["aud"])
+        chain = evidence_chain(corpus, nv["worst_line"]) if nv else []
 
     s = result["summary"]
     pack = render(result["payload"])
@@ -218,15 +301,11 @@ def handle(body: dict) -> dict:
     if close_id and findings:
         postgrest("attest_findings", token, findings)
 
-    from attest.money import fmt
-    s["exceptions_top"] = [
-        {"label": LABELS.get(e["class"], e["class"].replace("_", " ").title()),
-         "count": e["count"], "exposure": fmt(e["exposure"])}
-        for e in s["exceptions"][:8]
-    ]
+    s["exceptions_top"] = _top(s["exceptions"], result["claims"], result["today"])
     s.pop("exceptions", None)
     s["close_id"] = close_id
-    return {"ok": True, "summary": s, "pack_html": pack}
+    return {"ok": True, "summary": s, "naive": nv, "chain": chain,
+            "pack_html": pack, "saved": bool(close_id)}
 
 
 class handler(BaseHTTPRequestHandler):

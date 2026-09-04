@@ -62,6 +62,7 @@ def build_exceptions(corpus, res, aud) -> list[dict]:
     for (stage, when), chains in grouped.items():
         ex.append({
             "class": stage.upper(),
+            "kind": "chain",
             "count": len(chains),
             "exposure": sum(abs(c.delta) for c in chains),
             "evidence_required": remedy.get(stage, "manual investigation"),
@@ -74,18 +75,26 @@ def build_exceptions(corpus, res, aud) -> list[dict]:
             continue
         _when = batch_dates.get(f["container"])
         ex.append({
-            "class": f["class"], "count": 1, "exposure": abs(f["delta"]),
+            "class": f["class"], "kind": "finding",
+            "count": 1, "exposure": abs(f["delta"]),
             "evidence_required": "counterparty confirmation",
             "sample": [f["container"]],
             "occurred_on": _when.isoformat() if _when else None,
         })
 
+    # An overturned match is a VERDICT on money already counted above, not a
+    # second pile of money. An offsetting pair is the same rupees as the MDR
+    # chain break and the refund variance that compose it; adding all three to a
+    # recoverable total would state the exposure two or three times over. They
+    # are carried here so the register is complete and the reasoning is
+    # visible, and marked so that recovery skips them.
     for a in aud.overturned:
         _when = batch_dates.get(a.target)
         ex.append({
-            "class": a.hypothesis.upper(), "count": 1, "exposure": abs(a.delta),
+            "class": a.hypothesis.upper(), "kind": "verdict",
+            "count": 1, "exposure": abs(a.delta),
             "evidence_required": "review the overturned match before posting",
-            "sample": [a.target],
+            "sample": [a.target], "reasoning": a.reasoning,
             "occurred_on": _when.isoformat() if _when else None,
         })
 

@@ -78,6 +78,12 @@ def build_claims(exceptions: list[dict], period_end: date, today: date) -> list[
         cls = e["class"]
         if cls in NOT_RECOVERABLE:
             continue
+        # A verdict from the adversarial pass describes money that is already in
+        # this list under the chain break that produced it. Claiming it again
+        # would overstate what the merchant can actually recover, which is the
+        # one direction a finance tool must never err in.
+        if e.get("kind") == "verdict":
+            continue
         counterparty, window = WINDOWS.get(cls, ("razorpay", 60))
 
         # The clock starts at the event, not at the close. This is the whole

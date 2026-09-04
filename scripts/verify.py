@@ -294,6 +294,114 @@ def check_outputs() -> None:
 
 
 # ==========================================================================
+def check_demo() -> None:
+    """The demo is the first thing a judge touches, so it is checked hardest.
+    A demo that silently stops demonstrating its own point is worse than none."""
+    section("THE DEMO")
+    from attest.demo import check as demo_check
+
+    try:
+        r = demo_check()
+    except AssertionError as e:
+        record(FAIL, "compensating pair still found", str(e))
+        return
+    record(PASS, "compensating pair still found",
+           f"fee out {r['fee_overcharge_paise']}p vs refund out "
+           f"{r['refund_under_paise']}p")
+
+    # The whole argument is the ratio. If it collapses, the demo has stopped
+    # being a demonstration.
+    ratio = r["exposure_paise"] // max(r["batch_variance_paise"], 1)
+    if ratio > 1000:
+        record(PASS, "the gap is still dramatic",
+               f"batch looks {r['batch_variance_paise']}p out, is "
+               f"{r['exposure_paise']}p wrong — {ratio:,}x")
+    else:
+        record(FAIL, "the gap is still dramatic",
+               f"only {ratio}x — the demo no longer makes its point")
+
+    record(PASS if r["tied"] >= 1 else FAIL, "a batch still ties",
+           f"{r['tied']}/{r['batches']} tie, so the naive view passes")
+
+    # Determinism: two runs, identical findings.
+    r2 = demo_check()
+    record(PASS if r2 == r else FAIL, "the demo is deterministic",
+           "two runs produced identical findings")
+
+
+def check_api() -> None:
+    """The endpoints a judge's browser will actually call."""
+    section("ENDPOINTS")
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("capi", ROOT / "api" / "close.py")
+    api = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api)
+
+    out = api.handle({"mode": "demo"})
+    record(PASS if out.get("ok") else FAIL, "demo close needs no account",
+           "runs signed out and writes nothing")
+    record(PASS if out.get("saved") is False else FAIL,
+           "demo writes nothing to the database")
+    record(PASS if out.get("naive") and out.get("chain") else FAIL,
+           "demo returns the comparison and the evidence chain",
+           f"{len(out.get('chain') or [])} chain stages")
+
+    # A live key must be refused before it can reach the network.
+    try:
+        api.from_razorpay("rzp_live_ABCDEF", "secret", 2026, 8)
+        record(FAIL, "live keys are refused", "a live key was accepted")
+    except api.CloseError as e:
+        record(PASS if "test keys only" in str(e).lower() else FAIL,
+               "live keys are refused")
+
+    # Malformed and empty input must fail as messages, never as tracebacks.
+    for bad, label in (({"token": "t", "merchant": "", "period": "2026-08"},
+                        "empty merchant"),
+                       ({"token": "t", "merchant": "x", "period": "nonsense"},
+                        "malformed period"),
+                       ({"token": "t", "merchant": "x", "period": "2026-08",
+                         "files": {"razorpay_settlements.csv": ""}},
+                        "empty settlement file"),
+                       ({"token": "t", "merchant": "x", "period": "2026-08",
+                         "files": {"razorpay_settlements.csv": "a,b,c\n1,2,3"}},
+                        "a settlement file with the wrong columns"),
+                       ({"token": "t", "merchant": "x", "period": "2026-08",
+                         "files": {"razorpay_settlements.csv":
+                                   "settlement_id,settled_on,payment_id,order_id,"
+                                   "gross_amount,mdr,gst_on_mdr,net_amount,row_type",
+                                   "razorpay_mdr_invoice.json": "{broken"}},
+                        "malformed JSON")):
+        try:
+            api.handle(bad)
+            record(FAIL, f"rejects {label}", "it was accepted")
+        except api.CloseError:
+            record(PASS, f"rejects {label}")
+        except Exception as e:                       # noqa: BLE001
+            record(FAIL, f"rejects {label}",
+                   f"crashed instead of explaining: {type(e).__name__}")
+
+    spec = importlib.util.spec_from_file_location("eapi", ROOT / "api" / "explain.py")
+    ex = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ex)
+    r = ex.explain({"class": "MDR", "count": 3, "exposure_display": "₹1.00"})
+    record(PASS if r.get("ok") and r.get("text") else FAIL,
+           "explanations work with no model configured",
+           f"source: {r.get('source')}")
+    record(PASS if r.get("verified") is True else WARN,
+           "the deterministic path is labelled as verified")
+
+
+def check_money_tests() -> None:
+    section("MONEY")
+    import subprocess as sp
+    r = sp.run([sys.executable, "tests/test_money_edges.py"], cwd=ROOT,
+               capture_output=True, text=True)
+    line = (r.stdout.strip().splitlines() or ["no output"])[-1]
+    record(PASS if r.returncode == 0 else FAIL, "money edge cases", line.strip())
+
+
+# ==========================================================================
 def check_engine() -> None:
     section("REASONING LAYER")
     import os
@@ -368,6 +476,9 @@ def main() -> None:
         m = check_pipeline()
         check_integrity(m)
         check_outputs()
+        check_money_tests()
+        check_demo()
+        check_api()
         check_engine()
         check_razorpay()
     except Exception as ex:                       # a crash is itself a failure
