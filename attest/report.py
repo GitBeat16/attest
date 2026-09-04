@@ -169,6 +169,40 @@ footer{padding:38px 0 64px;font-family:var(--mono);font-size:11.5px;color:var(--
 .sealbox .sm{font-family:var(--mono);font-size:11.5px;color:var(--ink3);margin-top:10px}
 .sealbox .sc{font-family:var(--mono);font-size:12px;color:var(--accent);margin-top:14px;
   padding-top:12px;border-top:1px solid var(--rule2)}
+
+/* ================= responsive ================= */
+h2{scroll-margin-top:70px}
+@media(max-width:820px){
+  .seal2,.grid2,.two{grid-template-columns:1fr!important}
+}
+@media(max-width:640px){
+  .wrap{padding:0 18px}
+  nav .wrap{flex-direction:column;align-items:flex-start;gap:6px;height:auto;padding-top:12px;
+    padding-bottom:12px}
+  nav .meta{text-align:left}
+  h1{font-size:1.6rem}
+  h2{font-size:1.3rem}
+  .sealbox{padding:18px 16px}
+  .sealbox .sd{font-size:.9rem;letter-spacing:.03em}
+  .sealbox .sc{font-size:11px;overflow-x:auto}
+  .status{flex-direction:column;align-items:flex-start;gap:10px}
+
+  /* Four columns of financial data do not fit a phone, and scrolling sideways
+     hides the column the reader came for. Each row becomes a labelled block. */
+  .tbl{border:none;overflow-x:visible;background:transparent}
+  .tbl table,.tbl tbody,.tbl tr,.tbl td{display:block;width:100%}
+  .tbl thead{display:none}
+  .tbl tr{border:1px solid var(--rule);background:var(--paper);margin-bottom:12px}
+  .tbl td{border:none;padding:9px 15px;text-align:left}
+  .tbl td+td{border-top:1px dotted var(--rule)}
+  .tbl td::before{content:attr(data-l);display:block;font-family:var(--mono);
+    font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);
+    margin-bottom:2px}
+  .tbl td:first-child::before{content:none}
+  .tbl td.k{font-size:1.02rem;padding-top:13px}
+  .tbl td.n{text-align:left;font-size:1.08rem;font-weight:600}
+  .tbl tr.miss{background:var(--bad-soft)}
+}
 """
 
 
@@ -267,18 +301,21 @@ def render(p: dict) -> str:
     # --- what to do about it ----------------------------------------------
     dl_rows = "".join(
         f"<tr><td class='mono'>{d['deadline']}</td>"
-        f"<td class='n'><span class='tag "
+        f"<td class='n' data-l='Days left'><span class='tag "
         f"{'t-urg' if d['urgency'] in ('critical','lapsed') else 't-soon' if d['urgency']=='urgent' else 't-ok'}'>"
         f"{d['days']} days</span></td>"
-        f"<td class='k'>{esc(_label(d['cls'])[0])}<small>{esc(_label(d['cls'])[1])}</small></td>"
-        f"<td class='n'>{fmt(d['exposure'])}</td><td>{esc(d['party'])}</td></tr>"
+        f"<td class='k' data-l='What happened'>{esc(_label(d['cls'])[0])}"
+        f"<small>{esc(_label(d['cls'])[1])}</small></td>"
+        f"<td class='n' data-l='Exposure'>{fmt(d['exposure'])}</td>"
+        f"<td data-l='Counterparty'>{esc(d['party'])}</td></tr>"
         for d in rc.get("deadlines", [])
     )
 
     ex_rows = "".join(
         f"<tr><td class='k'>{esc(_label(e['class'])[0])}<small>{esc(_label(e['class'])[1])}</small></td>"
-        f"<td class='n'>{e['count']}</td><td class='n'>{fmt(e['exposure'])}</td>"
-        f"<td>{esc(e['evidence_required'])}</td></tr>"
+        f"<td class='n' data-l='Items'>{e['count']}</td>"
+        f"<td class='n' data-l='Exposure'>{fmt(e['exposure'])}</td>"
+        f"<td data-l='Evidence required'>{esc(e['evidence_required'])}</td></tr>"
         for e in p["exceptions"][:8]
     )
 
@@ -291,8 +328,10 @@ def render(p: dict) -> str:
                else "<span class='tag t-ok'>designed for</span>")
         sc_rows += (f"<tr class='{'miss' if held and missed else ''}'>"
                     f"<td class='k'>{_label(cls)[0]}</td>"
-                    f"<td class='n'>{s['planted']}</td><td class='n'>{s['detected']}</td>"
-                    f"<td class='n'>{s['recall']*100:.0f}%</td><td>{tag}</td></tr>")
+                    f"<td class='n' data-l='Planted'>{s['planted']}</td>"
+                    f"<td class='n' data-l='Found'>{s['detected']}</td>"
+                    f"<td class='n' data-l='Recall'>{s['recall']*100:.0f}%</td>"
+                    f"<td data-l='Provenance'>{tag}</td></tr>")
 
     if p.get("scorecard"):
         accuracy_section = f"""<h2>Why you can trust these numbers</h2>

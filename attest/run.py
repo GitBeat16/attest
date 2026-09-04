@@ -206,7 +206,8 @@ def main() -> None:
 
     payload = _payload(corpus, res, aud, card, exceptions, elapsed, volume,
                        residual, residual_bps, signed, tied, proven, total,
-                       generated=f"{corpus.mdr_invoice['period']} close")
+                       generated=f"from the {corpus.mdr_invoice['period']} "
+                                 f"benchmark corpus")
     tied_ids = {sid for sid, ok in res.batch_ties.items() if ok}
     lines_in_tied = sum(
         1 for c in res.gateway_chains if c.stages.get("_batch_id") in tied_ids

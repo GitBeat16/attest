@@ -234,6 +234,13 @@ def check_outputs() -> None:
         ab = app.read_text(encoding="utf-8")
         record(PASS if "rzp_test_" in ab and "dataTransfer" in ab else FAIL,
                "app has drag-and-drop and refuses live keys")
+        # Every page has to survive a phone. The check is layout, not taste:
+        # nothing may push the document wider than the viewport, because a page
+        # that scrolls sideways hides the column the reader came for.
+        for name, text in (("landing page", lb), ("app", ab), ("close pack", body)):
+            ok = "max-width:640px" in text.replace(" ", "") and "viewport" in text
+            record(PASS if ok else FAIL, f"{name} is responsive",
+                   "narrow-screen rules and a viewport tag are present")
     else:
         record(FAIL, "app present")
 

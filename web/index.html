@@ -84,7 +84,9 @@ h1 em{font-style:italic;color:var(--accent)}
 .trust b{color:var(--ink);font-weight:600}
 
 /* ---------- sections ---------- */
-section{padding:78px 0;border-bottom:1px solid var(--rule);position:relative}
+section{padding:78px 0;border-bottom:1px solid var(--rule);position:relative;
+  scroll-margin-top:72px}
+header{scroll-margin-top:72px}
 .kicker{font-family:var(--mono);font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;
   color:var(--ink3);margin-bottom:14px}
 h2{font-family:var(--serif);font-size:clamp(1.7rem,3.4vw,2.3rem);line-height:1.18;
@@ -95,6 +97,7 @@ h3{font-family:var(--serif);font-size:1.3rem;font-weight:500}
 
 /* ---------- the three steps ---------- */
 .flow{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:38px}
+.flow > *,.qa .q > *,.two > *{min-width:0}
 .fstep{background:var(--paper);border:1px solid var(--rule);padding:26px 24px;
   position:relative;transition:transform .3s cubic-bezier(.22,.61,.36,1),
   box-shadow .3s}
@@ -175,12 +178,12 @@ tr.zero td.n{font-weight:600;color:var(--bad)}
 /* ---------- seal ---------- */
 .seal{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--rule);
   border:1px solid var(--rule);margin-top:34px}
-.seal > div{background:var(--paper);padding:28px 26px}
+.seal > div{background:var(--paper);padding:28px 26px;min-width:0}
 .seal .digest{font-family:var(--mono);font-size:1.05rem;font-weight:600;
   letter-spacing:.06em;word-break:break-all;color:var(--ink);margin-bottom:14px}
 .seal .cmd{font-family:var(--mono);font-size:12.5px;background:var(--surface);
   border:1px solid var(--rule);padding:11px 13px;border-radius:4px;color:var(--ink2);
-  overflow-x:auto;white-space:nowrap}
+  overflow-x:auto;white-space:nowrap;min-width:0}
 .seal .ok{color:var(--good);font-weight:600}
 .seal .no{color:var(--bad);font-weight:600}
 .seal p{color:var(--ink2);font-size:.95rem;margin-top:12px}
@@ -272,7 +275,72 @@ html.js #boot{display:grid}
 footer{padding:52px 0 72px;font-size:.88rem;color:var(--ink3)}
 footer .row{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}
 footer a{color:var(--ink2)}
-@media(max-width:760px){.two{grid-template-columns:1fr}}
+
+/* ================= responsive ================= */
+@media(max-width:900px){
+  .seal{grid-template-columns:1fr}
+  .two{grid-template-columns:1fr}
+}
+
+@media(max-width:760px){
+  header{padding:64px 0 54px}
+  section{padding:56px 0}
+  .lede{font-size:1.08rem;margin-top:22px}
+  .trust{gap:14px 24px;margin-top:34px}
+  .qa .q{padding:22px 20px}
+  .exhibit .body{padding:24px 20px}
+  .seal > div{padding:24px 20px}
+}
+
+/* Below this width a four-column table stops being a table and becomes a
+   stack of labelled rows. A phone cannot show four columns of financial data
+   legibly, and sideways scrolling hides exactly the column that matters. */
+@media(max-width:640px){
+  .wrap{padding:0 18px}
+  header{padding:52px 0 46px}
+  section{padding:48px 0}
+  h1{font-size:clamp(2rem,9vw,2.6rem)}
+  .lede{font-size:1.02rem}
+  .cta{gap:10px}
+  .cta .btn{width:100%;justify-content:center}
+  .cta .aside{width:100%}
+  .trust{font-size:11.5px;gap:10px 20px}
+  .flow{gap:16px;margin-top:28px}
+  .fstep{padding:22px 20px}
+  .fstep .time{position:static;display:block;margin-bottom:10px}
+  .fstep .n{margin-bottom:12px}
+  .qa .num{font-size:1.85rem}
+  .qa .ask{font-size:1.12rem}
+  .ledger{font-size:13.5px}
+  .ledger .row{flex-direction:column;gap:2px}
+  .ledger .amt{align-self:flex-start}
+  .seal .digest{font-size:.92rem;letter-spacing:.04em}
+
+  .tbl{border:none;overflow-x:visible;background:transparent}
+  .tbl table,.tbl thead,.tbl tbody,.tbl tr,.tbl td{display:block;width:100%}
+  .tbl thead{display:none}
+  .tbl tr{border:1px solid var(--rule);background:var(--paper);
+    margin-bottom:12px;padding:4px 0}
+  .tbl td{border:none;padding:9px 16px;text-align:left}
+  .tbl td+td{border-top:1px dotted var(--rule)}
+  .tbl td::before{content:attr(data-l);display:block;font-family:var(--mono);
+    font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);
+    margin-bottom:3px}
+  .tbl td:first-child::before{content:none}
+  .tbl td.k{font-size:1.02rem;padding-top:14px}
+  .tbl td.n{text-align:left;font-size:1.15rem;font-weight:600}
+  tr.zero td{background:transparent}
+  tr.zero{border-color:var(--bad);background:var(--bad-soft)}
+  .note{padding:16px 18px}
+}
+
+@media(max-width:520px){ .xs-hide{display:none} }
+
+@media(max-width:400px){
+  nav .wrap{height:58px}
+  .mark .name{font-size:12.5px;letter-spacing:.16em}
+  .btn{padding:12px 16px;font-size:14px}
+}
 </style></head>
 <body>
 <script>document.documentElement.className+=' js';</script>
@@ -289,7 +357,7 @@ footer a{color:var(--ink2)}
     <a href="#start">How it works</a>
     <a href="#who">Who it's for</a>
     <a href="close-pack.html">Example close pack</a>
-    <a href="app.html" class="btn sm">Close your own month <span class="arw">→</span></a>
+    <a href="app.html" class="btn sm">Close<span class="xs-hide"> your own</span> month <span class="arw">→</span></a>
   </div>
 </div></nav>
 
@@ -473,19 +541,19 @@ footer a{color:var(--ink2)}
     <thead><tr><th>What you upload</th><th class="n">Match rate</th>
       <th class="n">Proof rate</th><th>What you lose</th></tr></thead>
     <tbody>
-      <tr><td class="k">Everything<small>7 sources</small></td>
-        <td class="n">90.9%</td><td class="n">73.0%</td>
-        <td>Nothing. This is the ceiling.</td></tr>
-      <tr><td class="k">Settlements + bank + orders + refunds<small>4 sources</small></td>
-        <td class="n">90.9%</td><td class="n">41.5%</td>
-        <td>COD short-remittance and return freight stop being checked.</td></tr>
-      <tr class="zero"><td class="k">Settlements + bank<small>2 sources</small></td>
-        <td class="n">90.9%</td><td class="n">0.0%</td>
-        <td>No order export, so no line can be traced back to what the customer was
+      <tr><td data-l="What you upload" class="k">Everything<small>7 sources</small></td>
+        <td data-l="Match rate" class="n">90.9%</td><td data-l="Proof rate" class="n">73.0%</td>
+        <td data-l="What you lose">Nothing. This is the ceiling.</td></tr>
+      <tr><td data-l="What you upload" class="k">Settlements + bank + orders + refunds<small>4 sources</small></td>
+        <td data-l="Match rate" class="n">90.9%</td><td data-l="Proof rate" class="n">41.5%</td>
+        <td data-l="What you lose">COD short-remittance and return freight stop being checked.</td></tr>
+      <tr class="zero"><td data-l="What you upload" class="k">Settlements + bank<small>2 sources</small></td>
+        <td data-l="Match rate" class="n">90.9%</td><td data-l="Proof rate" class="n">0.0%</td>
+        <td data-l="What you lose">No order export, so no line can be traced back to what the customer was
           actually charged. Everything still ties.</td></tr>
-      <tr><td class="k">Razorpay alone<small>1 source</small></td>
-        <td class="n">0.0%</td><td class="n">0.0%</td>
-        <td>Nothing at all. Razorpay cannot prove Razorpay.</td></tr>
+      <tr><td data-l="What you upload" class="k">Razorpay alone<small>1 source</small></td>
+        <td data-l="Match rate" class="n">0.0%</td><td data-l="Proof rate" class="n">0.0%</td>
+        <td data-l="What you lose">Nothing at all. Razorpay cannot prove Razorpay.</td></tr>
     </tbody>
   </table></div>
 
@@ -506,7 +574,7 @@ footer a{color:var(--ink2)}
 
   <div class="seal rise">
     <div>
-      <div class="digest">c3d2703b c68930f3 134b428b 26606f71</div>
+      <div class="digest">7e6077c5 28c09fae 1b84556a c3f53148</div>
       <div class="cmd">$ python3 -m attest.seal --verify close-pack.html</div>
       <p><span class="ok">INTACT</span> — the whole document hashes to its printed
         digest. Change one rupee, one date, one letter of the business name, and it
@@ -537,24 +605,24 @@ footer a{color:var(--ink2)}
   <div class="tbl rise"><table>
     <thead><tr><th>Annual volume</th><th>Who reconciles</th><th>Customer</th><th>Why</th></tr></thead>
     <tbody>
-      <tr><td class="k">Under ₹40 lakh<small>micro</small></td>
-        <td>The founder, in a notebook</td>
-        <td><span class="pill p-n">No</span></td>
-        <td>Volume is low enough to eyeball. The pain is cash timing, not accuracy.</td></tr>
-      <tr><td class="k">₹40 lakh – ₹5 crore<small>small</small></td>
-        <td>An external chartered accountant, in Tally</td>
-        <td><span class="pill p-y">Yes</span></td>
-        <td>The merchant never feels it — the CA does, across twenty clients a month.
+      <tr><td data-l="Annual volume" class="k">Under ₹40 lakh<small>micro</small></td>
+        <td data-l="Who reconciles">The founder, in a notebook</td>
+        <td data-l="Customer"><span class="pill p-n">No</span></td>
+        <td data-l="Why">Volume is low enough to eyeball. The pain is cash timing, not accuracy.</td></tr>
+      <tr><td data-l="Annual volume" class="k">₹40 lakh – ₹5 crore<small>small</small></td>
+        <td data-l="Who reconciles">An external chartered accountant, in Tally</td>
+        <td data-l="Customer"><span class="pill p-y">Yes</span></td>
+        <td data-l="Why">The merchant never feels it — the CA does, across twenty clients a month.
           <strong>The CA is the buyer.</strong></td></tr>
-      <tr><td class="k">₹5 crore – ₹100 crore<small>mid</small></td>
-        <td>A one-to-three person finance team</td>
-        <td><span class="pill p-y">Yes</span></td>
-        <td>Multi-channel, COD, marketplaces. 20–50 hours a month across three to
+      <tr><td data-l="Annual volume" class="k">₹5 crore – ₹100 crore<small>mid</small></td>
+        <td data-l="Who reconciles">A one-to-three person finance team</td>
+        <td data-l="Customer"><span class="pill p-y">Yes</span></td>
+        <td data-l="Why">Multi-channel, COD, marketplaces. 20–50 hours a month across three to
           five systems. Best fit.</td></tr>
-      <tr><td class="k">₹100 crore +<small>enterprise</small></td>
-        <td>Controller plus an ERP recon module</td>
-        <td><span class="pill p-n">No</span></td>
-        <td>Already automated, or has the staff to absorb it.</td></tr>
+      <tr><td data-l="Annual volume" class="k">₹100 crore +<small>enterprise</small></td>
+        <td data-l="Who reconciles">Controller plus an ERP recon module</td>
+        <td data-l="Customer"><span class="pill p-n">No</span></td>
+        <td data-l="Why">Already automated, or has the staff to absorb it.</td></tr>
     </tbody>
   </table></div>
 
