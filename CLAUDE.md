@@ -14,10 +14,11 @@ architecture doc (already written).
 Everything here exists to support a single argument:
 
 > A match rate is not evidence of a correct close. Two numbers can agree for the
-> wrong reasons — an MDR overcharge of ₹4.12 against a refund under-deducted by
-> ₹4.10 leaves the batch out by two paise, inside any tolerance, with two real
-> errors inside it. So Attest reports a **proof rate** and a **false-match rate**
-> alongside the match rate, and the gap between them is the product.
+> wrong reasons — a gateway fee overcharged by ₹4,248.00 against a refund
+> under-deducted by ₹4,247.80 leaves the batch out by twenty paise, inside any
+> tolerance, with ₹8,495.80 of real error inside it. So Attest reports a **proof
+> rate** and a **false-match rate** alongside the match rate, and the gap between
+> them is the product.
 
 If a change makes those three numbers less honest, it is the wrong change, even
 if it makes them look better.
@@ -56,6 +57,22 @@ if it makes them look better.
 
 7. **Nothing posts to a ledger automatically.** Draft for human approval only.
 
+8. **Falsiness is not absence.** A money value of exactly zero is a real value.
+   Never write `if not credit` or `x if x else y` on an amount — a legitimate
+   ₹0 credit taking a different code path was a real bug, and
+   `tests/test_money_edges.py` exists to stop it recurring.
+
+9. **Adversarial verdicts are not claimable money.** An overturned match
+   describes the same rupees as the chain break that produced it. Verdicts carry
+   `kind: "verdict"`, are excluded from recovery, and are shown separately.
+   Summing them into a recoverable total overstates what a merchant can get
+   back, which is the one direction a finance tool must never err in.
+
+10. **The demo must keep demonstrating.** `attest/demo.py` builds inputs, not
+    results; the real engine finds the pair. `demo.check()` recomputes the
+    arithmetic independently and raises if the engine stops finding it. Never
+    hardcode a finding into the UI.
+
 ---
 
 ## Expected output
@@ -85,26 +102,23 @@ regressed.** Those two numbers are the integrity check on the whole project.
 
 ## Still to do
 
-1. **Gemini reasoning adapter** (`attest/engines.py`, not yet written).
-   Interface with four implementations: `rules` (default, zero deps, already
-   effectively what runs today), `gemini`, `openai`, `ollama`. Config via
-   `ATTEST_ENGINE` in `.env` — see `.env.example`. Gemini free tier is the chosen
-   provider. Use it for three things only: parsing bank narration, explaining
-   root causes, drafting claims. **Never for match arithmetic.** Cache responses
-   to disk so re-runs cost nothing. The pipeline must still run fully with the
-   engine unavailable.
+1. **The pitch video.** The two-minute judge journey is the spine:
+   open the app → **Run the demo close** → naive vs Attest, ₹0.00 variance
+   against ₹8,495.80 wrong, 42,479× → the money-first strip → the evidence chain
+   with the broken links → *"Why is this wrong?"* and the engine/AI labels →
+   recovery, including the courier claim that has already expired → the close
+   pack and its seal. Close on: **don't just close the books, prove the close.**
 
-2. **5-minute pitch video.** Structure: the queue → run the pipeline live in the
-   terminal (0.02s, proves it's real) → open the close pack → walk the descent
-   90.9% → 73.0% → 68.2% → the compensating pair (₹4.12 vs ₹4.10) → the scorecard
-   with the visible MISS → the ₹5,365 cost-of-monthly number → close.
+2. **Two form answers**: Project Objectives, and Build Challenges & Technical
+   Obstacles. The bug list below is the raw material for the second.
 
-3. **Two form answers**: Project Objectives, and Build Challenges & Technical
-   Obstacles.
+3. **Optional before submitting**: set `GEMINI_API_KEY` in Vercel if you want the
+   AI-labelled explanation on camera rather than the engine one. Both are
+   correct; only the label differs.
 
-4. **Hosting** — `web/` is deployed on Vercel (project `attest`, root directory
-   `web`), linked to this repo, so every push to `main` redeploys. `docs/` was the
-   old GitHub Pages copy and has been removed; do not reintroduce it.
+**Done since this list was last written:** the reasoning layer (`engines.py`,
+with model discovery), the hosted app and API, optional accounts with RLS, the
+demo, the seal, the logo, the responsive pass, and the money test suite.
 
 ---
 
@@ -127,6 +141,25 @@ Useful for the "Build Challenges" answer, and all genuine:
   errors.
 - **A held-out defect causing an unrelated regression.** Moving a settlement into
   September shifted `max(settled_on)`, which silently disabled timing suppression.
+- **A legitimate zero treated as missing.** `ReconRow.net` read
+  `self.credit if self.credit else (amount - fee - tax)`. A credit of exactly
+  zero is falsy, so it fell through to a computed figure, silently replacing what
+  Razorpay reported. `net_disagrees_by` had the same shape, so a reported zero
+  that disagreed was reported as agreeing — the check failed exactly where it
+  mattered. Found by auditing for the pattern, not by a failing test.
+- **Adversarial verdicts counted as recoverable money.** An offsetting pair is
+  the same rupees as the MDR chain break and refund variance composing it, and
+  all three were summed into the recoverable total — overstating the benchmark by
+  ₹846.90 and the demo by ~₹17,000. Found while building the money-first
+  dashboard, i.e. at the moment the number was about to be shown in 72pt type.
+- **A demo that could silently stop demonstrating.** The compensating pair is
+  found by the engine, not scripted — so a tolerance change could quietly remove
+  it and leave a demo that shows nothing. `demo.check()` now recomputes the
+  arithmetic independently and raises.
+- **The whole app dying because a CDN was blocked.** The Supabase SDK was a
+  top-level import, so when jsdelivr was unreachable the module never executed
+  and every button was dead — including the demo, which does not use auth at all.
+  Now loaded on demand.
 
 ---
 
