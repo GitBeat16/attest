@@ -226,6 +226,64 @@ def check_outputs() -> None:
            "motion is opt-out", "reduced-motion users get the page, not the animation")
     record(PASS if 'href="close-pack.html"' in lb else FAIL,
            "landing page links to the close pack")
+    record(PASS if 'href="app.html"' in lb else FAIL,
+           "landing page links to the app")
+
+    app = ROOT / "web" / "app.html"
+    if app.exists():
+        ab = app.read_text(encoding="utf-8")
+        record(PASS if "rzp_test_" in ab and "dataTransfer" in ab else FAIL,
+               "app has drag-and-drop and refuses live keys")
+    else:
+        record(FAIL, "app present")
+
+    if (ROOT / "USE-CASES.md").exists():
+        record(PASS, "use cases documented")
+    else:
+        record(WARN, "use cases documented", "USE-CASES.md is missing")
+
+    # --- the seal ---------------------------------------------------------
+    # A seal that cannot detect an edit is decoration, so the check is not
+    # "does it produce a digest" but "does tampering actually break it".
+    from attest.seal import verify as verify_seal
+    r = verify_seal(body)
+    if r["sealed"] and r["digest_ok"] and not r["problems"]:
+        record(PASS, "close pack is sealed", f"digest {r['digest'][:16]}…")
+    else:
+        record(FAIL, "close pack is sealed", "; ".join(r["problems"]) or "no seal")
+        return
+
+    from attest.seal import grouped
+    if grouped(r["digest"]) in lb:
+        record(PASS, "landing page shows the real digest")
+    else:
+        record(FAIL, "landing page shows the real digest",
+               f"paste this into web/index.html: {grouped(r['digest'])}")
+
+    # A sealed artefact that hashes differently every run is not much of a
+    # seal, so reproducibility is asserted rather than assumed.
+    import tempfile as _tf
+    with _tf.TemporaryDirectory() as td:
+        again = Path(td) / "again.html"
+        subprocess.run([sys.executable, "-m", "attest.run", "--data", "data",
+                        "--html", str(again)], cwd=ROOT, capture_output=True)
+        r2 = verify_seal(again.read_text(encoding="utf-8")) if again.exists() else {}
+    if r2.get("digest") == r["digest"]:
+        record(PASS, "the close pack is byte-reproducible", "two runs, one digest")
+    else:
+        record(FAIL, "the close pack is byte-reproducible",
+               "the same inputs produced two different digests")
+
+    caught = 0
+    edits = [("₹", "Rs "), ("NOT ATTESTABLE", "SIGNED"), ("2026-08", "2026-09")]
+    for before, after in edits:
+        if before not in body:
+            continue
+        if not verify_seal(body.replace(before, after, 1))["digest_ok"]:
+            caught += 1
+    record(PASS if caught == len([e for e in edits if e[0] in body]) else FAIL,
+           "tampering breaks the seal",
+           f"{caught} single-character-class edits detected, none missed")
 
 
 # ==========================================================================

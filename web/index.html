@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Attest — proof of close for Indian merchants</title>
-<meta name="description" content="Your books tie to the bank. They are still wrong. Attest reports what a month-end close can prove, not what happened to match.">
+<meta name="description" content="Your books tie to the bank. They are still wrong. Upload two files and find out what your month-end close can actually prove.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap">
@@ -13,65 +13,126 @@
   --paper:#FCFBF8; --surface:#F4F1EA; --raised:#EEEAE0;
   --ink:#16181D; --ink2:#4A4E58; --ink3:#7B808C;
   --rule:#E3DED3; --rule2:#CFC8B8;
-  --accent:#1B4B73; --accent-soft:#E7EDF3;
+  --accent:#1B4B73; --accent-deep:#123754; --accent-soft:#E7EDF3;
   --good:#1D6B4F; --good-soft:#E4EFE9;
   --warn:#8A5A12; --warn-soft:#F5EDDC;
   --bad:#A03A22; --bad-soft:#F7E7E1;
+  --gold:#DFA82A;
   --serif:Newsreader,Georgia,"Times New Roman",serif;
   --sans:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
 }
 html{scroll-behavior:smooth}
 body{background:var(--paper);color:var(--ink);font-family:var(--sans);
-  font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
-.wrap{max-width:1080px;margin:0 auto;padding:0 32px}
+  font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;
+  overflow-x:hidden}
+.wrap{max-width:1080px;margin:0 auto;padding:0 32px;position:relative}
 @media(max-width:640px){.wrap{padding:0 20px}}
 .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 a{color:var(--accent)}
 
+/* ---------- buttons ---------- */
+.btn{display:inline-flex;align-items:center;gap:9px;background:var(--accent);
+  color:#fff!important;text-decoration:none;padding:13px 22px;border-radius:6px;
+  font-size:15px;font-weight:500;letter-spacing:-.01em;border:1px solid var(--accent);
+  box-shadow:0 1px 0 rgba(22,24,29,.05),0 10px 22px -14px rgba(27,75,115,.85);
+  transition:background .18s,transform .16s,box-shadow .18s;cursor:pointer}
+.btn:hover{background:var(--accent-deep);transform:translateY(-1.5px);
+  box-shadow:0 2px 0 rgba(22,24,29,.05),0 16px 30px -16px rgba(27,75,115,.9)}
+.btn:active{transform:translateY(0);box-shadow:0 1px 0 rgba(22,24,29,.06)}
+.btn .arw{transition:transform .18s;display:inline-block}
+.btn:hover .arw{transform:translateX(3px)}
+.btn.ghost{background:transparent;color:var(--accent)!important;
+  border-color:var(--rule2);box-shadow:none}
+.btn.ghost:hover{background:var(--accent-soft);border-color:var(--accent);
+  box-shadow:0 8px 18px -14px rgba(27,75,115,.7)}
+.btn.sm{padding:9px 16px;font-size:14px}
+
 /* ---------- nav ---------- */
-nav{border-bottom:1px solid var(--rule);position:sticky;top:0;background:rgba(252,251,248,.94);
-  backdrop-filter:blur(8px);z-index:50}
-nav .wrap{display:flex;align-items:center;justify-content:space-between;height:62px}
+nav{border-bottom:1px solid var(--rule);position:sticky;top:0;
+  background:rgba(252,251,248,.92);backdrop-filter:blur(10px);z-index:60}
+nav .wrap{display:flex;align-items:center;justify-content:space-between;height:64px}
 .mark{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink)}
 .mark .glyph{width:26px;height:26px;border:1.5px solid var(--accent);border-radius:3px;
   display:grid;place-items:center;font-family:var(--mono);font-size:13px;font-weight:600;
   color:var(--accent)}
 .mark .name{font-family:var(--mono);font-size:14px;letter-spacing:.22em;
   text-transform:uppercase;font-weight:600}
-nav .links{display:flex;gap:26px;align-items:center;font-size:14px}
-nav .links a{color:var(--ink2);text-decoration:none}
+nav .links{display:flex;gap:24px;align-items:center;font-size:14.5px}
+nav .links a{color:var(--ink2);text-decoration:none;transition:color .15s}
 nav .links a:hover{color:var(--ink)}
-.btn{display:inline-block;background:var(--accent);color:#fff!important;text-decoration:none;
-  padding:9px 16px;border-radius:4px;font-size:14px;font-weight:500;
-  border:1px solid var(--accent);transition:background .15s}
-.btn:hover{background:#15395a}
-.btn.ghost{background:transparent;color:var(--accent)!important}
-.btn.ghost:hover{background:var(--accent-soft)}
+@media(max-width:760px){nav .links a:not(.btn){display:none}}
 
-/* ---------- hero ---------- */
-header{padding:88px 0 72px;border-bottom:1px solid var(--rule)}
+/* ---------- hero + parallax ---------- */
+header{padding:96px 0 78px;border-bottom:1px solid var(--rule);
+  position:relative;overflow:hidden}
+/* the watermark drifts slower than the page, which is the whole trick */
+.wm{position:absolute;top:-40px;right:-60px;font-family:var(--serif);
+  font-size:min(46vw,620px);line-height:.8;color:var(--ink);opacity:.028;
+  pointer-events:none;user-select:none;z-index:0;will-change:transform}
+header .wrap{z-index:1}
 .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;
   color:var(--accent);margin-bottom:22px}
 h1{font-family:var(--serif);font-size:clamp(2.5rem,6vw,4rem);line-height:1.06;
   font-weight:500;letter-spacing:-.02em;max-width:17ch}
 h1 em{font-style:italic;color:var(--accent)}
 .lede{font-size:1.18rem;color:var(--ink2);max-width:56ch;margin-top:26px;line-height:1.55}
-.cta{display:flex;gap:12px;margin-top:34px;flex-wrap:wrap}
-.trust{display:flex;gap:28px;margin-top:44px;padding-top:26px;border-top:1px solid var(--rule);
+.cta{display:flex;gap:12px;margin-top:34px;flex-wrap:wrap;align-items:center}
+.cta .aside{color:var(--ink3);font-size:.9rem}
+.trust{display:flex;gap:28px;margin-top:46px;padding-top:26px;border-top:1px solid var(--rule);
   flex-wrap:wrap;font-family:var(--mono);font-size:12.5px;color:var(--ink3)}
 .trust b{color:var(--ink);font-weight:600}
 
 /* ---------- sections ---------- */
-section{padding:76px 0;border-bottom:1px solid var(--rule)}
+section{padding:78px 0;border-bottom:1px solid var(--rule);position:relative}
 .kicker{font-family:var(--mono);font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;
   color:var(--ink3);margin-bottom:14px}
 h2{font-family:var(--serif);font-size:clamp(1.7rem,3.4vw,2.3rem);line-height:1.18;
   font-weight:500;letter-spacing:-.015em;max-width:22ch}
+h3{font-family:var(--serif);font-size:1.3rem;font-weight:500}
 .sub{color:var(--ink2);max-width:62ch;margin-top:16px;font-size:1.03rem}
+.tint{background:var(--surface)}
+
+/* ---------- the three steps ---------- */
+.flow{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:38px}
+.fstep{background:var(--paper);border:1px solid var(--rule);padding:26px 24px;
+  position:relative;transition:transform .3s cubic-bezier(.22,.61,.36,1),
+  box-shadow .3s}
+.fstep:hover{transform:translateY(-3px);box-shadow:0 18px 34px -26px rgba(22,24,29,.5)}
+.fstep .n{width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;
+  display:grid;place-items:center;font-family:var(--mono);font-size:13px;font-weight:600;
+  margin-bottom:16px}
+.fstep h3{margin-bottom:9px}
+.fstep p{color:var(--ink2);font-size:.95rem}
+.fstep .where{margin-top:14px;padding-top:13px;border-top:1px dotted var(--rule2);
+  font-family:var(--mono);font-size:11.5px;color:var(--ink3);line-height:1.55}
+.fstep .where b{color:var(--accent);font-weight:500}
+.fstep .time{position:absolute;top:22px;right:22px;font-family:var(--mono);
+  font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3)}
+@media(max-width:820px){.flow{grid-template-columns:1fr}}
+
+/* ---------- plain-English rates ---------- */
+.qa{border:1px solid var(--rule);margin-top:34px;background:var(--paper)}
+.qa .q{display:grid;grid-template-columns:150px 1fr;gap:26px;padding:24px 26px;
+  border-bottom:1px solid var(--rule);align-items:start}
+.qa .q:last-child{border-bottom:none}
+.qa .num{font-family:var(--mono);font-size:2.1rem;font-weight:600;letter-spacing:-.03em;
+  line-height:1;font-variant-numeric:tabular-nums}
+.qa .lab{font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--ink3);margin-top:9px}
+.qa .ask{font-family:var(--serif);font-size:1.22rem;font-weight:500;line-height:1.3}
+.qa .ans{color:var(--ink2);margin-top:9px;font-size:.97rem}
+.qa .tagline{font-family:var(--mono);font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;margin-top:12px;display:inline-block;padding:3px 9px;
+  border-radius:3px}
+.q1 .num{color:var(--ink3)} .q1 .tagline{background:var(--surface);color:var(--ink3)}
+.q2 .num{color:var(--good)} .q2 .tagline{background:var(--good-soft);color:var(--good)}
+.q3 .num{color:var(--bad)}  .q3 .tagline{background:var(--bad-soft);color:var(--bad)}
+@media(max-width:640px){.qa .q{grid-template-columns:1fr;gap:12px}}
 
 /* ---------- the exhibit ---------- */
-.exhibit{background:var(--surface);border:1px solid var(--rule);margin-top:34px}
+.exhibit{background:var(--paper);border:1px solid var(--rule);margin-top:34px;
+  box-shadow:0 22px 44px -38px rgba(22,24,29,.55)}
 .exhibit .head{padding:16px 26px;border-bottom:1px solid var(--rule);
   font-family:var(--mono);font-size:11.5px;letter-spacing:.13em;text-transform:uppercase;
   color:var(--ink3);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
@@ -91,17 +152,6 @@ h2{font-family:var(--serif);font-size:clamp(1.7rem,3.4vw,2.3rem);line-height:1.1
   color:var(--ink2);max-width:64ch;font-size:.98rem}
 .verdict strong{color:var(--ink);font-weight:600}
 
-/* ---------- rates ---------- */
-.rates{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--rule);
-  border:1px solid var(--rule);margin-top:34px}
-.rates > div{background:var(--paper);padding:26px 24px}
-.rates .n{font-family:var(--mono);font-size:2.4rem;font-weight:600;letter-spacing:-.03em;
-  line-height:1}
-.rates .t{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;
-  color:var(--ink3);margin-bottom:14px}
-.rates .d{color:var(--ink2);font-size:.92rem;margin-top:12px;line-height:1.5}
-.r1 .n{color:var(--ink3)} .r2 .n{color:var(--good)} .r3 .n{color:var(--bad)}
-
 /* ---------- tables ---------- */
 .tbl{border:1px solid var(--rule);margin-top:30px;overflow-x:auto;background:var(--paper)}
 table{width:100%;border-collapse:collapse;font-size:.94rem}
@@ -111,6 +161,7 @@ th{background:var(--surface);text-align:left;font-family:var(--mono);font-size:1
 td{padding:14px 16px;border-bottom:1px solid var(--rule);color:var(--ink2);vertical-align:top}
 tr:last-child td{border-bottom:none}
 td.k{color:var(--ink);font-weight:500}
+td.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
 td.k small{display:block;font-family:var(--mono);font-size:11.5px;color:var(--ink3);
   font-weight:400;margin-top:3px}
 .pill{display:inline-block;font-family:var(--mono);font-size:10.5px;letter-spacing:.09em;
@@ -118,16 +169,22 @@ td.k small{display:block;font-family:var(--mono);font-size:11.5px;color:var(--in
 .p-y{background:var(--good-soft);color:var(--good)}
 .p-n{background:var(--bad-soft);color:var(--bad)}
 .p-m{background:var(--warn-soft);color:var(--warn)}
+tr.zero td{background:var(--bad-soft)}
+tr.zero td.n{font-weight:600;color:var(--bad)}
 
-/* ---------- steps ---------- */
-.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;margin-top:34px}
-.step .num{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;color:var(--accent);
-  padding-bottom:10px;border-bottom:1.5px solid var(--accent);display:inline-block;
-  margin-bottom:16px}
-.step h3{font-family:var(--serif);font-size:1.25rem;font-weight:500;margin-bottom:8px}
-.step p{color:var(--ink2);font-size:.95rem}
-.step code{font-family:var(--mono);font-size:.85em;background:var(--surface);
-  padding:2px 6px;border-radius:3px;color:var(--ink)}
+/* ---------- seal ---------- */
+.seal{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--rule);
+  border:1px solid var(--rule);margin-top:34px}
+.seal > div{background:var(--paper);padding:28px 26px}
+.seal .digest{font-family:var(--mono);font-size:1.05rem;font-weight:600;
+  letter-spacing:.06em;word-break:break-all;color:var(--ink);margin-bottom:14px}
+.seal .cmd{font-family:var(--mono);font-size:12.5px;background:var(--surface);
+  border:1px solid var(--rule);padding:11px 13px;border-radius:4px;color:var(--ink2);
+  overflow-x:auto;white-space:nowrap}
+.seal .ok{color:var(--good);font-weight:600}
+.seal .no{color:var(--bad);font-weight:600}
+.seal p{color:var(--ink2);font-size:.95rem;margin-top:12px}
+@media(max-width:760px){.seal{grid-template-columns:1fr}}
 
 /* ---------- honesty ---------- */
 .two{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--rule);
@@ -135,30 +192,27 @@ td.k small{display:block;font-family:var(--mono);font-size:11.5px;color:var(--in
 .two > div{background:var(--paper);padding:26px 24px}
 .two h4{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;
   margin-bottom:16px}
-.two.built h4,.two > .built h4{color:var(--good)}
-.two > .later h4{color:var(--warn)}
-.two ul{list-style:none;font-size:.93rem;color:var(--ink2)}
-.two li{padding:7px 0 7px 20px;position:relative;line-height:1.5}
-.two li::before{position:absolute;left:0;font-family:var(--mono);font-size:12px}
-.two > .built li::before{content:"✓";color:var(--good)}
-.two > .later li::before{content:"—";color:var(--warn)}
+.two .built h4{color:var(--good)} .two .later h4{color:var(--ink3)}
+.two ul{list-style:none}
+.two li{padding:7px 0 7px 20px;position:relative;color:var(--ink2);font-size:.94rem;
+  border-bottom:1px dotted var(--rule)}
+.two li:last-child{border-bottom:none}
+.two .built li::before{content:"✓";position:absolute;left:0;color:var(--good);font-weight:600}
+.two .later li::before{content:"○";position:absolute;left:0;color:var(--ink3)}
 
-.note{background:var(--accent-soft);border-left:3px solid var(--accent);padding:20px 24px;
-  margin-top:30px;max-width:70ch;font-size:.97rem;color:var(--ink2);line-height:1.6}
-.note strong{color:var(--ink);font-weight:600}
+.note{padding:20px 22px;border-left:2px solid var(--rule2);background:var(--surface);
+  margin-top:26px;color:var(--ink2);font-size:.96rem}
+.note strong{color:var(--ink)}
+.note.warn{border-left-color:var(--warn);background:var(--warn-soft)}
 
-
-/* ---------- motion ----------
-   Everything below degrades to "already visible" when JS is off or the reader
-   has asked for reduced motion. Nothing important is only reachable by moving. */
-.rise{opacity:0;transform:translateY(14px);
+/* ---------- reveal + parallax motion ---------- */
+.rise{opacity:0;transform:translateY(16px);
   transition:opacity .6s cubic-bezier(.22,.61,.36,1),transform .6s cubic-bezier(.22,.61,.36,1)}
 .rise.in{opacity:1;transform:none}
-.rise.d1{transition-delay:.07s} .rise.d2{transition-delay:.14s}
-.rise.d3{transition-delay:.21s} .rise.d4{transition-delay:.28s}
+.d1{transition-delay:.07s} .d2{transition-delay:.14s}
+.d3{transition-delay:.21s} .d4{transition-delay:.28s}
+.px{will-change:transform}
 
-/* the ledger resolves line by line, so the reader watches the two errors
-   cancel rather than being told they did */
 .ledger .row{opacity:0;transform:translateY(8px);
   transition:opacity .5s ease,transform .5s ease}
 .ledger.in .row{opacity:1;transform:none}
@@ -170,15 +224,7 @@ td.k small{display:block;font-family:var(--mono);font-size:11.5px;color:var(--in
   22%{background:var(--warn-soft);box-shadow:0 0 0 5px var(--warn-soft)}
   100%{background:transparent;box-shadow:none}}
 
-.rates .n{font-variant-numeric:tabular-nums}
-.btn{transition:background .15s,transform .15s}
-.btn:active{transform:translateY(1px)}
-nav .links a{transition:color .15s}
-.step .num{transition:border-color .2s}
-
-/* ---------- boot: a coin turning on its edge ----------
-   Shown only when JS is running, so the page is never gated behind it.
-   Without JS the overlay is display:none and the content is simply there. */
+/* ---------- boot: a coin turning on its edge ---------- */
 #boot{position:fixed;inset:0;z-index:200;background:var(--paper);
   display:none;place-items:center;align-content:center;justify-items:center;gap:20px;
   transition:opacity .38s ease,visibility .38s ease}
@@ -187,20 +233,21 @@ html.js #boot{display:grid}
 #boot > *{transition:transform .38s cubic-bezier(.4,0,.2,1)}
 #boot.done > *{transform:translateY(-10px)}
 #boot .cap{font-family:var(--mono);font-size:11.5px;letter-spacing:.18em;
-  text-transform:uppercase;color:var(--ink3)}
+  text-transform:uppercase;color:var(--ink3);min-height:1.2em;
+  transition:opacity .25s ease}
+#boot .cap.swap{opacity:0}
 
 .coin{width:60px;height:60px;position:relative;transform-style:preserve-3d;
   animation:turn 1.6s cubic-bezier(.42,0,.58,1) infinite}
 .coin .face{position:absolute;inset:0;border-radius:50%;
   display:grid;place-items:center;backface-visibility:hidden;
-  font-family:var(--mono);font-weight:600;font-size:23px;color:#6A4707;
   transform:translateZ(1.5px);
+  font-family:var(--mono);font-weight:600;font-size:23px;color:#6A4707;
   background:radial-gradient(circle at 32% 28%,#FBE9A8 0%,#F2CB5C 34%,#DFA82A 62%,#B87C15 100%);
   box-shadow:inset 0 0 0 3px rgba(255,255,255,.42),
              inset 0 -6px 10px rgba(120,78,10,.28),
              0 8px 18px rgba(150,105,20,.22)}
 .coin .face.b{transform:rotateY(180deg) translateZ(1.5px)}
-/* the rim catches light as the coin passes edge-on */
 .coin .rim{position:absolute;inset:0;border-radius:50%;
   background:linear-gradient(90deg,#8A5A12,#E8C25A 45%,#8A5A12);
   transform:rotateY(90deg);opacity:0;animation:rim 1.6s linear infinite}
@@ -218,12 +265,14 @@ html.js #boot{display:grid}
   .ledger.in .row.total .amt{animation:none}
   .coin,.coin .rim,#boot .shadow{animation:none}
   .coin .rim{opacity:0}
+  .px{transform:none!important}
+  .fstep:hover,.btn:hover{transform:none}
 }
 
 footer{padding:52px 0 72px;font-size:.88rem;color:var(--ink3)}
 footer .row{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}
 footer a{color:var(--ink2)}
-@media(max-width:760px){.rates,.steps,.two{grid-template-columns:1fr}}
+@media(max-width:760px){.two{grid-template-columns:1fr}}
 </style></head>
 <body>
 <script>document.documentElement.className+=' js';</script>
@@ -231,45 +280,162 @@ footer a{color:var(--ink2)}
 <div id="boot" role="status" aria-live="polite" aria-label="Loading">
   <div class="coin"><span class="face">₹</span><span class="rim"></span><span class="face b">₹</span></div>
   <div class="shadow"></div>
-  <p class="cap">Closing the month</p>
+  <p class="cap" id="bootcap">Reading the settlement report</p>
 </div>
 
 <nav><div class="wrap">
   <a class="mark" href="#top"><span class="glyph">A</span><span class="name">Attest</span></a>
   <div class="links">
-    <a href="#how">How it works</a>
+    <a href="#start">How it works</a>
     <a href="#who">Who it's for</a>
-    <a href="close-pack.html">Close pack</a>
-    <a href="app.html" class="btn">Close your own month</a>
+    <a href="close-pack.html">Example close pack</a>
+    <a href="app.html" class="btn sm">Close your own month <span class="arw">→</span></a>
   </div>
 </div></nav>
 
-<header id="top"><div class="wrap">
-  <p class="eyebrow rise">Proof of close · Indian merchants · Razorpay settlements</p>
-  <h1 class="rise d1">Your books tie to the bank. They are <em>still wrong.</em></h1>
-  <p class="lede rise d2">Razorpay pays exactly what its own settlement report specifies, so
-    the two agree by construction. That tie proves the money arrived. It proves
-    nothing about whether the deductions inside were correct — and it is the number
-    every reconciliation tool reports as success.</p>
-  <div class="cta rise d3">
-    <a href="close-pack.html" class="btn">See a live close pack</a>
-    <a href="https://github.com/GitBeat16/attest" class="btn ghost">Read the code</a>
+<header id="top">
+  <div class="wm px" data-px="0.18" aria-hidden="true">₹</div>
+  <div class="wrap">
+    <p class="eyebrow rise">Proof of close · Indian merchants · Razorpay settlements</p>
+    <h1 class="rise d1 px" data-px="-0.06">Your books tie to the bank. They are <em>still wrong.</em></h1>
+    <p class="lede rise d2">Razorpay pays exactly what its own settlement report specifies, so
+      the two agree by construction. That tie proves the money arrived. It proves
+      nothing about whether the deductions inside were correct — and it is the number
+      every reconciliation tool reports as success.</p>
+    <div class="cta rise d3">
+      <a href="app.html" class="btn">Close your own month <span class="arw">→</span></a>
+      <a href="close-pack.html" class="btn ghost">See an example close pack</a>
+      <span class="aside">Two files. About two minutes.</span>
+    </div>
+    <div class="trust rise d4">
+      <span><b>3,043</b> records closed in <b>0.01s</b></span>
+      <span><b>14</b> defect classes, <b>4</b> held out</span>
+      <span><b>0</b> false positives</span>
+      <span>Live Razorpay Settlement Recon API</span>
+    </div>
   </div>
-  <div class="trust rise d4">
-    <span><b>3,043</b> records closed in <b>0.01s</b></span>
-    <span><b>14</b> defect classes, <b>4</b> held out</span>
-    <span><b>0</b> false positives</span>
-    <span>Live Razorpay Settlement Recon API</span>
-  </div>
-</div></header>
+</header>
 
-<section id="exhibit"><div class="wrap">
+<!-- ==================== START HERE ==================== -->
+<section id="start" class="tint"><div class="wrap">
+  <p class="kicker">Start here</p>
+  <h2>What you actually do</h2>
+  <p class="sub">You do not need to understand reconciliation to use this. You need
+    two files you already have, and about two minutes.</p>
+
+  <div class="flow">
+    <div class="fstep rise">
+      <span class="time">~1 min</span>
+      <div class="n">1</div>
+      <h3>Download two files</h3>
+      <p>Your settlement report for the month, and your bank statement for the same
+        month. Both as CSV. That is the minimum — anything else you have makes the
+        answer sharper.</p>
+      <div class="where">
+        <b>Settlements</b> — Razorpay Dashboard → Settlements → Reports → download
+        the recon report for the month<br><br>
+        <b>Bank</b> — your net-banking portal → statement for the same month →
+        export as CSV
+      </div>
+    </div>
+
+    <div class="fstep rise d1">
+      <span class="time">~30 sec</span>
+      <div class="n">2</div>
+      <h3>Drop them in</h3>
+      <p>Drag both files onto the page. Type your registered business name and pick
+        the month you are closing. If you know your MDR rate, set it — otherwise the
+        standard 2% is assumed.</p>
+      <div class="where">
+        <b>Nothing is kept.</b> Your statements are read in memory and discarded.
+        Attest stores the close pack it produces, not your raw files.
+      </div>
+    </div>
+
+    <div class="fstep rise d2">
+      <span class="time">under a second</span>
+      <div class="n">3</div>
+      <h3>Read three numbers</h3>
+      <p>You get a sealed close pack: what tied, what can be <i>proven</i>, what
+        broke under testing, and a ranked list of money you can still claim
+        back — with the deadline on each claim.</p>
+      <div class="where">
+        <b>Then act.</b> Each exception names the counterparty, the evidence that
+        would settle it, and the date it expires.
+      </div>
+    </div>
+  </div>
+
+  <div class="note"><strong>Do not have all the files?</strong> Run it anyway. Attest
+    never assumes what it cannot see — a missing source lowers the proof rate and the
+    app tells you exactly what it cost. That is the honest behaviour, and it is
+    shown in full <a href="#ladder">further down</a>.</div>
+</div></section>
+
+<!-- ==================== WHAT YOU GET BACK ==================== -->
+<section id="numbers"><div class="wrap">
+  <p class="kicker">What you get back</p>
+  <h2>Three numbers, and the second two are the point</h2>
+  <p class="sub">Every reconciliation tool reports the first one. Here is what each
+    actually answers, in the order a merchant would ask.</p>
+
+  <div class="qa rise">
+    <div class="q q1">
+      <div><div class="num" data-count>90.9%</div><div class="lab">Match rate</div></div>
+      <div>
+        <div class="ask">"Did the money arrive?"</div>
+        <div class="ans">The share of settlement batches whose total agrees with a
+          credit in your bank. It is a real check and it passes almost always —
+          because Razorpay pays exactly what its own report says it will. The two
+          documents agree by construction.</div>
+        <span class="tagline">What everyone reports</span>
+      </div>
+    </div>
+
+    <div class="q q2">
+      <div><div class="num" data-count>73.0%</div><div class="lab">Proof rate</div></div>
+      <div>
+        <div class="ask">"Can I show why every deduction was correct?"</div>
+        <div class="ans">The share of individual lines that trace end to end with no
+          link missing: the order the customer placed → the fee charged on it → the
+          tax on that fee → the batch it settled in → the credit in your bank. Break
+          any link and the line is not proven, however well the totals agree.</div>
+        <span class="tagline">What we report</span>
+      </div>
+    </div>
+
+    <div class="q q3">
+      <div><div class="num" data-count>68.2%</div><div class="lab">False-match rate</div></div>
+      <div>
+        <div class="ask">"How many of those matches fall apart when attacked?"</div>
+        <div class="ans">Of the batches that passed, this share was overturned by an
+          adversarial pass that actively tries to break its own results — six
+          hypotheses about how a match could be true for the wrong reason. Published
+          on purpose, because a tool that never reports its own failures is not
+          reporting.</div>
+        <span class="tagline">What nobody reports</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="note"><strong>Why you can trust these numbers.</strong> The benchmark data
+    is built truth-first: the real ledger is generated and frozen, the documents are
+    derived from it, then errors are injected into the documents only. Four defect
+    classes were planted with <strong>no detector written for them</strong> — three
+    were caught anyway by generic integrity checks, and one is reported as missed.
+    Recall on the classes we designed for is 100%, which on its own proves nothing at
+    all. Recall on the held-out classes is <strong>75%</strong>. That is the number
+    that means something.</div>
+</div></section>
+
+<!-- ==================== THE EXHIBIT ==================== -->
+<section id="exhibit" class="tint"><div class="wrap">
   <p class="kicker">Exhibit — one batch from a real month</p>
   <h2>The error a match rate can never find</h2>
   <p class="sub">This batch reconciles perfectly. Every automated check passes. Two
-    real errors are inside it.</p>
+    real errors are sitting inside it.</p>
 
-  <div class="exhibit rise">
+  <div class="exhibit rise px" data-px="-0.02">
     <div class="head"><span>Settlement batch · August 2026</span>
       <span>36 lines · reconciled ✓</span></div>
     <div class="body">
@@ -288,7 +454,7 @@ footer a{color:var(--ink2)}
         close.
         <br><br>
         Attest catches it by rebuilding what the refund deduction <strong>should</strong>
-        have been from the merchant's own records and the netting rule in their
+        have been from your own refund records and the netting rule in your
         contract — never from the settlement report it is auditing. Use the audited
         document to check itself and the error cancels out of the very test built to
         find it.</p>
@@ -296,62 +462,72 @@ footer a{color:var(--ink2)}
   </div>
 </div></section>
 
-<section><div class="wrap">
-  <p class="kicker">What we report instead</p>
-  <h2>Three numbers, and the second two are the point</h2>
-  <p class="sub">Measured on a synthetic month with 81 planted, labelled defects.
-    The number goes down as the test gets harder.</p>
+<!-- ==================== THE EVIDENCE LADDER ==================== -->
+<section id="ladder"><div class="wrap">
+  <p class="kicker">What if I only have some of the files</p>
+  <h2>Less evidence, lower proof — never a quieter answer</h2>
+  <p class="sub">The same August month, closed four times, withdrawing one source at
+    a time. Watch the first column refuse to move.</p>
 
-  <div class="rates rise">
-    <div class="r1"><div class="t">Looks reconciled</div><div class="n">90.9%</div>
-      <div class="d">Batches whose total agrees with the bank. What conventional
-        reconciliation reports.</div></div>
-    <div class="r2"><div class="t">Actually provable</div><div class="n">73.0%</div>
-      <div class="d">Lines traced end to end — order, fee, tax, batch, bank — with
-        no link missing.</div></div>
-    <div class="r3"><div class="t">Matches we broke</div><div class="n">68.2%</div>
-      <div class="d">Of the batches that passed, this share failed adversarial
-        review. Published on purpose.</div></div>
-  </div>
+  <div class="tbl rise"><table>
+    <thead><tr><th>What you upload</th><th class="n">Match rate</th>
+      <th class="n">Proof rate</th><th>What you lose</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Everything<small>7 sources</small></td>
+        <td class="n">90.9%</td><td class="n">73.0%</td>
+        <td>Nothing. This is the ceiling.</td></tr>
+      <tr><td class="k">Settlements + bank + orders + refunds<small>4 sources</small></td>
+        <td class="n">90.9%</td><td class="n">41.5%</td>
+        <td>COD short-remittance and return freight stop being checked.</td></tr>
+      <tr class="zero"><td class="k">Settlements + bank<small>2 sources</small></td>
+        <td class="n">90.9%</td><td class="n">0.0%</td>
+        <td>No order export, so no line can be traced back to what the customer was
+          actually charged. Everything still ties.</td></tr>
+      <tr><td class="k">Razorpay alone<small>1 source</small></td>
+        <td class="n">0.0%</td><td class="n">0.0%</td>
+        <td>Nothing at all. Razorpay cannot prove Razorpay.</td></tr>
+    </tbody>
+  </table></div>
 
-  <div class="note rise"><strong>Why you can trust these numbers.</strong> The test data
-    is built truth-first: the real ledger is generated and frozen, the documents are
-    derived from it, then errors are injected into the documents only. Four defect
-    classes were planted with <strong>no detector written for them</strong> — three
-    were caught anyway by generic integrity checks, and one is reported as missed.
-    Recall on the classes we designed for is 100%, which on its own proves nothing.
-    Recall on the held-out classes is <strong>75%</strong>. That is the number that
-    means something.</div>
+  <div class="note warn"><strong>Read the third row again.</strong> Your books tie
+    90.9% and you can prove <strong>nothing</strong>. That gap is not a bug in the
+    measurement — it is the entire argument of this project, and it is why connecting
+    a payment gateway to itself and calling the result reconciled is a category
+    error. The tie tells you money moved. Only evidence tells you the right amount
+    moved.</div>
 </div></section>
 
-<section id="how"><div class="wrap">
-  <p class="kicker">How it works</p>
-  <h2>Connect, close, claim</h2>
-  <div class="steps rise">
-    <div class="step"><span class="num">01 — CONNECT</span>
-      <h3>Your real settlements</h3>
-      <p>Attest calls Razorpay's live Settlement Recon API with your own keys.
-        Test and live keys use the identical path. Bank statement, courier
-        remittances and order export come in alongside.</p></div>
-    <div class="step"><span class="num">02 — CLOSE</span>
-      <h3>Every line, proven or not</h3>
-      <p>Deterministic matching, then a proof chain per line, then six
-        falsification hypotheses attacking every match that survived. The
-        arithmetic never goes through a model.</p></div>
-    <div class="step"><span class="num">03 — CLAIM</span>
-      <h3>Money, with a clock on it</h3>
-      <p>Each exception gets a counterparty, the evidence that would close it,
-        and a deadline. Courier disputes die in 14 days — a month-end close finds
-        them too late.</p></div>
-  </div>
+<!-- ==================== THE SEAL ==================== -->
+<section id="seal" class="tint"><div class="wrap">
+  <p class="kicker">What you hand your auditor</p>
+  <h2>A close pack that cannot be quietly edited</h2>
+  <p class="sub">A report is a file, and a file can be opened and changed. Every close
+    pack carries a SHA-256 digest of the entire rendered document.</p>
 
-  <div class="note rise"><strong>Cadence is the product.</strong> On the sample month,
-    closing monthly instead of daily lets <strong>₹5,365 across 16 claims expire
-    unfiled</strong> — computed from the same findings scored against a close that
-    lands 30 days later, not asserted. Running daily is not a performance detail.
-    It is the difference between finding money and recovering it.</div>
+  <div class="seal rise">
+    <div>
+      <div class="digest">c3d2703b c68930f3 134b428b 26606f71</div>
+      <div class="cmd">$ python3 -m attest.seal --verify close-pack.html</div>
+      <p><span class="ok">INTACT</span> — the whole document hashes to its printed
+        digest. Change one rupee, one date, one letter of the business name, and it
+        reads <span class="no">ALTERED</span> instead.</p>
+    </div>
+    <div>
+      <h3 style="margin-bottom:12px">What it proves, and what it does not</h3>
+      <p>A matching digest proves the pack has not been edited since it was sealed.
+        It does <b>not</b> prove who produced it — anyone holding the code can seal a
+        document. That is true of every self-contained checksum, which is why the
+        honest word is <b>tamper-evident</b> and not tamper-proof.</p>
+      <p>Authorship comes from the close record: when a close runs, its digest is
+        written to a table with <b>no update policy and no delete policy</b>. A
+        merchant can add a seal; nobody can alter one afterwards — not the merchant,
+        not us. Your auditor asks it one question. <i>Was this exact digest
+        recorded, and when?</i></p>
+    </div>
+  </div>
 </div></section>
 
+<!-- ==================== WHO IT'S FOR ==================== -->
 <section id="who"><div class="wrap">
   <p class="kicker">Who it's for</p>
   <h2>Not every MSME — and the difference matters</h2>
@@ -381,9 +557,17 @@ footer a{color:var(--ink2)}
         <td>Already automated, or has the staff to absorb it.</td></tr>
     </tbody>
   </table></div>
+
+  <div class="note"><strong>Cadence is the product.</strong> On the sample month,
+    closing monthly instead of daily lets <strong>₹5,365 across 16 claims expire
+    unfiled</strong> — computed from the same findings scored against a close that
+    lands 30 days later, not asserted. Courier disputes die in 14 days. Running daily
+    is not a performance detail; it is the difference between finding money and
+    recovering it.</div>
 </div></section>
 
-<section id="real"><div class="wrap">
+<!-- ==================== HONEST SCOPE ==================== -->
+<section id="real" class="tint"><div class="wrap">
   <p class="kicker">Honest scope</p>
   <h2>What exists, and what does not</h2>
   <p class="sub">A roadmap presented as a feature is a lie. This is the split.</p>
@@ -391,55 +575,79 @@ footer a{color:var(--ink2)}
   <div class="two rise">
     <div class="built"><h4>Built and working</h4>
       <ul>
-        <li>Live Razorpay Settlement Recon API, test and live keys</li>
+        <li>Accounts, with each merchant's closes visible only to them</li>
+        <li>Upload your own exports, or connect a Razorpay test key</li>
+        <li>Live Razorpay Settlement Recon API from the command line</li>
         <li>Deterministic match engine and per-line proof chains</li>
         <li>Adversarial auditor — six falsification hypotheses</li>
         <li>Accuracy scored against held-out ground truth</li>
         <li>Deadline-aware recovery with counterparty and claim window</li>
-        <li>Self-contained close pack, zero runtime dependencies</li>
-        <li>One-command local verification of every claim</li>
+        <li>Tamper-evident close pack, sealed and independently verifiable</li>
+        <li>One-command local verification of every claim on this page</li>
       </ul></div>
     <div class="later"><h4>Roadmap — not built</h4>
       <ul>
-        <li>OAuth, so merchants connect without pasting API secrets</li>
+        <li>Razorpay OAuth, so merchants never paste a key at all</li>
         <li>Continuous ingest via webhooks, replacing the batch run</li>
-        <li>Multi-tenancy and a CA-firm view across clients</li>
-        <li>Filing and tracking claims, not just drafting them</li>
+        <li>A CA-firm view across many client merchants</li>
+        <li>Filing and tracking claims, not only drafting them</li>
         <li>Journal export to Tally and Zoho</li>
         <li>A learning loop on which claim types actually get paid</li>
       </ul></div>
   </div>
 
-  <div class="note rise"><strong>Why the benchmark is synthetic, deliberately.</strong>
+  <div class="note"><strong>Why the benchmark is synthetic, deliberately.</strong>
     Accuracy can only be measured against data whose truth you constructed. On live
     settlements you can report that something does not reconcile — never whether you
     were <em>right</em>, because nobody knows the correct answer. Recall needs an
     answer key. So the ingestion path is real and the accuracy benchmark is
-    synthetic, by necessity rather than convenience.</div>
+    synthetic, by necessity rather than convenience. A close pack produced from your
+    own data says so on its face, and shows no recall figure at all.</div>
+
+  <div class="cta" style="margin-top:34px">
+    <a href="app.html" class="btn">Close your own month <span class="arw">→</span></a>
+    <a href="https://github.com/GitBeat16/attest" class="btn ghost">Read the code</a>
+  </div>
 </div></section>
 
 <footer><div class="wrap"><div class="row">
   <span>Attest · Razorpay AI Buildathon, Track 4 — AI Finance Controller</span>
   <span><a href="https://github.com/GitBeat16/attest">github.com/GitBeat16/attest</a>
-    &nbsp;·&nbsp; <a href="close-pack.html">Live close pack</a></span>
+    &nbsp;·&nbsp; <a href="close-pack.html">Example close pack</a>
+    &nbsp;·&nbsp; <a href="app.html">Sign in</a></span>
 </div></div></footer>
 
-
 <script>
-// The coin turns while the page loads, then hands off. It is deliberately
-// short-lived and self-cancelling: a slow font or a dead network must never
-// leave a merchant staring at a spinning coin.
+// The coin turns while the page loads, then hands off. Deliberately short-lived
+// and self-cancelling: a slow font or a dead network must never leave a merchant
+// staring at a spinning coin.
 (function () {
   var boot = document.getElementById('boot');
-  var slow = window.matchMedia &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 850;
+  var cap = document.getElementById('bootcap');
+  var reduced = window.matchMedia &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var slow = reduced ? 0 : 1300;
   var start = Date.now(), fired = false, ready = false, queue = [];
+
+  // Each caption names a real stage of the pipeline, in the order it runs.
+  var CAPS = ['Reading the settlement report', 'Resolving settlement ids',
+              'Rebuilding the fee calculation', 'Testing what tied',
+              'Sealing the pack'];
+  var ci = 0, timer = null;
+  if (!reduced && cap) {
+    timer = setInterval(function () {
+      ci = (ci + 1) % CAPS.length;
+      cap.classList.add('swap');
+      setTimeout(function () { cap.textContent = CAPS[ci]; cap.classList.remove('swap'); }, 250);
+    }, 620);
+  }
 
   window.attestReady = function (fn) { ready ? fn() : queue.push(fn); };
 
   function finish() {
     if (fired) return; fired = true;
-    setTimeout(function () {                 // let one full turn complete
+    setTimeout(function () {
+      if (timer) clearInterval(timer);
       if (boot) boot.classList.add('done');
       ready = true;
       while (queue.length) queue.shift()();
@@ -447,7 +655,7 @@ footer a{color:var(--ink2)}
   }
   if (document.readyState === 'complete') finish();
   else window.addEventListener('load', finish);
-  setTimeout(finish, 3000);                  // hard ceiling, whatever is still loading
+  setTimeout(finish, 3000);            // hard ceiling, whatever is still loading
 })();
 
 (function () {
@@ -465,15 +673,15 @@ footer a{color:var(--ink2)}
     entries.forEach(function (e) {
       if (!e.isIntersecting) return;
       e.target.classList.add('in');
-      io.unobserve(e.target);            // reveal once; never re-animate on scroll back
+      io.unobserve(e.target);          // reveal once; never re-animate on scroll back
       if (e.target.id === 'ledger') countUp();
     });
   }, { threshold: 0.18, rootMargin: '0px 0px -40px 0px' });
 
   document.querySelectorAll('.rise, #ledger').forEach(function (el) { io.observe(el); });
 
-  // The hero is above the fold, so it reveals as the coin clears rather than
-  // on scroll -- otherwise it animates behind the overlay and is missed.
+  // The hero reveals as the coin clears rather than on scroll, otherwise it
+  // animates behind the overlay and is missed.
   window.attestReady(function () {
     requestAnimationFrame(function () {
       document.querySelectorAll('header .rise').forEach(function (el) {
@@ -482,31 +690,53 @@ footer a{color:var(--ink2)}
     });
   });
 
+  // ---- parallax -------------------------------------------------------
+  // Transform only, batched into one rAF per frame, and capped so nothing
+  // drifts far enough to collide with the text it sits behind.
+  var layers = [].slice.call(document.querySelectorAll('[data-px]'));
+  if (layers.length) {
+    var ticking = false;
+    function frame() {
+      var y = window.pageYOffset || document.documentElement.scrollTop;
+      layers.forEach(function (el) {
+        var speed = parseFloat(el.getAttribute('data-px')) || 0;
+        var top = el.getBoundingClientRect().top + y;
+        var shift = (y - top) * speed;
+        shift = Math.max(-90, Math.min(90, shift));
+        el.style.transform = 'translate3d(0,' + shift.toFixed(1) + 'px,0)';
+      });
+      ticking = false;
+    }
+    window.addEventListener('scroll', function () {
+      if (!ticking) { ticking = true; requestAnimationFrame(frame); }
+    }, { passive: true });
+    frame();
+  }
+
   // Count the three rates up to their real values. Percentages only -- no money
   // figure is ever animated, because a rupee amount ticking upward reads as a
   // sales gimmick on a page whose whole argument is restraint about numbers.
   var counted = false;
   function countUp() {
     if (counted) return; counted = true;
-    document.querySelectorAll('.rates .n').forEach(function (el) {
+    document.querySelectorAll('[data-count]').forEach(function (el) {
       var target = parseFloat(el.textContent);
       if (isNaN(target)) return;
       var t0 = null, dur = 900;
-      function frame(ts) {
+      function step(ts) {
         if (!t0) t0 = ts;
         var k = Math.min((ts - t0) / dur, 1);
-        var eased = 1 - Math.pow(1 - k, 3);
-        el.textContent = (target * eased).toFixed(1) + '%';
-        if (k < 1) requestAnimationFrame(frame);
+        el.textContent = (target * (1 - Math.pow(1 - k, 3))).toFixed(1) + '%';
+        if (k < 1) requestAnimationFrame(step);
       }
       el.textContent = '0.0%';
-      requestAnimationFrame(frame);
+      requestAnimationFrame(step);
     });
   }
-  var rates = document.querySelector('.rates');
-  if (rates) new IntersectionObserver(function (es, ob) {
+  var qa = document.querySelector('.qa');
+  if (qa) new IntersectionObserver(function (es, ob) {
     if (es[0].isIntersecting) { countUp(); ob.disconnect(); }
-  }, { threshold: 0.4 }).observe(rates);
+  }, { threshold: 0.3 }).observe(qa);
 })();
 </script>
 </body></html>

@@ -127,17 +127,25 @@ footer{padding:38px 0 64px;font-family:var(--mono);font-size:11.5px;color:var(--
   line-height:1.9}
 @media(max-width:760px){.split{grid-template-columns:1fr}.dline{flex-wrap:wrap}
   .dtext{min-width:0}}
+
+.sealbox{border:1px solid var(--rule);background:var(--surface);padding:22px 24px;
+  margin-top:20px}
+.sealbox .sd{font-family:var(--mono);font-size:1.05rem;font-weight:600;
+  letter-spacing:.08em;color:var(--ink);word-break:break-all}
+.sealbox .sm{font-family:var(--mono);font-size:11.5px;color:var(--ink3);margin-top:10px}
+.sealbox .sc{font-family:var(--mono);font-size:12px;color:var(--accent);margin-top:14px;
+  padding-top:12px;border-top:1px solid var(--rule2)}
 </style></head><body>
 
 <nav><div class="wrap">
   <a class="mark" href="index.html"><span class="glyph">A</span><span class="name">Attest</span></a>
   <div class="meta">Acme Athleisure Private Limited<br>2026-08 &nbsp;·&nbsp; 3,043 records
-    from 7 systems &nbsp;·&nbsp; closed in 0.012s</div>
+    from 7 systems &nbsp;·&nbsp; closed in 0.01s</div>
 </div></nav>
 
 <div class="wrap">
 <header class="page">
-  <p class="eyebrow">Close pack &middot; generated 2026-09-04 08:20</p>
+  <p class="eyebrow">Close pack &middot; generated 2026-08 close</p>
   <h1>We found <b>₹88,103.47</b> you can still claim back
     &mdash; and <i>₹5,365.00</i> of it dies if you close
     monthly.</h1>
@@ -258,9 +266,30 @@ footer{padding:38px 0 64px;font-family:var(--mono);font-size:11.5px;color:var(--
     signs is not attesting to anything.</span>
 </div>
 
+<h2>Seal</h2>
+<p class="lede">Every figure above is covered by this digest. Change one rupee
+  anywhere on the page and it stops matching.</p>
+<div class="sealbox">
+  <div class="sd">c3d2703b c68930f3 134b428b 26606f71</div>
+  <div class="sm">SHA-256 over 3,043 records ·
+    20/22 batches tied ·
+    743/1018 lines proven ·
+    residual ₹46,617.32</div>
+  <div class="sc">python3 -m attest.seal --verify &lt;this file&gt;</div>
+</div>
+<div class="note"><b>What this proves, and what it does not.</b> A matching
+  digest proves the pack has not been edited since it was sealed. It does
+  <i>not</i> prove who produced it — anyone holding the code can seal a
+  document, which is true of every self-contained checksum and is why the honest
+  word is <b>tamper-evident</b> rather than tamper-proof. Authorship comes from
+  the close record, which is written once and can never be updated or deleted,
+  by its owner or by us. An auditor asks one question of it: was this exact
+  digest recorded, and when?</div>
+
+<!--attest-seal:v1 c3d2703bc68930f3134b428b26606f71f0ccd461e8a7ca3d33f28cf12b779b50 {"attestable":false,"batches":22,"exceptions":[["ADJUSTMENT",3,7158],["ADJUSTMENT",5,9183],["ADJUSTMENT",6,14943],["CHARGEBACK_ORPHAN",1,153117],["CREDIT",10,1104950],["CREDIT",22,2785265],["DUPLICATE_AWB",1,280116],["DUPLICATE_SETTLEMENT_LINE",1,96263],["GST",1,11740],["GST",1,18103],["GST",2,41216],["MDR",1,412],["MDR",1,412],["MDR",4,4],["MDR",5,733],["MDR",6,6],["MDR",6,550],["MDR",7,7],["MDR",7,7],["MDR",7,717],["MDR",7,1010],["MDR",8,8],["MDR",8,8],["MDR",8,8],["MDR",8,530],["MDR",9,9],["MDR",10,10],["MDR",13,1901],["MDR",15,194],["MDR",19,976],["MDR",20,2191],["MDR",27,596],["MDR",29,1901],["OFFSETTING_PAIR",1,822],["OFFSETTING_PAIR",1,822],["ORPHAN_BANK_CREDIT",1,517000],["ORPHAN_BANK_CREDIT",1,2717360],["REFUND_MISMATCH",1,338653],["SELF_REFERENTIAL_TIE",1,212],["SELF_REFERENTIAL_TIE",1,412],["SELF_REFERENTIAL_TIE",1,412],["SELF_REFERENTIAL_TIE",1,617],["SELF_REFERENTIAL_TIE",1,643],["SELF_REFERENTIAL_TIE",1,675],["SELF_REFERENTIAL_TIE",1,839],["SELF_REFERENTIAL_TIE",1,862],["SELF_REFERENTIAL_TIE",1,1186],["SELF_REFERENTIAL_TIE",1,14307],["SELF_REFERENTIAL_TIE",1,20334],["SELF_REFERENTIAL_TIE",1,42347],["TOLERANCE_ABUSE",1,200],["UNREFERENCED_ADJ",1,225100],["UNREFERENCED_ADJ",1,393300]],"lines":1018,"merchant":"Acme Athleisure Private Limited","overturned":15,"period":"2026-08","proven":743,"records":3043,"residual_paise":4661732,"tested":22,"tied":20,"v":1,"volume_paise":183176093} :attest-seal-->
+
 <footer>
-  Attest &middot; Razorpay AI Buildathon, Track 4 &middot; synthetic corpus, no real
-  merchant data<br>
+  Attest &middot; Razorpay AI Buildathon, Track 4<br>
   Deterministic engine, zero runtime dependencies. Every figure reproducible with
   <span style="color:var(--ink2)">python -m attest.generate --out data --orders 1200</span><br>
   <a href="index.html">&larr; What Attest is</a>

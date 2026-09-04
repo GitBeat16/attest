@@ -142,7 +142,8 @@ td.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
 @keyframes rim{0%,18%{opacity:0}25%{opacity:1}32%,68%{opacity:0}75%{opacity:1}82%,100%{opacity:0}}
 .busy{display:grid;place-items:center;gap:18px;padding:56px 0}
 .busy .cap{font-family:var(--mono);font-size:11px;letter-spacing:.18em;
-  text-transform:uppercase;color:var(--ink3)}
+  text-transform:uppercase;color:var(--ink3);transition:opacity .22s ease;
+  min-height:1.2em;text-align:center}
 
 .hist{border:1px solid var(--rule);margin-top:16px}
 .hist .h{display:flex;align-items:center;gap:16px;padding:13px 16px;
@@ -156,6 +157,25 @@ td.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
   padding:3px 8px;border-radius:3px}
 .tag.yes{background:var(--good-soft);color:var(--good)}
 .tag.no{background:var(--bad-soft);color:var(--bad)}
+
+.drop{border:1.5px dashed var(--rule2);border-radius:6px;background:var(--surface);
+  padding:30px 24px;text-align:center;transition:border-color .18s,background .18s,
+  transform .18s;cursor:pointer}
+.drop:hover{border-color:var(--accent);background:var(--accent-soft)}
+.drop.over{border-color:var(--accent);background:var(--accent-soft);
+  border-style:solid;transform:scale(1.007)}
+.drop .big{font-family:var(--serif);font-size:1.2rem;font-weight:500;color:var(--ink)}
+.drop .small{color:var(--ink3);font-size:.9rem;margin-top:7px}
+.drop .small b{color:var(--ink2);font-weight:500}
+.drop input[type=file]{display:none}
+.matched{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.chip{font-family:var(--mono);font-size:11px;padding:4px 10px;border-radius:3px;
+  background:var(--good-soft);color:var(--good)}
+.chip.no{background:var(--bad-soft);color:var(--bad)}
+.slotwrap{margin-top:18px}
+.slotwrap > summary{cursor:pointer;font-family:var(--mono);font-size:11px;
+  letter-spacing:.13em;text-transform:uppercase;color:var(--ink3);margin-bottom:10px}
+.slot.over{background:var(--accent-soft)}
 
 .err{margin-top:16px;padding:13px 16px;border-left:2px solid var(--bad);
   background:var(--bad-soft);color:var(--ink);font-size:.92rem}
@@ -238,7 +258,17 @@ footer{padding:44px 0 66px;margin-top:44px;border-top:1px solid var(--rule);
     </div>
 
     <div id="pane-upload">
-      <div class="slots" id="slots"></div>
+      <div class="drop" id="drop">
+        <div class="big">Drop your exports here</div>
+        <div class="small">or <b>click to choose files</b> — drop them all at once and
+          Attest sorts them out by filename</div>
+        <div class="matched" id="matched"></div>
+        <input type="file" id="dropinput" multiple accept=".csv,.json,text/csv,application/json">
+      </div>
+      <details class="slotwrap" id="slotwrap">
+        <summary>Or place each file yourself</summary>
+        <div class="slots" id="slots"></div>
+      </details>
       <div class="note" style="margin-top:18px">
         Files stay in memory for the length of the request. Attest keeps the close
         pack it produces, not your raw statements.
@@ -263,7 +293,17 @@ footer{padding:44px 0 66px;margin-top:44px;border-top:1px solid var(--rule);
         be zero however well the totals tie. That is not a bug: <b>Razorpay cannot
         prove Razorpay.</b>
       </div>
-      <div class="slots" id="slots-key" style="margin-top:18px"></div>
+      <div class="drop" id="drop-key" style="margin-top:18px">
+        <div class="big">Drop your bank statement here</div>
+        <div class="small">Razorpay gives you the settlements. Only you can supply the
+          other side.</div>
+        <div class="matched" id="matched-key"></div>
+        <input type="file" id="dropinput-key" multiple accept=".csv,.json,text/csv,application/json">
+      </div>
+      <details class="slotwrap">
+        <summary>Or place each file yourself</summary>
+        <div class="slots" id="slots-key"></div>
+      </details>
     </div>
 
     <details style="margin-top:22px">
@@ -398,6 +438,82 @@ function paintSlot(name, required, got) {
 SOURCES.forEach(([n, l, w, r]) => slotRow(n, l, w, r, $('slots')));
 SOURCES.slice(1).forEach(([n, l, w, r]) => slotRow(n, l, w, r, $('slots-key')));
 
+// ------------------------------------------------------------- drag and drop
+// A merchant exports files named whatever their bank and dashboard call them.
+// Rather than making them match ours, match theirs: score each dropped filename
+// against every source and take the best fit above a threshold. Anything we
+// cannot place is reported rather than silently ignored.
+const HINTS = {
+  'razorpay_settlements.csv': ['settlement', 'settle', 'recon', 'razorpay', 'rzp', 'payout'],
+  'bank_statement.csv':       ['bank', 'statement', 'account', 'passbook', 'stmt'],
+  'orders.csv':               ['order', 'sales', 'transaction'],
+  'refunds.csv':              ['refund', 'return'],
+  'cod_remittances.csv':      ['cod', 'remit', 'remittance'],
+  'shipments.csv':            ['shipment', 'awb', 'shipping', 'courier', 'delivery'],
+  'disputes.csv':             ['dispute', 'chargeback', 'cb'],
+  'razorpay_mdr_invoice.json':['invoice', 'mdr', 'tax'],
+};
+
+function classify(filename) {
+  const n = filename.toLowerCase();
+  const isJson = n.endsWith('.json');
+  let best = null, bestScore = 0;
+  for (const [target, words] of Object.entries(HINTS)) {
+    if (target.endsWith('.json') !== isJson) continue;
+    let score = 0;
+    if (n === target) score = 99;
+    else for (const w of words) if (n.includes(w)) score += w.length;
+    if (score > bestScore) { bestScore = score; best = target; }
+  }
+  return bestScore >= 3 ? best : null;
+}
+
+async function accept(fileList, host) {
+  const placed = [], rejected = [];
+  for (const f of fileList) {
+    if (f.size > 5 * 1024 * 1024) { rejected.push(f.name + ' (too large)'); continue; }
+    const target = classify(f.name);
+    if (!target) { rejected.push(f.name); continue; }
+    files[target] = await f.text();
+    const meta = SOURCES.find(x => x[0] === target);
+    paintSlot(target, meta[3], f.name);
+    placed.push([meta[1], f.name]);
+  }
+  const out = $(host);
+  out.innerHTML =
+    placed.map(([label]) => `<span class="chip">${label} ✓</span>`).join('') +
+    rejected.map(n => `<span class="chip no">${n} — not recognised</span>`).join('');
+  if (rejected.length) {
+    out.innerHTML += '<span class="chip no">place these by hand below</span>';
+    const w = $('slotwrap'); if (w) w.open = true;
+  }
+}
+
+function wireDrop(zoneId, inputId, matchedId) {
+  const zone = $(zoneId), input = $(inputId);
+  if (!zone || !input) return;
+  zone.addEventListener('click', e => { if (e.target !== input) input.click(); });
+  input.addEventListener('change', () => accept(input.files, matchedId));
+  ['dragenter', 'dragover'].forEach(ev => zone.addEventListener(ev, e => {
+    e.preventDefault(); e.stopPropagation(); zone.classList.add('over');
+  }));
+  ['dragleave', 'drop'].forEach(ev => zone.addEventListener(ev, e => {
+    e.preventDefault(); e.stopPropagation();
+    if (ev === 'dragleave' && zone.contains(e.relatedTarget)) return;
+    zone.classList.remove('over');
+  }));
+  zone.addEventListener('drop', e => {
+    if (e.dataTransfer && e.dataTransfer.files.length) accept(e.dataTransfer.files, matchedId);
+  });
+}
+wireDrop('drop', 'dropinput', 'matched');
+wireDrop('drop-key', 'dropinput-key', 'matched-key');
+
+// Dropping anywhere else on the page must not make the browser navigate away
+// from a half-filled form.
+['dragover', 'drop'].forEach(ev =>
+  window.addEventListener(ev, e => { e.preventDefault(); }, false));
+
 let mode = 'upload';
 $('tab-upload').onclick = () => setMode('upload');
 $('tab-key').onclick = () => setMode('razorpay_test');
@@ -440,6 +556,24 @@ function paint(session) {
 
 // ---------------------------------------------------------------- run
 let lastPack = '';
+
+// The captions name real stages, in the order the pipeline runs them.
+const STAGES = ['Reading the settlement report', 'Resolving settlement ids',
+                'Rebuilding the fee calculation', 'Testing what tied',
+                'Attacking every match that passed', 'Sealing the pack'];
+let capTimer = null;
+function startCaptions(fetching) {
+  const el = $('busycap');
+  let i = 0;
+  el.textContent = fetching ? 'Fetching settlements from Razorpay' : STAGES[0];
+  clearInterval(capTimer);
+  capTimer = setInterval(() => {
+    i = (i + 1) % STAGES.length;
+    el.style.opacity = '0';
+    setTimeout(() => { el.textContent = STAGES[i]; el.style.opacity = '1'; }, 220);
+  }, 700);
+}
+function stopCaptions() { clearInterval(capTimer); capTimer = null; }
 $('run').onclick = run;
 $('another').onclick = () => { $('result').hidden = true; window.scrollTo({ top: 0, behavior: 'smooth' }); };
 
@@ -460,7 +594,7 @@ async function run() {
   $('busy').hidden = false;
   $('result').hidden = true;
   $('run').disabled = true;
-  $('busycap').textContent = mode === 'razorpay_test' ? 'Fetching settlements' : 'Closing the month';
+  startCaptions(mode === 'razorpay_test');
 
   const body = {
     token: session.access_token, merchant, period, mode,
@@ -491,6 +625,7 @@ async function run() {
   } finally {
     // The secret never lives longer than the request on this side either.
     $('keysecret').value = '';
+    stopCaptions();
     $('busy').hidden = true;
     $('run').disabled = false;
   }

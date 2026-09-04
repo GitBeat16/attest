@@ -169,6 +169,14 @@ def handle(body: dict) -> dict:
     s = result["summary"]
     pack = render(result["payload"])
 
+    # The seal is read back off the finished document rather than recomputed,
+    # so what gets recorded is provably the digest of the file the merchant
+    # actually holds.
+    from attest.seal import verify as verify_seal
+    sealed = verify_seal(pack)
+    s["seal_digest"] = sealed.get("digest")
+    s["seal_ok"] = bool(sealed.get("digest_ok"))
+
     row = postgrest("attest_closes", token, [{
         "merchant": s["merchant"], "period": s["period"], "source": mode,
         "key_id_masked": key_masked,
@@ -184,6 +192,21 @@ def handle(body: dict) -> dict:
         "pack_html": pack,
     }])
     close_id = row[0]["id"] if row else None
+
+    if s.get("seal_digest") and s["seal_ok"]:
+        # Append-only by policy: this row can never be updated or deleted, which
+        # is what turns a self-contained checksum into something an auditor can
+        # rely on.
+        try:
+            postgrest("attest_seals", token, [{
+                "digest": s["seal_digest"], "close_id": close_id,
+                "merchant": s["merchant"], "period": s["period"],
+                "records": s["records"], "attestable": s["attestable"],
+            }])
+        except CloseError:
+            s["seal_recorded"] = False      # the close still stands
+        else:
+            s["seal_recorded"] = True
 
     findings = [{
         "close_id": close_id,

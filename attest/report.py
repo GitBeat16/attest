@@ -161,6 +161,14 @@ footer{padding:38px 0 64px;font-family:var(--mono);font-size:11.5px;color:var(--
   line-height:1.9}
 @media(max-width:760px){.split{grid-template-columns:1fr}.dline{flex-wrap:wrap}
   .dtext{min-width:0}}
+
+.sealbox{border:1px solid var(--rule);background:var(--surface);padding:22px 24px;
+  margin-top:20px}
+.sealbox .sd{font-family:var(--mono);font-size:1.05rem;font-weight:600;
+  letter-spacing:.08em;color:var(--ink);word-break:break-all}
+.sealbox .sm{font-family:var(--mono);font-size:11.5px;color:var(--ink3);margin-top:10px}
+.sealbox .sc{font-family:var(--mono);font-size:12px;color:var(--accent);margin-top:14px;
+  padding-top:12px;border-top:1px solid var(--rule2)}
 """
 
 
@@ -172,7 +180,25 @@ def _label(cls: str) -> tuple[str, str]:
     return LABELS.get(cls, (cls.replace("_", " ").title(), ""))
 
 
+def esc(v) -> str:
+    """Escape anything that came from outside this program.
+
+    The close pack is a document a merchant hands to their auditor, which makes
+    it a delivery vehicle: a business name or a settlement id containing markup
+    would otherwise execute in the reader's browser. Every value interpolated
+    below that originated in a form field or an uploaded file goes through here.
+    """
+    return (str(v).replace("&", "&amp;").replace("<", "&lt;")
+            .replace(">", "&gt;").replace('"', "&quot;"))
+
+
 def render(p: dict) -> str:
+    from .seal import MARK_CLOSE, MARK_OPEN, PH, PH_GROUPED, canonical
+    seal_canon = canonical(p)
+    seal_blob = (MARK_OPEN + PH + " "
+                 + __import__("json").dumps(seal_canon, sort_keys=True,
+                                            separators=(",", ":"))
+                 + MARK_CLOSE)
     rc = p.get("recovery") or {}
     comp = (p.get("compensating") or [{}])[0]
 
@@ -200,7 +226,7 @@ def render(p: dict) -> str:
     Attest catches it by rebuilding what the refund deduction <b>should</b> have
     been from the merchant's own refund records and the netting rule in the
     contract &mdash; never from the settlement report it is auditing. Batch
-    <span class="mono" style="color:var(--ink)">{comp.get('target','')[:22]}</span>.
+    <span class="mono" style="color:var(--ink)">{esc(comp.get('target',''))[:22]}</span>.
   </div>
 </div>"""
     else:
@@ -244,15 +270,15 @@ def render(p: dict) -> str:
         f"<td class='n'><span class='tag "
         f"{'t-urg' if d['urgency'] in ('critical','lapsed') else 't-soon' if d['urgency']=='urgent' else 't-ok'}'>"
         f"{d['days']} days</span></td>"
-        f"<td class='k'>{_label(d['cls'])[0]}<small>{_label(d['cls'])[1]}</small></td>"
-        f"<td class='n'>{fmt(d['exposure'])}</td><td>{d['party']}</td></tr>"
+        f"<td class='k'>{esc(_label(d['cls'])[0])}<small>{esc(_label(d['cls'])[1])}</small></td>"
+        f"<td class='n'>{fmt(d['exposure'])}</td><td>{esc(d['party'])}</td></tr>"
         for d in rc.get("deadlines", [])
     )
 
     ex_rows = "".join(
-        f"<tr><td class='k'>{_label(e['class'])[0]}<small>{_label(e['class'])[1]}</small></td>"
+        f"<tr><td class='k'>{esc(_label(e['class'])[0])}<small>{esc(_label(e['class'])[1])}</small></td>"
         f"<td class='n'>{e['count']}</td><td class='n'>{fmt(e['exposure'])}</td>"
-        f"<td>{e['evidence_required']}</td></tr>"
+        f"<td>{esc(e['evidence_required'])}</td></tr>"
         for e in p["exceptions"][:8]
     )
 
@@ -298,16 +324,16 @@ def render(p: dict) -> str:
   not transferred to this page. What is on this page is evidence: what tied, what
   traced end to end, and what did not.</div>"""
 
-    return f"""<!doctype html>
+    doc = f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Attest — close pack {p['period']}</title>
+<title>Attest — close pack {esc(p['period'])}</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>{CSS}</style></head><body>
 
 <nav><div class="wrap">
   <a class="mark" href="index.html"><span class="glyph">A</span><span class="name">Attest</span></a>
-  <div class="meta">{p['merchant']}<br>{p['period']} &nbsp;·&nbsp; {p['records']:,} records
+  <div class="meta">{esc(p['merchant'])}<br>{esc(p['period'])} &nbsp;·&nbsp; {p['records']:,} records
     from 7 systems &nbsp;·&nbsp; closed in {p['seconds']}s</div>
 </div></nav>
 
@@ -371,11 +397,34 @@ def render(p: dict) -> str:
     signs is not attesting to anything.</span>
 </div>
 
+<h2>Seal</h2>
+<p class="lede">Every figure above is covered by this digest. Change one rupee
+  anywhere on the page and it stops matching.</p>
+<div class="sealbox">
+  <div class="sd">{PH_GROUPED}</div>
+  <div class="sm">SHA-256 over {seal_canon['records']:,} records ·
+    {seal_canon['tied']}/{seal_canon['batches']} batches tied ·
+    {seal_canon['proven']:,}/{seal_canon['lines']} lines proven ·
+    residual {fmt(seal_canon['residual_paise'])}</div>
+  <div class="sc">python3 -m attest.seal --verify &lt;this file&gt;</div>
+</div>
+<div class="note"><b>What this proves, and what it does not.</b> A matching
+  digest proves the pack has not been edited since it was sealed. It does
+  <i>not</i> prove who produced it — anyone holding the code can seal a
+  document, which is true of every self-contained checksum and is why the honest
+  word is <b>tamper-evident</b> rather than tamper-proof. Authorship comes from
+  the close record, which is written once and can never be updated or deleted,
+  by its owner or by us. An auditor asks one question of it: was this exact
+  digest recorded, and when?</div>
+
+{seal_blob}
+
 <footer>
-  Attest &middot; Razorpay AI Buildathon, Track 4 &middot; synthetic corpus, no real
-  merchant data<br>
+  Attest &middot; Razorpay AI Buildathon, Track 4<br>
   Deterministic engine, zero runtime dependencies. Every figure reproducible with
   <span style="color:var(--ink2)">python -m attest.generate --out data --orders 1200</span><br>
   <a href="index.html">&larr; What Attest is</a>
 </footer>
 </div></body></html>"""
+    from .seal import stamp
+    return stamp(doc, seal_canon)
