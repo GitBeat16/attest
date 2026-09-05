@@ -413,6 +413,8 @@ Attest resolves bank credits to batches on `(value_date, amount)` and then carri
 `settlement_id` forward as the authoritative identity. Where two batches could
 both explain a credit, it escalates rather than picking one.
 
+Live Video Demo : https://drive.google.com/file/d/1nD7FGzZJo4dO_KYNC6aZXf2B7LYQqdli/view?usp=drive_link
+
 ## Licence
 
 MIT
