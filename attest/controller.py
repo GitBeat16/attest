@@ -329,6 +329,12 @@ For "conclude", include "claim" and "evidence_ids" citing only ids a tool return
         self.engine = engine
         self.calls = 0
         self.last_error = ""
+        # If the model drops out mid-investigation — rate limit, timeout, a
+        # network blip on stage — the loop must keep going on the deterministic
+        # planner rather than taking the whole investigation down with it. The
+        # planner is the replaceable part; that is the entire architecture.
+        self.degraded = False
+        self._rules = RulesPlanner()
 
     def propose(self, observation: dict, history: list[Step]) -> dict:
         prompt = json.dumps({
@@ -343,7 +349,12 @@ For "conclude", include "claim" and "evidence_ids" citing only ids a tool return
         }, default=str)[:6000]
 
         self.calls += 1
-        raw = self.engine.plan(self.SYSTEM, prompt)
+        try:
+            raw = self.engine.plan(self.SYSTEM, prompt)
+        except Exception as e:                               # noqa: BLE001
+            self.degraded = True
+            self.last_error = f"model unavailable: {type(e).__name__}"
+            return self._rules.propose(observation, history)
         try:
             start, end = raw.index("{"), raw.rindex("}") + 1
             return json.loads(raw[start:end])

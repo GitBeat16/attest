@@ -286,8 +286,11 @@ section{padding:104px 0;position:relative;scroll-margin-top:78px}
    set inside it. The whole group is pushed through an SVG turbulence
    displacement, which is what gives the rough ink edge — a clean vector circle
    reads as a logo, not as something pressed onto paper. */
-.stamp-slot{position:relative;display:flex;align-items:center;gap:22px;
-  margin-top:26px;max-width:100%;flex-wrap:wrap}
+/* Badge on top, statement under it, both centred — a stamp sits on the page,
+   it does not stand beside its own caption. */
+.stamp-slot{position:relative;display:flex;flex-direction:column;align-items:center;
+  gap:20px;margin:38px auto 6px;max-width:100%;text-align:center}
+.badge-wrap{position:relative;display:inline-block;line-height:0}
 .badge{width:118px;height:118px;flex:none;color:currentColor;opacity:0;
   transform-origin:50% 50%;will-change:transform,opacity,filter}
 html:not(.js) .badge{opacity:1}
@@ -296,9 +299,9 @@ html:not(.js) .badge{opacity:1}
 .badge .bw{font-size:16px;letter-spacing:-.02em}
 .badge .bs{font-size:7.5px;letter-spacing:.06em;opacity:.85}
 .badge .bt{font-size:6.5px;letter-spacing:.26em;fill:currentColor;opacity:.8}
-.stamp-slot .stamp{flex:0 1 auto;min-width:0}
+.stamp-slot .stamp{max-width:min(100%,640px)}
 @media(max-width:640px){
-  .stamp-slot{gap:16px}
+  .stamp-slot{gap:16px;margin-top:28px}
   .badge{width:92px;height:92px}
   .stamp-slot .stamp{min-width:0}
 }
@@ -311,8 +314,9 @@ html:not(.js) .badge{opacity:1}
 html.js .stamp{opacity:0}
 
 /* the shock the paper takes, spreading out from under the mark */
-.stamp-slot .ring{position:absolute;inset:0;border:2px solid currentColor;opacity:0;
-  pointer-events:none;z-index:1;will-change:transform,opacity}
+/* the rings now ring the badge, so they are circles */
+.stamp-slot .ring{position:absolute;inset:4%;border:2px solid currentColor;border-radius:50%;
+  opacity:0;pointer-events:none;z-index:1;will-change:transform,opacity}
 .stamp-slot .ring.r2{border-width:1px}
 .stamp-slot.ok{color:var(--good-lit)}
 .stamp-slot.no{color:var(--bad-lit)}
@@ -663,7 +667,7 @@ footer a:hover{color:var(--gold-lit)}
           <span class="a">₹19,40,799.80</span></div>
         <div class="r"><span class="l">Difference</span><span class="a">₹0.00</span></div>
       </div>
-      <div class="stamp-slot ok"><svg class="badge" viewBox="0 0 132 132" aria-hidden="true">
+      <div class="stamp-slot ok"><div class="badge-wrap"><svg class="badge" viewBox="0 0 132 132" aria-hidden="true">
   <defs>
     <filter id="ink1" x="-25%" y="-25%" width="150%" height="150%">
       <feTurbulence type="fractalNoise" baseFrequency="0.045 0.09" numOctaves="4" seed="7" result="n"/>
@@ -681,7 +685,7 @@ footer a:hover{color:var(--gold-lit)}
     <text class="bs" x="66" y="79" text-anchor="middle">₹0.00 OUT</text>
     <text class="bt" x="66" y="95" text-anchor="middle">AUG 2026</text>
   </g>
-</svg><div class="stamp ok">✓ Reconciled — every recon tool stops right here</div><span class="ring"></span><span class="ring r2"></span><i class="speck"></i><i class="speck"></i><i class="speck"></i><i class="speck"></i><i class="speck"></i></div>
+</svg><span class="ring"></span><span class="ring r2"></span><i class="speck"></i><i class="speck"></i><i class="speck"></i><i class="speck"></i><i class="speck"></i></div><div class="stamp ok">✓ Reconciled — every recon tool stops right here</div></div>
     </div>
 
     <div class="beat hot">
@@ -728,7 +732,7 @@ footer a:hover{color:var(--gold-lit)}
       <div class="scrubbar" aria-hidden="true"><i id="scrubfill"></i></div>
       <p class="scrubhint" id="scrubhint">Scroll to run it — or press play</p>
 
-      <div class="stamp-slot no" id="beat2slot"><svg class="badge" viewBox="0 0 132 132" aria-hidden="true">
+      <div class="stamp-slot no" id="beat2slot"><div class="badge-wrap"><svg class="badge" viewBox="0 0 132 132" aria-hidden="true">
   <defs>
     <filter id="ink2" x="-25%" y="-25%" width="150%" height="150%">
       <feTurbulence type="fractalNoise" baseFrequency="0.045 0.09" numOctaves="4" seed="14" result="n"/>
@@ -746,8 +750,8 @@ footer a:hover{color:var(--gold-lit)}
     <text class="bs" x="66" y="79" text-anchor="middle">₹8,495.80</text>
     <text class="bt" x="66" y="95" text-anchor="middle">AUG 2026</text>
   </g>
-</svg><div class="stamp no" id="beat2stamp">✗ ₹8,495.80 of real error, hidden behind ₹0.20</div><span class="ring"></span><span class="ring r2"></span><i class="speck"></i><i class="speck"></i><i class="speck"></i><i class="speck"></i><i class="speck"></i></div>
-      <div><button class="replay" id="replay">↻ Play it again</button></div>
+</svg><span class="ring"></span><span class="ring r2"></span><i class="speck"></i><i class="speck"></i><i class="speck"></i><i class="speck"></i><i class="speck"></i></div><div class="stamp no" id="beat2stamp">✗ ₹8,495.80 of real error, hidden behind ₹0.20</div></div>
+      <div style="text-align:center"><button class="replay" id="replay">↻ Play it again</button></div>
     </div>
 
     <div class="beat">
@@ -765,7 +769,7 @@ footer a:hover{color:var(--gold-lit)}
           <div class="k">wrong inside — 42,479× understated</div></div>
       </div>
 
-      <div class="stamp-slot no"><svg class="badge" viewBox="0 0 132 132" aria-hidden="true">
+      <div class="stamp-slot no"><div class="badge-wrap"><svg class="badge" viewBox="0 0 132 132" aria-hidden="true">
   <defs>
     <filter id="ink3" x="-25%" y="-25%" width="150%" height="150%">
       <feTurbulence type="fractalNoise" baseFrequency="0.045 0.09" numOctaves="4" seed="21" result="n"/>
@@ -783,7 +787,7 @@ footer a:hover{color:var(--gold-lit)}
     <text class="bs" x="66" y="79" text-anchor="middle">ATTESTABLE</text>
     <text class="bt" x="66" y="95" text-anchor="middle">AUG 2026</text>
   </g>
-</svg><div class="stamp no">✗ Not attestable — and the money is claimable from Razorpay</div><span class="ring"></span><span class="ring r2"></span><i class="speck"></i><i class="speck"></i><i class="speck"></i><i class="speck"></i><i class="speck"></i></div>
+</svg><span class="ring"></span><span class="ring r2"></span><i class="speck"></i><i class="speck"></i><i class="speck"></i><i class="speck"></i><i class="speck"></i></div><div class="stamp no">✗ Not attestable — and the money is claimable from Razorpay</div></div>
     </div>
   </div>
 
