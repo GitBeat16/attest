@@ -319,7 +319,7 @@ is not the party being checked.
 
 ## Financial bugs found during the build
 
-Nine were caught in total ([`CLAUDE.md`](CLAUDE.md) has the full list). These two
+Nine were caught in total ([`INVARIANTS.md`](INVARIANTS.md) has the full list). These two
 are the quiet kind — wrong numbers rather than crashes — and both are worth
 reading if you are assessing whether this was built carefully.
 
@@ -379,7 +379,7 @@ data/            generated; sources/ is readable, truth/ is held out
 
 Further reading: [`ARCHITECTURE.md`](ARCHITECTURE.md) for how it works,
 [`USE-CASES.md`](USE-CASES.md) for what four different merchants actually do with
-it, and [`CLAUDE.md`](CLAUDE.md) for the invariants that must not be broken.
+it, and [`INVARIANTS.md`](INVARIANTS.md) for the invariants that must not be broken.
 
 ## Environment and secrets
 
@@ -413,6 +413,6 @@ Attest resolves bank credits to batches on `(value_date, amount)` and then carri
 `settlement_id` forward as the authoritative identity. Where two batches could
 both explain a credit, it escalates rather than picking one.
 
-## License
+## Licence
 
 MIT
