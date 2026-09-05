@@ -33,6 +33,7 @@ point: the model is given the wheel, never the money.
 from __future__ import annotations
 
 import json
+import os
 import time
 from dataclasses import asdict, dataclass, field
 
@@ -537,14 +538,29 @@ def run(src, *, planner_name: str = "auto", budget: Budget | None = None,
     box = Toolbox(corpus, res, aud, exceptions, claims, today, pol)
 
     planner = None
+    # Why the planner is what it is, in words. A model that silently does not
+    # run is worse than one that is absent: the panel would claim a
+    # deterministic planner was chosen when in fact something failed. Never
+    # includes a key value — only whether one is present.
+    engine_note = ""
     if planner_name in ("auto", "model"):
         try:
             from . import engines
             eng = engines.get_engine()
-            if getattr(eng, "name", "rules") != "rules" and hasattr(eng, "plan"):
+            ename = getattr(eng, "name", "rules")
+            if ename != "rules" and hasattr(eng, "plan"):
                 planner = ModelPlanner(eng)
-        except Exception:                                    # noqa: BLE001
+                engine_note = f"engine {ename} resolved"
+            else:
+                want = os.environ.get("ATTEST_ENGINE", "").strip() or "unset"
+                keys = [k for k in ("GEMINI_API_KEY", "OPENAI_API_KEY",
+                                    "ANTHROPIC_API_KEY", "OLLAMA_HOST")
+                        if os.environ.get(k, "").strip()]
+                engine_note = (f"resolved to '{ename}'; ATTEST_ENGINE={want}; "
+                               f"credentials present: {', '.join(keys) or 'none'}")
+        except Exception as e:                               # noqa: BLE001
             planner = None
+            engine_note = f"engine setup raised {type(e).__name__}: {e}"[:180]
     if planner is None:
         if planner_name == "model":
             # Asked for explicitly and unavailable: say so rather than pretend.
@@ -566,6 +582,11 @@ def run(src, *, planner_name: str = "auto", budget: Budget | None = None,
     }
     out["resolution"] = resolution_advice(inv, box, pol)
     out["model_requested_but_unavailable"] = unavailable
+    out["engine_note"] = engine_note
+    out["degraded"] = bool(getattr(planner, "degraded", False))
+    if getattr(planner, "last_error", ""):
+        out["engine_note"] = (engine_note + " | "
+                              + planner.last_error).strip(" |")
     return out
 
 
