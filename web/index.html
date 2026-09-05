@@ -193,11 +193,11 @@ header::before{content:"";position:absolute;inset:0;pointer-events:none;
   background:repeating-linear-gradient(to bottom,transparent 0 43px,rgba(22,24,29,.035) 43px 44px);
   -webkit-mask-image:linear-gradient(to bottom,transparent,#000 18%,#000 62%,transparent);
   mask-image:linear-gradient(to bottom,transparent,#000 18%,#000 62%,transparent)}
-.wm{position:absolute;top:80px;right:-52px;font-family:var(--serif);
-  font-size:min(30vw,400px);line-height:.82;color:transparent;
-  -webkit-text-stroke:1.8px var(--ink);opacity:.08;pointer-events:none;user-select:none;
-  z-index:0;will-change:transform}
-@supports not (-webkit-text-stroke:1px black){.wm{color:var(--ink);opacity:.03}}
+/* A watermark, so it is filled and sits whole inside the page. Outlined and
+   bled off the corner it read as a stray stroke rather than a rupee sign. */
+.wm{position:absolute;top:96px;right:48px;font-family:var(--serif);font-weight:500;
+  font-size:min(21vw,290px);line-height:.82;color:var(--ink);opacity:.042;
+  pointer-events:none;user-select:none;z-index:0;will-change:transform}
 header .wrap{z-index:1}
 .eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.2em;text-transform:uppercase;
   color:var(--ink3);margin-bottom:36px;display:flex;align-items:center;gap:12px;
@@ -231,7 +231,9 @@ header .wrap{z-index:1}
 /* ---------- sections ---------- */
 section{padding:104px 0;position:relative;scroll-margin-top:78px}
 .tint{background:var(--surface);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
-.deep{background:var(--deep);color:var(--on-deep)}
+.deep{background:var(--deep);color:var(--on-deep);overflow:hidden}
+/* the stamp and its shock rings scale past the card while they play; clipping
+   at the section edge contains that without changing what anyone sees */
 .deep::before{content:"";position:absolute;inset:0;pointer-events:none;
   background:radial-gradient(110% 80% at 82% 0%,rgba(223,168,42,.10),transparent 60%),
              repeating-linear-gradient(to bottom,transparent 0 47px,rgba(255,255,255,.02) 47px 48px)}
@@ -239,6 +241,13 @@ section{padding:104px 0;position:relative;scroll-margin-top:78px}
   mix-blend-mode:overlay;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E")}
 .deep .wrap{position:relative;z-index:1}
+/* a second, slower plane behind the ink sections — it moves against the
+   scroll, which is what gives the panels their depth */
+.deepwm{position:absolute;left:40px;top:12%;font-family:var(--serif);font-weight:500;
+  font-size:min(26vw,360px);line-height:.8;color:var(--on-deep);opacity:.035;
+  pointer-events:none;user-select:none;z-index:0;will-change:transform}
+.deepwm.right{left:auto;right:56px;color:var(--gold);opacity:.07}
+@media(max-width:900px){.deepwm{display:none}}
 .deep h2,.deep h3{color:var(--on-deep)}
 .deep .kicker{color:var(--on-deep3)}
 
@@ -266,16 +275,42 @@ section{padding:104px 0;position:relative;scroll-margin-top:78px}
 .rows .l small{display:block;font-size:.8rem;color:var(--on-deep3);margin-top:5px}
 .rows .a{font-weight:600;white-space:nowrap;font-size:1.15rem;color:var(--on-deep)}
 .rows .a.up{color:var(--bad-lit)} .rows .a.dn{color:var(--good-lit)}
-/* Stamped, not faded in. A verdict on a close is a rubber stamp coming down
-   on paper, so it lands hard and slightly askew rather than arriving politely. */
-.stamp{margin-top:22px;display:inline-flex;align-items:center;gap:11px;padding:12px 18px;
+/* ------------------------------------------------------------
+   THE STAMP
+   A verdict on a close is a rubber stamp hitting paper: it falls,
+   it lands hard and askew, the ink splays, and the page takes the
+   knock. Every part of that is a separate element here — the mark,
+   two shock rings, and ink that flies off the edge.
+   ------------------------------------------------------------ */
+.stamp-slot{position:relative;display:inline-block;margin-top:22px;max-width:100%}
+.stamp{display:inline-flex;align-items:center;gap:11px;padding:12px 18px;
   font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;
-  font-weight:600;transform-origin:center;
+  font-weight:600;transform-origin:50% 50%;position:relative;z-index:2;
   /* an inline-flex box sizes to max-content, and this one carries a long
      sentence — without a cap it pushes the whole page sideways on a phone */
-  max-width:100%;overflow-wrap:anywhere}
+  max-width:100%;overflow-wrap:anywhere;will-change:transform,opacity,filter}
 html.js .stamp{opacity:0}
-@media(max-width:640px){.stamp{font-size:11px;padding:11px 14px;letter-spacing:.1em}}
+
+/* the shock the paper takes, spreading out from under the mark */
+.stamp-slot .ring{position:absolute;inset:0;border:2px solid currentColor;opacity:0;
+  pointer-events:none;z-index:1;will-change:transform,opacity}
+.stamp-slot .ring.r2{border-width:1px}
+.stamp-slot.ok{color:var(--good-lit)}
+.stamp-slot.no{color:var(--bad-lit)}
+
+/* ink that does not make it onto the paper cleanly */
+.stamp-slot .speck{position:absolute;left:50%;top:50%;width:4px;height:4px;border-radius:50%;
+  background:currentColor;opacity:0;pointer-events:none;z-index:3;
+  will-change:transform,opacity}
+
+@media(max-width:640px){
+  .stamp{font-size:11px;padding:11px 14px;letter-spacing:.1em}
+  .stamp-slot .speck{width:3px;height:3px}
+}
+@media (prefers-reduced-motion:reduce){
+  html.js .stamp{opacity:1}
+  .stamp-slot .ring,.stamp-slot .speck{display:none}
+}
 .stamp.ok{background:rgba(95,199,155,.14);color:var(--good-lit);border:1.5px solid rgba(95,199,155,.35)}
 .stamp.no{background:rgba(232,138,108,.14);color:var(--bad-lit);border:1.5px solid rgba(232,138,108,.38)}
 
@@ -289,6 +324,24 @@ html.js .stamp{opacity:0}
 .cancel .grpA,.cancel .grpB,.cancel .sliver,.cancel .rest{opacity:0}
 .cancel .bar{transform-box:fill-box;transform-origin:bottom center}
 .cancel .bar.down{transform-origin:top center}
+/* hovering a line lights the bar it belongs to, so the reader can tie the
+   number to the shape without being told which is which */
+.rows .r[data-bar]{cursor:pointer;margin:0 -14px;padding-left:14px;padding-right:14px;
+  transition:background .2s,box-shadow .2s;outline:none}
+.rows .r[data-bar]:hover,.rows .r[data-bar]:focus-visible{background:rgba(255,255,255,.045);
+  box-shadow:inset 2px 0 0 currentColor}
+.rows .r[data-bar="a"]{color:var(--bad-lit)}
+.rows .r[data-bar="b"]{color:var(--good-lit)}
+.cancel .grpA,.cancel .grpB{transition:filter .25s}
+.cancel.lit-a .grpB,.cancel.lit-b .grpA{filter:saturate(.25) opacity(.4)}
+
+/* the scroll scrubs the sequence, so a progress read-out belongs with it */
+.scrubbar{margin-top:18px;height:2px;background:var(--deep3);position:relative;
+  max-width:700px;margin-left:auto;margin-right:auto}
+.scrubbar i{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--gold)}
+.scrubhint{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--on-deep3);text-align:center;margin-top:10px}
+
 .replay{margin-top:20px;background:none;border:1.5px solid var(--deep3);color:var(--on-deep2);
   font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;
   padding:10px 16px;cursor:pointer;transition:border-color .2s,color .2s;font-weight:500}
@@ -559,7 +612,7 @@ footer a:hover{color:var(--gold-lit)}
     </div>
     <p class="cta-note rise">No account · no credentials · about one second</p>
 
-    <div class="trust rise">
+    <div class="trust rise px" data-px="0.05">
       <div><div class="v" data-num="3043">3,043</div><div class="k">records closed<br>in 0.01s</div></div>
       <div><div class="v">14 / 4</div><div class="k">defect classes<br>four held out</div></div>
       <div><div class="v" data-num="0">0</div><div class="k">false positives<br>on the benchmark</div></div>
@@ -569,7 +622,9 @@ footer a:hover{color:var(--gold-lit)}
 </header>
 
 <!-- ==================== THE EXHIBIT ==================== -->
-<section id="exhibit" class="deep on-deep"><div class="wrap">
+<section id="exhibit" class="deep on-deep">
+  <div class="deepwm px" data-px="-0.16" aria-hidden="true">₹</div>
+  <div class="wrap">
   <p class="kicker">One real batch, start to finish</p>
   <h2>How ₹8,495 walks out of a batch that balances</h2>
   <p class="sub">Three steps, no jargon. This is the actual batch in the demo, and these are
@@ -589,7 +644,7 @@ footer a:hover{color:var(--gold-lit)}
           <span class="a">₹19,40,799.80</span></div>
         <div class="r"><span class="l">Difference</span><span class="a">₹0.00</span></div>
       </div>
-      <div class="stamp ok">✓ Reconciled — every recon tool stops right here</div>
+      <div class="stamp-slot ok"><div class="stamp ok">✓ Reconciled — every recon tool stops right here</div><span class="ring"></span><span class="ring r2"></span><i class="speck"></i><i class="speck"></i><i class="speck"></i><i class="speck"></i><i class="speck"></i></div>
     </div>
 
     <div class="beat hot">
@@ -599,10 +654,10 @@ footer a:hover{color:var(--gold-lit)}
         deduction from <b>your own records</b> — your orders, your refunds, your contract —
         never from the report it is checking.</p>
       <div class="rows">
-        <div class="r"><span class="l">They charged you too much in fees
+        <div class="r" data-bar="a" tabindex="0"><span class="l">They charged you too much in fees
             <small>2.18% taken, 2.00% agreed in your contract</small></span>
           <span class="a up">+ ₹4,248.00</span></div>
-        <div class="r"><span class="l">They forgot to deduct refunds you owed
+        <div class="r" data-bar="b" tabindex="0"><span class="l">They forgot to deduct refunds you owed
             <small>your refund export says ₹12,000; they deducted ₹7,752.20</small></span>
           <span class="a dn">− ₹4,247.80</span></div>
       </div>
@@ -633,7 +688,10 @@ footer a:hover{color:var(--gold-lit)}
           </g>
         </svg>
       </div>
-      <div class="stamp no" id="beat2stamp">✗ ₹8,495.80 of real error, hidden behind ₹0.20</div>
+      <div class="scrubbar" aria-hidden="true"><i id="scrubfill"></i></div>
+      <p class="scrubhint" id="scrubhint">Scroll to run it — or press play</p>
+
+      <div class="stamp-slot no" id="beat2slot"><div class="stamp no" id="beat2stamp">✗ ₹8,495.80 of real error, hidden behind ₹0.20</div><span class="ring"></span><span class="ring r2"></span><i class="speck"></i><i class="speck"></i><i class="speck"></i><i class="speck"></i><i class="speck"></i></div>
       <div><button class="replay" id="replay">↻ Play it again</button></div>
     </div>
 
@@ -644,7 +702,7 @@ footer a:hover{color:var(--gold-lit)}
         through it, and ₹8,495.80 leaves the building. Accountants call this a
         <b>compensating error</b>, and a check on totals cannot find it by construction.</p>
 
-      <div class="punch">
+      <div class="punch px" data-px="-0.05">
         <div class="fig small"><div class="v">₹0.20</div>
           <div class="k">what the check sees</div></div>
         <div class="x">but really</div>
@@ -652,7 +710,7 @@ footer a:hover{color:var(--gold-lit)}
           <div class="k">wrong inside — 42,479× understated</div></div>
       </div>
 
-      <div class="stamp no">✗ Not attestable — and the money is claimable from Razorpay</div>
+      <div class="stamp-slot no"><div class="stamp no">✗ Not attestable — and the money is claimable from Razorpay</div><span class="ring"></span><span class="ring r2"></span><i class="speck"></i><i class="speck"></i><i class="speck"></i><i class="speck"></i><i class="speck"></i></div>
     </div>
   </div>
 
@@ -845,6 +903,7 @@ footer a:hover{color:var(--gold-lit)}
 
 <!-- ==================== CLOSE ==================== -->
 <section id="close" class="deep on-deep">
+  <div class="deepwm right px" data-px="-0.22" aria-hidden="true">✓</div>
   <div class="wrap" style="text-align:center">
     <h2 style="max-width:22ch;margin:0 auto;font-size:clamp(2.1rem,5vw,3.4rem)">
       Don't just close the books.<br><em style="color:var(--gold-lit)">Prove the close.</em></h2>
@@ -902,6 +961,33 @@ footer a:hover{color:var(--gold-lit)}
 </div></footer>
 
 <script src="motion.js"></script>
+<script>
+// Rive slot. @rive-app/canvas is a *player* — it needs a .riv binary authored
+// in the Rive editor, and nothing in code can produce one. So the runtime is
+// not loaded unless a file is actually there: drop web/stamp.riv in and this
+// picks it up and takes over the stamp; until then it costs nothing and the
+// Motion version runs. No dead 500kB library on the page either way.
+window.attestRive = (function () {
+  var STATE = { ready: false, riv: null };
+  fetch('stamp.riv', { method: 'HEAD' }).then(function (r) {
+    if (!r.ok) return;
+    var s = document.createElement('script');
+    s.src = 'rive.js';
+    s.onload = function () {
+      if (!window.rive) return;
+      var host = document.getElementById('riveStamp');
+      if (!host) return;
+      host.hidden = false;
+      STATE.riv = new window.rive.Rive({
+        src: 'stamp.riv', canvas: host, autoplay: false,
+        stateMachines: 'Stamp', onLoad: function () { STATE.ready = true; }
+      });
+    };
+    document.head.appendChild(s);
+  }).catch(function () { /* no file, no runtime, no problem */ });
+  return STATE;
+})();
+</script>
 <script>
 // The boot coin turns while the page loads, then hands off. Self-cancelling:
 // a slow font or a dead network must never leave a merchant watching a coin.
@@ -995,68 +1081,172 @@ footer a:hover{color:var(--gold-lit)}
   // ---- stamps ---------------------------------------------------------
   // Overshoot on the way down, so it reads as a stamp hitting paper rather
   // than a box fading in. The tilt is deliberate: nobody stamps straight.
+  // Four stages, because that is what a stamp actually does: it falls (big,
+  // tilted, motion-blurred), it hits (overshoot past its resting size), it
+  // recoils, it settles. The ink and the shock rings are separate elements
+  // fired off the impact, not part of the mark itself.
+  //
   // The delay is a timer, not Motion's `delay`: Motion applies the first
-  // keyframe immediately and waits, which would leave the stamp sitting at
-  // 2.3× for five seconds — invisible, but wide enough to push the page
-  // sideways on a phone.
+  // keyframe immediately and then waits, which would leave the stamp sitting
+  // at 2.4× for five seconds — invisible, but wide enough to shove the page
+  // sideways on a phone. That was a real bug; this is the fix.
+  var IMPACT = .40;                            // when the rubber meets the paper
+
   function stamp(el, delay) {
     if (!el) return;
-    if (!M || reduced) { el.style.opacity = 1; el.style.transform = 'none'; return; }
+    var slot = el.parentElement;
+    if (!M || reduced) {
+      el.style.opacity = 1; el.style.transform = 'none'; el.style.filter = 'none';
+      return;
+    }
     el.style.opacity = 0;
     el.style.transform = 'none';
     clearTimeout(el._stampTimer);
+
     el._stampTimer = setTimeout(function () {
+      var DUR = .62;
+      // a 2.4x fall and a 2.5x shockwave are fine on a desktop card and far
+      // too wide on a phone, where they push past the viewport edge
+      var narrow = window.innerWidth < 820;
+      var fall = narrow ? 1.7 : 2.4, drop = narrow ? 26 : 38;
       M.animate(el, {
-        opacity: [0, 1, 1],
-        transform: ['scale(2.3) rotate(-10deg)', 'scale(.94) rotate(-1.6deg)',
-                    'scale(1) rotate(-1.6deg)']
-      }, { duration: .5, ease: [.3, .9, .3, 1] });
+        opacity:   [0, .55, 1, 1, 1],
+        filter:    ['blur(7px)', 'blur(2.5px)', 'blur(0px)', 'blur(0px)', 'blur(0px)'],
+        transform: [
+          'translateY(-' + drop + 'px) scale(' + fall + ') rotate(-13deg)',   // falling
+          'translateY(-' + (drop * .32).toFixed(0) + 'px) scale('
+            + (1 + (fall - 1) * .32).toFixed(2) + ') rotate(-6deg)',          // nearly down
+          'translateY(0) scale(.93) rotate(-1.6deg)',      // impact, squashed
+          'translateY(0) scale(1.035) rotate(-1.6deg)',    // recoil
+          'translateY(0) scale(1) rotate(-1.6deg)'         // settled, askew
+        ]
+      }, { duration: DUR, ease: [.3, .85, .35, 1], times: [0, .22, IMPACT, .62, 1] });
+
+      if (!slot) return;
+      var impactMs = DUR * IMPACT * 1000;
+
+      // the paper takes the knock
+      var beat = slot.closest('.beat');
+      if (beat) setTimeout(function () {
+        M.animate(beat, { transform: ['translateY(0)', 'translateY(3px)', 'translateY(0)'] },
+                  { duration: .26, ease: 'ease-out' });
+      }, impactMs);
+
+      // two rings of shock, the second slower and fainter
+      slot.querySelectorAll('.ring').forEach(function (ring, i) {
+        // On a phone the slot is nearly the full width, so a ring that grows
+        // sideways has nowhere to go. There it pulses vertically instead —
+        // same read, no horizontal overflow.
+        var k = narrow
+          ? ['scaleY(.5)', 'scaleY(' + (i ? 1.9 : 1.5) + ')', 'scaleY(' + (i ? 2.6 : 2) + ')']
+          : ['scale(.55)', 'scale(' + (i ? 1.7 : 1.35) + ')', 'scale(' + (i ? 2.5 : 1.9) + ')'];
+        M.animate(ring, {
+          opacity:   [0, i ? .35 : .7, 0],
+          transform: k
+        }, { duration: i ? .95 : .7, delay: (impactMs / 1000) + (i ? .06 : 0),
+             ease: [.16, .8, .3, 1] });
+      });
+
+      // ink that misses the paper, thrown out along the tilt
+      slot.querySelectorAll('.speck').forEach(function (sp, i) {
+        var a = (-150 + i * 62) * Math.PI / 180;
+        var d = 26 + (i % 3) * 15;
+        M.animate(sp, {
+          opacity:   [0, .9, 0],
+          transform: ['translate(-50%,-50%) scale(.3)',
+                      'translate(calc(-50% + ' + (Math.cos(a) * d * .55).toFixed(1) + 'px),'
+                        + ' calc(-50% + ' + (Math.sin(a) * d * .55).toFixed(1) + 'px)) scale(1)',
+                      'translate(calc(-50% + ' + (Math.cos(a) * d).toFixed(1) + 'px),'
+                        + ' calc(-50% + ' + (Math.sin(a) * d).toFixed(1) + 'px)) scale(.2)']
+        }, { duration: .55 + (i % 3) * .1, delay: impactMs / 1000, ease: [.2, .9, .4, 1] });
+      });
     }, (delay || 0) * 1000);
   }
+
   document.querySelectorAll('.stamp').forEach(function (el) {
     if (el.id === 'beat2stamp') return;          // that one lands with the sequence
     if (!M || reduced) { el.style.opacity = 1; return; }
-    M.inView(el, function () { stamp(el, .25); }, { amount: .8 });
+    M.inView(el, function () { stamp(el, .3); }, { amount: .8 });
   });
 
   // ---- the exhibit sequence -----------------------------------------
   // Two errors grow to scale, slide into each other, and collapse. The money
   // does not go anywhere; it stops being visible. That is the whole argument.
+  // ONE source of truth for the sequence: render(p), p from 0 to 1.
+  // Scrolling scrubs p directly, so the reader drives the timeline and can
+  // run it backwards. The play button animates p instead. Two ways in, one
+  // implementation — which is why they cannot drift apart.
   var cancel = document.getElementById('cancel');
   var beat2stamp = document.getElementById('beat2stamp');
-  function runCancel() {
-    if (!cancel) return;
-    if (!M || reduced) {
-      cancel.querySelectorAll('g').forEach(function (g) { g.style.opacity = 1; });
-      if (beat2stamp) beat2stamp.style.opacity = 1;
-      return;
-    }
-    var A = cancel.querySelector('.grpA'), B = cancel.querySelector('.grpB');
-    var barA = A.querySelector('.bar'), barB = B.querySelector('.bar');
-    var sliver = cancel.querySelector('.sliver'), rest = cancel.querySelector('.rest');
-    [A, B, sliver, rest].forEach(function (g) { g.style.opacity = 0; });
-    barA.style.transform = 'scaleY(0)'; barB.style.transform = 'scaleY(0)';
-    A.style.transform = 'translateX(0)'; B.style.transform = 'translateX(0)';
+  var scrubfill = document.getElementById('scrubfill');
+  var scrubhint = document.getElementById('scrubhint');
 
-    M.animate(A, { opacity: 1 }, { duration: .3 });
-    M.animate(barA, { transform: ['scaleY(0)', 'scaleY(1)'] }, { duration: .8, ease: EASE });
-    M.animate(B, { opacity: 1 }, { duration: .3, delay: .75 });
-    M.animate(barB, { transform: ['scaleY(0)', 'scaleY(1)'] }, { duration: .8, delay: .75, ease: EASE });
-    M.animate(A, { transform: 'translateX(148px)' }, { duration: 1.1, delay: 2.1, ease: EASE });
-    M.animate(B, { transform: 'translateX(-148px)' }, { duration: 1.1, delay: 2.1, ease: EASE });
-    M.animate(barA, { transform: 'scaleY(0.02)' }, { duration: .55, delay: 3.25, ease: EASE });
-    M.animate(barB, { transform: 'scaleY(0.02)' }, { duration: .55, delay: 3.25, ease: EASE });
-    M.animate(A, { opacity: 0 }, { duration: .45, delay: 3.35 });
-    M.animate(B, { opacity: 0 }, { duration: .45, delay: 3.35 });
-    M.animate(sliver, { opacity: [0, 1] }, { duration: .6, delay: 3.8, ease: EASE });
-    M.animate(rest, { opacity: [0, 1], transform: ['translateY(8px)', 'none'] },
-              { duration: .6, delay: 4.5, ease: EASE });
-    stamp(beat2stamp, 5.15);          // the verdict lands last, and lands hard
+  function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
+  // eased sub-range: how far through [a,b] is p, smoothed at both ends
+  function seg(p, a, b) {
+    var t = clamp01((p - a) / (b - a));
+    return t * t * (3 - 2 * t);
   }
-  if (M && !reduced && cancel) M.inView(cancel, runCancel, { amount: .35 });
-  else runCancel();
+
+  var C = cancel && {
+    A: cancel.querySelector('.grpA'), B: cancel.querySelector('.grpB'),
+    barA: cancel.querySelector('.grpA .bar'), barB: cancel.querySelector('.grpB .bar'),
+    sliver: cancel.querySelector('.sliver'), rest: cancel.querySelector('.rest')
+  };
+  var stamped = false;
+
+  function render(p) {
+    if (!C) return;
+    p = clamp01(p);
+    var growA  = seg(p, .02, .24);          // the overcharge rises
+    var growB  = seg(p, .20, .42);          // the missed refund drops
+    var slide  = seg(p, .46, .70);          // they travel toward each other
+    var kill   = seg(p, .70, .82);          // and annihilate
+    var show   = seg(p, .80, .90);          // the residue is all that is left
+    var last   = seg(p, .90, 1);
+
+    C.A.style.opacity = growA * (1 - kill);
+    C.B.style.opacity = growB * (1 - kill);
+    C.barA.style.transform = 'scaleY(' + (growA * (1 - kill * .98)).toFixed(4) + ')';
+    C.barB.style.transform = 'scaleY(' + (growB * (1 - kill * .98)).toFixed(4) + ')';
+    C.A.style.transform = 'translateX(' + (slide * 148).toFixed(1) + 'px)';
+    C.B.style.transform = 'translateX(' + (slide * -148).toFixed(1) + 'px)';
+    C.sliver.style.opacity = show;
+    C.rest.style.opacity = last;
+    C.rest.style.transform = 'translateY(' + ((1 - last) * 8).toFixed(1) + 'px)';
+
+    if (scrubfill) scrubfill.style.width = (p * 100).toFixed(1) + '%';
+    if (scrubhint) scrubhint.style.opacity = (1 - p * .8).toFixed(2);
+
+    // the verdict is stamped once, at the end — it is an event, not a state
+    if (p > .97 && !stamped) { stamped = true; stamp(beat2stamp, 0); }
+    if (p < .85 && stamped) { stamped = false; if (beat2stamp) beat2stamp.style.opacity = 0; }
+  }
+
+  if (!M || reduced) {
+    if (C) { render(1); if (beat2stamp) beat2stamp.style.opacity = 1; }
+  } else if (C) {
+    render(0);
+  }
+
   var replay = document.getElementById('replay');
-  if (replay) replay.addEventListener('click', runCancel);
+  if (replay) replay.addEventListener('click', function () {
+    if (!M || reduced) { render(1); return; }
+    stamped = false;
+    if (beat2stamp) beat2stamp.style.opacity = 0;
+    M.animate(0, 1, { duration: 4.2, ease: 'linear', onUpdate: render });
+  });
+
+  // hovering a line isolates its bar
+  document.querySelectorAll('.rows .r[data-bar]').forEach(function (row) {
+    var which = row.getAttribute('data-bar');
+    function on()  { if (cancel) cancel.classList.add('lit-' + which); }
+    function off() { if (cancel) cancel.classList.remove('lit-a', 'lit-b'); }
+    row.addEventListener('mouseenter', on);
+    row.addEventListener('mouseleave', off);
+    row.addEventListener('focus', on);
+    row.addEventListener('blur', off);
+  });
 
   // ---- the coin ------------------------------------------------------
   // A damped spring. Scroll sets the target; the coin chases it with momentum
@@ -1097,10 +1287,44 @@ footer a:hover{color:var(--gold-lit)}
       shadow.style.transform = 'scaleX(' + (Math.abs(c) * .66 + .34).toFixed(3) + ')';
       shadow.style.opacity = (.4 + Math.abs(c) * .35).toFixed(2);
     }
-    var facing = Math.abs((((deg % 360) + 450) % 360) - 180) < 90 ? 1 : 0;
+    var m = ((deg % 360) + 360) % 360;
+    // the back face is toward the reader between 90 and 270 degrees
+    var facing = (m > 90 && m < 270) ? 1 : 0;
     if (facing !== shown && faceLabel) { shown = facing; faceLabel.textContent = FACES[facing]; }
   }, .13, .74);
   var railSpring = springTo(function (deg) { paint(railcoin, railrim, deg); }, .11, .78);
+
+  // A judge has about five seconds before deciding what this is. So the coin
+  // turns itself over once on arrival — money on one face, proof on the other
+  // — and the caption changes under it. The whole argument, before any scroll.
+  var introRunning = false;
+  if (M && !reduced && coin) {
+    introRunning = true;
+    window.attestReady(function () {
+      if (!introRunning) return;
+      setTimeout(function () {
+        if (!introRunning) return;
+        M.animate(0, 540, {
+          duration: 2.6, ease: [.5, 0, .2, 1],
+          onUpdate: function (deg) {
+            if (!introRunning) return;
+            var c = paint(coin, rim, deg);
+            if (shadow) {
+              shadow.style.transform = 'scaleX(' + (Math.abs(c) * .66 + .34).toFixed(3) + ')';
+              shadow.style.opacity = (.4 + Math.abs(c) * .35).toFixed(2);
+            }
+            var m = ((deg % 360) + 360) % 360;
+    // the back face is toward the reader between 90 and 270 degrees
+    var facing = (m > 90 && m < 270) ? 1 : 0;
+            if (facing !== shown && faceLabel) {
+              shown = facing; faceLabel.textContent = FACES[facing];
+            }
+          },
+          onComplete: function () { introRunning = false; }
+        });
+      }, 520);
+    });
+  }
 
   // ---- the spine ------------------------------------------------------
   var spine = document.getElementById('spine'), fill = document.getElementById('spinefill');
@@ -1117,13 +1341,15 @@ footer a:hover{color:var(--gold-lit)}
     layers.forEach(function (el) {
       var speed = parseFloat(el.getAttribute('data-px')) || 0;
       var top = el.getBoundingClientRect().top + y;
-      var shift = Math.max(-90, Math.min(90, (y - top) * speed));
+      var shift = Math.max(-190, Math.min(190, (y - top) * speed));
       el.style.transform = 'translate3d(0,' + shift.toFixed(1) + 'px,0)';
     });
 
     var span = Math.max(220, window.innerHeight * .72);
     var p = Math.max(0, Math.min(1, y / span));
-    heroSpring(p * 540);
+    // the intro owns the coin until it finishes, or until the reader scrolls
+    if (introRunning && y > 6) introRunning = false;
+    if (!introRunning) heroSpring(p * 540);
     if (hint) hint.style.opacity = (1 - p * .85).toFixed(2);
 
     var header = document.getElementById('top');
@@ -1149,6 +1375,16 @@ footer a:hover{color:var(--gold-lit)}
           fill.style.height = (track * (idx / (items.length - 1))) + 'px';
         }
       }
+    }
+
+    // the exhibit runs on scroll position, not on a clock: the graphic
+    // scrubs from 0 to 1 as it crosses the middle of the viewport, so the
+    // reader controls the timeline and can run it backwards
+    if (C && !reduced) {
+      var cr = cancel.getBoundingClientRect();
+      var vh = window.innerHeight;
+      var startAt = vh * .86, endAt = vh * .30;
+      render((startAt - cr.top) / (startAt - endAt));
     }
 
     var mid = window.innerHeight / 2, dark = false, navdark = false;
