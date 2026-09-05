@@ -44,9 +44,12 @@ CSS = """
   --ink:#16181D; --ink2:#4A4E58; --ink3:#7B808C;
   --rule:#E3DED3; --rule2:#CFC8B8;
   --accent:#1B4B73; --accent-soft:#E7EDF3;
-  --good:#1D6B4F; --good-soft:#E4EFE9;
+  --good:#1D6B4F; --good-soft:#E4EFE9; --good-lit:#5FC79B;
   --warn:#8A5A12; --warn-soft:#F5EDDC;
-  --bad:#A03A22; --bad-soft:#F7E7E1;
+  --bad:#A03A22; --bad-soft:#F7E7E1; --bad-lit:#E88A6C;
+  --deep:#101319; --deep-rule:#282E3A;
+  --on-deep:#EFEBE2; --on-deep2:#99A0AD; --on-deep3:#666D7A;
+  --gold:#DFA82A; --gold-lit:#F2CB5C; --gold-deep:#B87C15;
   --serif:Newsreader,Georgia,"Times New Roman",serif;
   --sans:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
@@ -81,17 +84,28 @@ section{padding:56px 0;border-bottom:1px solid var(--rule)}
 h2{font-family:var(--serif);font-size:1.65rem;font-weight:500;letter-spacing:-.015em;
   line-height:1.2;margin-bottom:6px}
 .lede{color:var(--ink2);max-width:64ch;margin-bottom:20px;font-size:.98rem}
-.step{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;
-  color:var(--ink3);margin-bottom:12px}
+.step{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--ink3);margin-bottom:12px;display:flex;align-items:center;gap:11px}
+.step::before{content:"";width:22px;height:1px;background:var(--rule2);flex:none}
 
-.split{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--rule);
-  border:1px solid var(--rule);margin-top:22px}
-.split > div{background:var(--paper);padding:22px 22px}
-.split .l{font-family:var(--mono);font-size:11px;letter-spacing:.14em;
-  text-transform:uppercase;color:var(--ink3)}
-.split .v{font-family:var(--mono);font-size:1.75rem;font-weight:600;margin-top:10px;
-  letter-spacing:-.025em}
-.split .n{font-size:.87rem;color:var(--ink3);margin-top:8px;line-height:1.45}
+/* The headline figures sit on ink, exactly as they do in the app — the pack
+   an auditor opens and the screen it was produced on are one product. */
+.split{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin:22px 0 40px;
+  background:var(--deep);border:1px solid var(--deep);position:relative;
+  overflow:hidden}
+.split::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(120% 90% at 84% 0%,rgba(223,168,42,.10),transparent 62%)}
+.split > div{padding:26px 24px;position:relative;z-index:1;
+  border-left:1px solid var(--deep-rule)}
+.split > div:first-child{border-left:none}
+.split .l{font-family:var(--mono);font-size:11px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--on-deep3)}
+.split .v{font-family:var(--mono);font-size:1.85rem;font-weight:600;margin-top:12px;
+  letter-spacing:-.03em;color:var(--on-deep);font-variant-numeric:tabular-nums}
+.split .n{font-size:.87rem;color:var(--on-deep3);margin-top:10px;line-height:1.5}
+/* the money-at-risk figure is the only gold on the page, as everywhere else */
+.split .v.money{color:var(--gold-lit)}
+.split .v.ok{color:var(--good-lit)} .split .v.no{color:var(--bad-lit)}
 
 .case{border:1px solid var(--rule);background:var(--surface)}
 .case .body{padding:26px 26px}
@@ -159,13 +173,16 @@ tr.miss td{background:var(--bad-soft)}
 
 footer{padding:38px 0 64px;font-family:var(--mono);font-size:11.5px;color:var(--ink3);
   line-height:1.9}
-@media(max-width:760px){.split{grid-template-columns:1fr}.dline{flex-wrap:wrap}
-  .dtext{min-width:0}}
+@media(max-width:760px){.split{grid-template-columns:1fr}
+  .split > div{border-left:none;border-top:1px solid var(--deep-rule)}
+  .split > div:first-child{border-top:none}
+  .dline{flex-wrap:wrap}.dtext{min-width:0}}
 
 .sealbox{border:1px solid var(--rule);background:var(--surface);padding:22px 24px;
   margin-top:20px}
-.sealbox .sd{font-family:var(--mono);font-size:1.05rem;font-weight:600;
-  letter-spacing:.08em;color:var(--ink);word-break:break-all}
+.sealbox .sd{font-family:var(--mono);font-size:1.1rem;font-weight:600;
+  letter-spacing:.09em;color:var(--ink);word-break:break-all;line-height:1.6;
+  border-bottom:2px solid var(--gold);display:inline-block;padding-bottom:3px}
 .sealbox .sm{font-family:var(--mono);font-size:11.5px;color:var(--ink3);margin-top:10px}
 .sealbox .sc{font-family:var(--mono);font-size:12px;color:var(--accent);margin-top:14px;
   padding-top:12px;border-top:1px solid var(--rule2)}
@@ -403,13 +420,13 @@ def render(p: dict) -> str:
 
 <div class="split">
   <div><div class="l">Claimable now</div>
-    <div class="v" style="color:var(--good)">{fmt(rc.get('recoverable', 0))}</div>
+    <div class="v money">{fmt(rc.get('recoverable', 0))}</div>
     <div class="n">across {rc.get('recoverable_count', 0)} items, from three counterparties</div></div>
   <div><div class="l">Expires within 7 days</div>
-    <div class="v" style="color:var(--warn)">{fmt(rc.get('expiring_soon', 0))}</div>
+    <div class="v" style="color:var(--gold)">{fmt(rc.get('expiring_soon', 0))}</div>
     <div class="n">{rc.get('expiring_count', 0)} claim windows closing</div></div>
   <div><div class="l">Lost by closing monthly</div>
-    <div class="v" style="color:var(--bad)">{fmt(rc.get('monthly_lapsed', 0))}</div>
+    <div class="v no">{fmt(rc.get('monthly_lapsed', 0))}</div>
     <div class="n">{rc.get('monthly_lapsed_count', 0)} claims expire unfiled at a
       {rc.get('late_date','')} close</div></div>
 </div>
