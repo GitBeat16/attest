@@ -186,7 +186,9 @@ html.js #boot{display:grid}
 .spine.dark li.now .nm{color:var(--on-deep)}
 
 /* ---------- hero ---------- */
-header{padding:80px 0 0;position:relative;overflow:hidden;scroll-margin-top:78px}
+/* the strip needs room to breathe under it — flush against the next section
+   its bottom border reads as a clipped edge rather than a closed box */
+header{padding:80px 0 96px;position:relative;overflow:hidden;scroll-margin-top:78px}
 header::before{content:"";position:absolute;inset:0;pointer-events:none;
   background:repeating-linear-gradient(to bottom,transparent 0 43px,rgba(22,24,29,.035) 43px 44px);
   -webkit-mask-image:linear-gradient(to bottom,transparent,#000 18%,#000 62%,transparent);
@@ -264,8 +266,16 @@ section{padding:104px 0;position:relative;scroll-margin-top:78px}
 .rows .l small{display:block;font-size:.8rem;color:var(--on-deep3);margin-top:5px}
 .rows .a{font-weight:600;white-space:nowrap;font-size:1.15rem;color:var(--on-deep)}
 .rows .a.up{color:var(--bad-lit)} .rows .a.dn{color:var(--good-lit)}
+/* Stamped, not faded in. A verdict on a close is a rubber stamp coming down
+   on paper, so it lands hard and slightly askew rather than arriving politely. */
 .stamp{margin-top:22px;display:inline-flex;align-items:center;gap:11px;padding:12px 18px;
-  font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:600}
+  font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+  font-weight:600;transform-origin:center;
+  /* an inline-flex box sizes to max-content, and this one carries a long
+     sentence — without a cap it pushes the whole page sideways on a phone */
+  max-width:100%;overflow-wrap:anywhere}
+html.js .stamp{opacity:0}
+@media(max-width:640px){.stamp{font-size:11px;padding:11px 14px;letter-spacing:.1em}}
 .stamp.ok{background:rgba(95,199,155,.14);color:var(--good-lit);border:1.5px solid rgba(95,199,155,.35)}
 .stamp.no{background:rgba(232,138,108,.14);color:var(--bad-lit);border:1.5px solid rgba(232,138,108,.38)}
 
@@ -503,7 +513,7 @@ footer a:hover{color:var(--gold-lit)}
     <li data-sec="numbers"><span class="dot"></span><a class="nm" href="#numbers">Investigation</a></li>
     <li data-sec="start"><span class="dot"></span><a class="nm" href="#start">Records</a></li>
     <li data-sec="ladder"><span class="dot"></span><a class="nm" href="#ladder">Verdict</a></li>
-    <li data-sec="seal"><span class="dot"></span><a class="nm" href="#seal">Proof</a></li>
+    <li data-sec="close"><span class="dot"></span><a class="nm" href="#close">Proof</a></li>
   </ol>
 </div>
 
@@ -623,7 +633,8 @@ footer a:hover{color:var(--gold-lit)}
           </g>
         </svg>
       </div>
-      <button class="replay" id="replay">↻ Play it again</button>
+      <div class="stamp no" id="beat2stamp">✗ ₹8,495.80 of real error, hidden behind ₹0.20</div>
+      <div><button class="replay" id="replay">↻ Play it again</button></div>
     </div>
 
     <div class="beat">
@@ -791,35 +802,6 @@ footer a:hover{color:var(--gold-lit)}
     computed, not asserted. Courier disputes die in 14 days.</div>
 </div></section>
 
-<!-- ==================== THE SEAL ==================== -->
-<section id="seal"><div class="wrap">
-  <p class="kicker">What you hand your auditor</p>
-  <h2>A close pack that cannot be quietly edited</h2>
-  <p class="sub">Every pack carries a SHA-256 digest of the whole rendered document. Change one
-    rupee and it stops matching.</p>
-
-  <div class="sealrow">
-    <div>
-      <div class="digest"><span>4e008d98</span> <span>18eb491c</span> <span>63c73b54</span> <span>5245f684</span></div>
-      <div class="cmd">$ python3 -m attest.seal <b>--verify</b> close-pack.html</div>
-      <p><span class="ok">INTACT</span> — the document hashes to its printed digest. Edit
-        anything and it reads <span class="no">ALTERED</span>.</p>
-    </div>
-    <div>
-      <h3 style="margin-bottom:14px">Tamper-evident, not tamper-proof</h3>
-      <p>A matching digest proves the pack has not been edited since it was sealed. It does
-        <b>not</b> prove who made it — anyone with the code can seal a document.</p>
-      <p>Authorship comes from the close record: each digest is written to a table with
-        <b>no update policy and no delete policy</b>. Your auditor asks it one question —
-        <em>was this digest recorded, and when?</em></p>
-    </div>
-  </div>
-
-  <div class="cta" style="justify-content:flex-start;margin-top:38px">
-    <a href="close-pack.html" class="btn ghost">Open an example close pack →</a>
-  </div>
-</div></section>
-
 <!-- ==================== SCOPE ==================== -->
 <section id="real" class="tint"><div class="wrap">
   <p class="kicker">Honest scope</p>
@@ -900,7 +882,7 @@ footer a:hover{color:var(--gold-lit)}
         <li><a href="https://github.com/GitBeat16/attest">Source on GitHub</a></li>
         <li><a href="https://github.com/GitBeat16/attest/blob/main/ARCHITECTURE.md">Architecture</a></li>
         <li><a href="https://github.com/GitBeat16/attest/blob/main/USE-CASES.md">Use cases</a></li>
-        <li><a href="index.html#seal">How the seal works</a></li>
+        <li><a href="close-pack.html">A sealed close pack</a></li>
       </ul>
     </div>
     <div>
@@ -1010,14 +992,43 @@ footer a:hover{color:var(--gold-lit)}
     }, { amount: .6 });
   });
 
+  // ---- stamps ---------------------------------------------------------
+  // Overshoot on the way down, so it reads as a stamp hitting paper rather
+  // than a box fading in. The tilt is deliberate: nobody stamps straight.
+  // The delay is a timer, not Motion's `delay`: Motion applies the first
+  // keyframe immediately and waits, which would leave the stamp sitting at
+  // 2.3× for five seconds — invisible, but wide enough to push the page
+  // sideways on a phone.
+  function stamp(el, delay) {
+    if (!el) return;
+    if (!M || reduced) { el.style.opacity = 1; el.style.transform = 'none'; return; }
+    el.style.opacity = 0;
+    el.style.transform = 'none';
+    clearTimeout(el._stampTimer);
+    el._stampTimer = setTimeout(function () {
+      M.animate(el, {
+        opacity: [0, 1, 1],
+        transform: ['scale(2.3) rotate(-10deg)', 'scale(.94) rotate(-1.6deg)',
+                    'scale(1) rotate(-1.6deg)']
+      }, { duration: .5, ease: [.3, .9, .3, 1] });
+    }, (delay || 0) * 1000);
+  }
+  document.querySelectorAll('.stamp').forEach(function (el) {
+    if (el.id === 'beat2stamp') return;          // that one lands with the sequence
+    if (!M || reduced) { el.style.opacity = 1; return; }
+    M.inView(el, function () { stamp(el, .25); }, { amount: .8 });
+  });
+
   // ---- the exhibit sequence -----------------------------------------
   // Two errors grow to scale, slide into each other, and collapse. The money
   // does not go anywhere; it stops being visible. That is the whole argument.
   var cancel = document.getElementById('cancel');
+  var beat2stamp = document.getElementById('beat2stamp');
   function runCancel() {
     if (!cancel) return;
     if (!M || reduced) {
       cancel.querySelectorAll('g').forEach(function (g) { g.style.opacity = 1; });
+      if (beat2stamp) beat2stamp.style.opacity = 1;
       return;
     }
     var A = cancel.querySelector('.grpA'), B = cancel.querySelector('.grpB');
@@ -1040,6 +1051,7 @@ footer a:hover{color:var(--gold-lit)}
     M.animate(sliver, { opacity: [0, 1] }, { duration: .6, delay: 3.8, ease: EASE });
     M.animate(rest, { opacity: [0, 1], transform: ['translateY(8px)', 'none'] },
               { duration: .6, delay: 4.5, ease: EASE });
+    stamp(beat2stamp, 5.15);          // the verdict lands last, and lands hard
   }
   if (M && !reduced && cancel) M.inView(cancel, runCancel, { amount: .35 });
   else runCancel();

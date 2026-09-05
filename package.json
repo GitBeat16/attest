@@ -1,5 +1,7 @@
 {
   "dependencies": {
+    "@rive-app/canvas": "^2.42.0",
+    "lottie-web": "^5.13.0",
     "motion": "^13.2.0"
   }
 }
