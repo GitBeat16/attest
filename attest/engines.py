@@ -25,13 +25,48 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import tempfile
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
-CACHE = Path(__file__).resolve().parent.parent / ".llm_cache"
 TIMEOUT = 30
+
+_CACHE_DIR: Path | None = None
+_CACHE_RESOLVED = False
+
+
+def cache_dir() -> Path | None:
+    """Where responses are cached, or None if nowhere is writable.
+
+    Serverless runtimes ship the code on a read-only filesystem — on Vercel
+    only the system temp directory can be written — so a cache next to the
+    source is a preference, never a requirement. Caching is an optimisation;
+    losing it must never be the reason a close cannot run.
+    """
+    global _CACHE_DIR, _CACHE_RESOLVED
+    if _CACHE_RESOLVED:
+        return _CACHE_DIR
+    _CACHE_RESOLVED = True
+
+    override = os.environ.get("ATTEST_CACHE_DIR", "").strip()
+    candidates = [Path(override)] if override else []
+    candidates += [Path(__file__).resolve().parent.parent / ".llm_cache",
+                   Path(tempfile.gettempdir()) / "attest-llm-cache"]
+
+    for cand in candidates:
+        try:
+            cand.mkdir(parents=True, exist_ok=True)
+            probe = cand / ".writable"
+            probe.write_text("1", encoding="utf-8")
+            probe.unlink()
+            _CACHE_DIR = cand
+            return _CACHE_DIR
+        except OSError:
+            continue
+    _CACHE_DIR = None            # read-only everywhere: run without a cache
+    return None
 
 # What each variance class actually means. Without this a model produces fluent
 # restatement -- "the MDR class recorded 23 items" -- which reads well and says
@@ -165,16 +200,18 @@ class _HTTPEngine(ReasoningEngine):
 
     def __init__(self, fallback: ReasoningEngine | None = None):
         self.fallback = fallback or RulesEngine()
-        CACHE.mkdir(exist_ok=True)
 
     # -- caching ----------------------------------------------------------
-    def _key(self, task: str, payload: str) -> Path:
+    def _key(self, task: str, payload: str) -> Path | None:
+        d = cache_dir()
+        if d is None:
+            return None
         h = hashlib.sha256(f"{self.name}:{task}:{payload}".encode()).hexdigest()[:32]
-        return CACHE / f"{h}.json"
+        return d / f"{h}.json"
 
     def _cached(self, task: str, payload: str) -> str | None:
         p = self._key(task, payload)
-        if p.exists():
+        if p is not None and p.exists():
             try:
                 return json.loads(p.read_text(encoding="utf-8"))["text"]
             except Exception:
@@ -182,9 +219,11 @@ class _HTTPEngine(ReasoningEngine):
         return None
 
     def _store(self, task: str, payload: str, text: str) -> None:
+        p = self._key(task, payload)
+        if p is None:
+            return
         try:
-            self._key(task, payload).write_text(
-                json.dumps({"text": text}), encoding="utf-8")
+            p.write_text(json.dumps({"text": text}), encoding="utf-8")
         except OSError:
             pass          # a cache failure must never break a close
 
@@ -320,8 +359,10 @@ class GeminiEngine(_HTTPEngine):
         if pinned:
             return [pinned]
 
-        cache = CACHE / "gemini_model.txt"
-        known = cache.read_text(encoding="utf-8").strip() if cache.exists() else ""
+        d = cache_dir()
+        cache = (d / "gemini_model.txt") if d is not None else None
+        known = (cache.read_text(encoding="utf-8").strip()
+                 if cache is not None and cache.exists() else "")
 
         try:
             available = self.list_models()
@@ -370,10 +411,12 @@ class GeminiEngine(_HTTPEngine):
             except (KeyError, IndexError) as e:
                 last = e
                 continue
-            try:                     # remember what worked, skip the walk next time
-                (CACHE / "gemini_model.txt").write_text(model, encoding="utf-8")
-            except OSError:
-                pass
+            d = cache_dir()          # remember what worked, skip the walk next time
+            if d is not None:
+                try:
+                    (d / "gemini_model.txt").write_text(model, encoding="utf-8")
+                except OSError:
+                    pass
             self.model_used = model
             return text
         raise last or RuntimeError("no Gemini model accepted generateContent")
