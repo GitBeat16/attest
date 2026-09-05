@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120"
+     role="img" aria-label="Attest coin">
+  <title>Attest — the coin</title>
+  <defs>
+    <radialGradient id="g" cx="34%" cy="28%" r="78%">
+      <stop offset="0" stop-color="#FBE9A8"/>
+      <stop offset="34%" stop-color="#F2CB5C"/>
+      <stop offset="64%" stop-color="#DFA82A"/>
+      <stop offset="100%" stop-color="#B87C15"/>
+    </radialGradient>
+    <radialGradient id="sh" cx="50%" cy="50%" r="50%">
+      <stop offset="60%" stop-color="#7A5410" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#7A5410" stop-opacity=".38"/>
+    </radialGradient>
+  </defs>
+  <circle cx="60" cy="60" r="54" fill="url(#g)"/>
+  <circle cx="60" cy="60" r="54" fill="url(#sh)"/>
+  <circle cx="60" cy="60" r="50.5" fill="none" stroke="#FFF6DA" stroke-opacity=".55" stroke-width="3"/>
+  <circle cx="60" cy="60" r="43" fill="none" stroke="#8A5A12" stroke-opacity=".33" stroke-width="1.2"/>
+  <text x="60" y="79" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="52"
+        font-weight="600" fill="#6A4707">&#8377;</text>
+</svg>

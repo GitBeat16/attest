@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 1228" width="980" height="1228" role="img" aria-label="Attest architecture">
+<title>Attest — architecture</title><rect width="980" height="1228" fill="#12151C"/>
+<text x="40" y="52" font-family="Georgia, 'Times New Roman', serif" font-size="27" fill="#F1EDE4">How a close actually runs</text>
+<text x="40" y="79" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12.5" letter-spacing="2.2" fill="#6C7481">MERCHANT RECORDS &#8594; PROOF, IN NINE STAGES</text>
+<rect x="40" y="108" width="900" height="104" rx="14" fill="#1B1F29" stroke="#2B323F" stroke-width="1.5"/>
+<rect x="40" y="108" width="5" height="104" rx="2.5" fill="#F2CB5C"/>
+<text x="76" y="154" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="26" font-weight="700" fill="#F2CB5C" opacity=".85">01</text>
+<text x="152" y="148" font-family="Georgia, 'Times New Roman', serif" font-size="19" fill="#F1EDE4">Your records</text>
+<text x="152" y="172" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13.5" fill="#A2A9B6">Settlements, bank statement, orders, refunds, courier remittance, disputes. Seven</text><text x="152" y="190" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13.5" fill="#A2A9B6">sources; two are enough to start.</text>
+<path d="M 490.0 213 V 227" stroke="#DFA82A" stroke-width="1.6" opacity=".55"/>
+<path d="M 486.0 222 L 490.0 227 L 494.0 222" fill="none" stroke="#DFA82A" stroke-width="1.6" opacity=".55"/>
+<rect x="40" y="228" width="900" height="104" rx="14" fill="#1B1F29" stroke="#2B323F" stroke-width="1.5"/>
+<rect x="40" y="228" width="5" height="104" rx="2.5" fill="#F2CB5C"/>
+<text x="76" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="26" font-weight="700" fill="#F2CB5C" opacity=".85">02</text>
+<text x="152" y="268" font-family="Georgia, 'Times New Roman', serif" font-size="19" fill="#F1EDE4">Ingest and normalise</text>
+<text x="152" y="292" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13.5" fill="#A2A9B6">Every amount becomes integer paise. No float ever touches money, because floats</text><text x="152" y="310" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13.5" fill="#A2A9B6">manufacture the sub-rupee drift we exist to find.</text>
+<path d="M 490.0 333 V 347" stroke="#DFA82A" stroke-width="1.6" opacity=".55"/>
+<path d="M 486.0 342 L 490.0 347 L 494.0 342" fill="none" stroke="#DFA82A" stroke-width="1.6" opacity=".55"/>
+<rect x="40" y="348" width="900" height="104" rx="14" fill="#1B1F29" stroke="#2B323F" stroke-width="1.5"/>
+<rect x="40" y="348" width="5" height="104" rx="2.5" fill="#F2CB5C"/>
+<text x="76" y="394" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="26" font-weight="700" fill="#F2CB5C" opacity=".85">03</text>
+<text x="152" y="388" font-family="Georgia, 'Times New Roman', serif" font-size="19" fill="#F1EDE4">Identity resolution</text>
+<text x="152" y="412" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13.5" fill="#A2A9B6">Bank credits are tied to batches by settlement_id — the authoritative key — never by</text><text x="152" y="430" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13.5" fill="#A2A9B6">amount or by the bank's own UTR.</text>
+<path d="M 490.0 453 V 467" stroke="#DFA82A" stroke-width="1.6" opacity=".55"/>
+<path d="M 486.0 462 L 490.0 467 L 494.0 462" fill="none" stroke="#DFA82A" stroke-width="1.6" opacity=".55"/>
+<rect x="40" y="468" width="900" height="104" rx="14" fill="#1B1F29" stroke="#2B323F" stroke-width="1.5"/>
+<rect x="40" y="468" width="5" height="104" rx="2.5" fill="#F2CB5C"/>
+<text x="76" y="514" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="26" font-weight="700" fill="#F2CB5C" opacity=".85">04</text>
+<text x="152" y="508" font-family="Georgia, 'Times New Roman', serif" font-size="19" fill="#F1EDE4">Deterministic engine</text>
+<text x="152" y="532" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13.5" fill="#A2A9B6">Rules, not guesses. Builds a proof chain per line: order to fee to tax to batch to bank</text><text x="152" y="550" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13.5" fill="#A2A9B6">credit. Break one link, the line is unproven.</text>
+<path d="M 490.0 573 V 587" stroke="#DFA82A" stroke-width="1.6" opacity=".55"/>
+<path d="M 486.0 582 L 490.0 587 L 494.0 582" fill="none" stroke="#DFA82A" stroke-width="1.6" opacity=".55"/>
+<rect x="40" y="588" width="900" height="104" rx="14" fill="#1B1F29" stroke="#2B323F" stroke-width="1.5"/>
+<rect x="40" y="588" width="5" height="104" rx="2.5" fill="#E88A6C"/>
+<text x="76" y="634" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="26" font-weight="700" fill="#E88A6C" opacity=".85">05</text>
+<text x="152" y="628" font-family="Georgia, 'Times New Roman', serif" font-size="19" fill="#F1EDE4">AI Finance Controller</text>
+<text x="152" y="652" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13.5" fill="#A2A9B6">Chooses what to investigate next, one step at a time. It can call tools. It cannot</text><text x="152" y="670" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13.5" fill="#A2A9B6">compute money, write records, or certify anything.</text>
+<path d="M 490.0 693 V 707" stroke="#DFA82A" stroke-width="1.6" opacity=".55"/>
+<path d="M 486.0 702 L 490.0 707 L 494.0 702" fill="none" stroke="#DFA82A" stroke-width="1.6" opacity=".55"/>
+<rect x="40" y="708" width="900" height="104" rx="14" fill="#1B1F29" stroke="#2B323F" stroke-width="1.5"/>
+<rect x="40" y="708" width="5" height="104" rx="2.5" fill="#5FC79B"/>
+<text x="76" y="754" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="26" font-weight="700" fill="#5FC79B" opacity=".85">06</text>
+<text x="152" y="748" font-family="Georgia, 'Times New Roman', serif" font-size="19" fill="#F1EDE4">14 deterministic tools</text>
+<text x="152" y="772" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13.5" fill="#A2A9B6">Every figure the controller reports came from one of these. The model narrates; the</text><text x="152" y="790" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13.5" fill="#A2A9B6">tools decide what is true.</text>
+<path d="M 490.0 813 V 827" stroke="#DFA82A" stroke-width="1.6" opacity=".55"/>
+<path d="M 486.0 822 L 490.0 827 L 494.0 822" fill="none" stroke="#DFA82A" stroke-width="1.6" opacity=".55"/>
+<rect x="40" y="828" width="900" height="104" rx="14" fill="#1B1F29" stroke="#2B323F" stroke-width="1.5"/>
+<rect x="40" y="828" width="5" height="104" rx="2.5" fill="#E88A6C"/>
+<text x="76" y="874" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="26" font-weight="700" fill="#E88A6C" opacity=".85">07</text>
+<text x="152" y="868" font-family="Georgia, 'Times New Roman', serif" font-size="19" fill="#F1EDE4">Adversarial auditor</text>
+<text x="152" y="892" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13.5" fill="#A2A9B6">Six hypotheses that attack the matches that passed. 68.2% of them do not survive.</text>
+<path d="M 490.0 933 V 947" stroke="#DFA82A" stroke-width="1.6" opacity=".55"/>
+<path d="M 486.0 942 L 490.0 947 L 494.0 942" fill="none" stroke="#DFA82A" stroke-width="1.6" opacity=".55"/>
+<rect x="40" y="948" width="900" height="104" rx="14" fill="#1B1F29" stroke="#2B323F" stroke-width="1.5"/>
+<rect x="40" y="948" width="5" height="104" rx="2.5" fill="#F2CB5C"/>
+<text x="76" y="994" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="26" font-weight="700" fill="#F2CB5C" opacity=".85">08</text>
+<text x="152" y="988" font-family="Georgia, 'Times New Roman', serif" font-size="19" fill="#F1EDE4">Policy gate</text>
+<text x="152" y="1012" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13.5" fill="#A2A9B6">Residual over 25 bps, or unexplained exceptions, means NOT ATTESTABLE. No action</text><text x="152" y="1030" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13.5" fill="#A2A9B6">available to the AI can override this.</text>
+<path d="M 490.0 1053 V 1067" stroke="#DFA82A" stroke-width="1.6" opacity=".55"/>
+<path d="M 486.0 1062 L 490.0 1067 L 494.0 1062" fill="none" stroke="#DFA82A" stroke-width="1.6" opacity=".55"/>
+<rect x="40" y="1068" width="900" height="104" rx="14" fill="#1B1F29" stroke="#2B323F" stroke-width="1.5"/>
+<rect x="40" y="1068" width="5" height="104" rx="2.5" fill="#F2CB5C"/>
+<text x="76" y="1114" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="26" font-weight="700" fill="#F2CB5C" opacity=".85">09</text>
+<text x="152" y="1108" font-family="Georgia, 'Times New Roman', serif" font-size="19" fill="#F1EDE4">Sealed close pack</text>
+<text x="152" y="1132" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13.5" fill="#A2A9B6">Proof rate, exceptions ranked by rupee, claim deadlines, and a SHA-256 of the whole</text><text x="152" y="1150" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13.5" fill="#A2A9B6">document.</text>
+</svg>

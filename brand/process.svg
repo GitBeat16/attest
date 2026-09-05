@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1498 360" width="1498" height="360" role="img" aria-label="The five questions Attest asks">
+<title>The five questions</title><rect width="1498" height="360" fill="#12151C"/>
+<text x="749.0" y="52" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="26" fill="#F1EDE4">Five questions, in order</text>
+<text x="749.0" y="78" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" letter-spacing="2.2" fill="#6C7481">EVERY OTHER TOOL STOPS AFTER THE FIRST ONE</text>
+<rect x="40" y="112" width="250" height="190" rx="14" fill="#1B1F29" stroke="#2B323F" stroke-width="1.5"/>
+<circle cx="70" cy="144" r="13" fill="none" stroke="#7B818E" stroke-width="1.6"/>
+<text x="70" y="149" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" font-weight="700" fill="#7B818E">1</text>
+<text x="60" y="190" font-family="Georgia, 'Times New Roman', serif" font-size="17" fill="#7B818E">Does it match?</text>
+<path d="M 60 222 H 270" stroke="#2B323F" stroke-width="1.5"/>
+<text x="60" y="246" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12.5" fill="#A2A9B6">Settlement total against the</text><text x="60" y="264" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12.5" fill="#A2A9B6">bank credit. Almost always</text><text x="60" y="282" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12.5" fill="#A2A9B6">yes.</text>
+<path d="M 298 207 H 322" stroke="#DFA82A" stroke-width="1.8" opacity=".6"/>
+<path d="M 317 202 L 323 207 L 317 212" fill="none" stroke="#DFA82A" stroke-width="1.8" opacity=".6"/>
+<rect x="332" y="112" width="250" height="190" rx="14" fill="#1B1F29" stroke="#2B323F" stroke-width="1.5"/>
+<circle cx="362" cy="144" r="13" fill="none" stroke="#F2CB5C" stroke-width="1.6"/>
+<text x="362" y="149" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" font-weight="700" fill="#F2CB5C">2</text>
+<text x="352" y="190" font-family="Georgia, 'Times New Roman', serif" font-size="17" fill="#F2CB5C">Can we prove it?</text>
+<path d="M 352 222 H 562" stroke="#2B323F" stroke-width="1.5"/>
+<text x="352" y="246" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12.5" fill="#A2A9B6">Does every line trace end to</text><text x="352" y="264" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12.5" fill="#A2A9B6">end, with no link missing?</text>
+<path d="M 590 207 H 614" stroke="#DFA82A" stroke-width="1.8" opacity=".6"/>
+<path d="M 609 202 L 615 207 L 609 212" fill="none" stroke="#DFA82A" stroke-width="1.8" opacity=".6"/>
+<rect x="624" y="112" width="250" height="190" rx="14" fill="#1B1F29" stroke="#2B323F" stroke-width="1.5"/>
+<circle cx="654" cy="144" r="13" fill="none" stroke="#E88A6C" stroke-width="1.6"/>
+<text x="654" y="149" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" font-weight="700" fill="#E88A6C">3</text>
+<text x="644" y="190" font-family="Georgia, 'Times New Roman', serif" font-size="17" fill="#E88A6C">Does it survive</text>
+<text x="644" y="213" font-family="Georgia, 'Times New Roman', serif" font-size="17" fill="#E88A6C">attack?</text>
+<path d="M 644 222 H 854" stroke="#2B323F" stroke-width="1.5"/>
+<text x="644" y="246" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12.5" fill="#A2A9B6">Six hypotheses try to break</text><text x="644" y="264" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12.5" fill="#A2A9B6">the matches that passed.</text>
+<path d="M 882 207 H 906" stroke="#DFA82A" stroke-width="1.8" opacity=".6"/>
+<path d="M 901 202 L 907 207 L 901 212" fill="none" stroke="#DFA82A" stroke-width="1.8" opacity=".6"/>
+<rect x="916" y="112" width="250" height="190" rx="14" fill="#1B1F29" stroke="#2B323F" stroke-width="1.5"/>
+<circle cx="946" cy="144" r="13" fill="none" stroke="#F2CB5C" stroke-width="1.6"/>
+<text x="946" y="149" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" font-weight="700" fill="#F2CB5C">4</text>
+<text x="936" y="190" font-family="Georgia, 'Times New Roman', serif" font-size="17" fill="#F2CB5C">What may be</text>
+<text x="936" y="213" font-family="Georgia, 'Times New Roman', serif" font-size="17" fill="#F2CB5C">certified?</text>
+<path d="M 936 222 H 1146" stroke="#2B323F" stroke-width="1.5"/>
+<text x="936" y="246" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12.5" fill="#A2A9B6">Policy decides, on residual</text><text x="936" y="264" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12.5" fill="#A2A9B6">and unexplained exceptions.</text>
+<path d="M 1174 207 H 1198" stroke="#DFA82A" stroke-width="1.8" opacity=".6"/>
+<path d="M 1193 202 L 1199 207 L 1193 212" fill="none" stroke="#DFA82A" stroke-width="1.8" opacity=".6"/>
+<rect x="1208" y="112" width="250" height="190" rx="14" fill="#1B1F29" stroke="#2B323F" stroke-width="1.5"/>
+<circle cx="1238" cy="144" r="13" fill="none" stroke="#5FC79B" stroke-width="1.6"/>
+<text x="1238" y="149" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" font-weight="700" fill="#5FC79B">5</text>
+<text x="1228" y="190" font-family="Georgia, 'Times New Roman', serif" font-size="17" fill="#5FC79B">A human signs</text>
+<path d="M 1228 222 H 1438" stroke="#2B323F" stroke-width="1.5"/>
+<text x="1228" y="246" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12.5" fill="#A2A9B6">Nothing posts to a ledger</text><text x="1228" y="264" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12.5" fill="#A2A9B6">automatically. Ever.</text>
+<text x="749.0" y="338" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" fill="#A2A9B6">A match rate answers question one. The product is questions two to five.</text>
+</svg>

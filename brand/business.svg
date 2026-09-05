@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 660" width="1180" height="660" role="img" aria-label="Attest business approach">
+<title>Attest — business approach</title><rect width="1180" height="660" fill="#12151C"/>
+<text x="590.0" y="52" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="27" fill="#F1EDE4">Who pays, and what they pay for</text>
+<text x="590.0" y="79" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" letter-spacing="2.2" fill="#6C7481">THE MERCHANT FEELS THE LOSS &amp;#183; THE CA FEELS THE WORK</text>
+<rect x="440.0" y="104" width="300" height="104" rx="14" fill="#20252F" stroke="#DFA82A" stroke-width="1.5"/>
+<text x="590.0" y="142" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" letter-spacing="4.5" font-weight="700" fill="#F2CB5C">ATTEST</text>
+<text x="590.0" y="168" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12.5" fill="#A2A9B6">Proof of close, sold as an outcome: money</text><text x="590.0" y="186" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12.5" fill="#A2A9B6">recovered before its claim window shuts.</text>
+<path d="M 590.0 208 V 238" stroke="#DFA82A" stroke-width="1.6" opacity=".55"/>
+<path d="M 210.0 238 H 970.0" stroke="#DFA82A" stroke-width="1.6" opacity=".55"/>
+<path d="M 210.0 238 V 266" stroke="#DFA82A" stroke-width="1.6" opacity=".55"/>
+<path d="M 206.0 261 L 210.0 267 L 214.0 261" fill="none" stroke="#DFA82A" stroke-width="1.6" opacity=".55"/>
+<rect x="40.0" y="272" width="340" height="180" rx="14" fill="#1B1F29" stroke="#2B323F" stroke-width="1.5"/>
+<rect x="40.0" y="272" width="340" height="4" rx="2" fill="#F2CB5C"/>
+<text x="62.0" y="314" font-family="Georgia, 'Times New Roman', serif" font-size="19" fill="#F2CB5C">Find the leakage</text>
+<text x="62.0" y="342" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12.5" fill="#A2A9B6">Fee overcharges, tax on the wrong base,</text><text x="62.0" y="360" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12.5" fill="#A2A9B6">refunds netted twice, settlements never</text><text x="62.0" y="378" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12.5" fill="#A2A9B6">credited.</text>
+<path d="M 62.0 406 H 358.0" stroke="#2B323F" stroke-width="1.5"/>
+<text x="62.0" y="428" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11.5" fill="#F1EDE4">₹87,256.57 found on one benchmark month</text>
+<path d="M 590.0 238 V 266" stroke="#DFA82A" stroke-width="1.6" opacity=".55"/>
+<path d="M 586.0 261 L 590.0 267 L 594.0 261" fill="none" stroke="#DFA82A" stroke-width="1.6" opacity=".55"/>
+<rect x="420.0" y="272" width="340" height="180" rx="14" fill="#1B1F29" stroke="#2B323F" stroke-width="1.5"/>
+<rect x="420.0" y="272" width="340" height="4" rx="2" fill="#5FC79B"/>
+<text x="442.0" y="314" font-family="Georgia, 'Times New Roman', serif" font-size="19" fill="#5FC79B">Prove the close</text>
+<text x="442.0" y="342" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12.5" fill="#A2A9B6">A proof rate and an evidence chain per</text><text x="442.0" y="360" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12.5" fill="#A2A9B6">line — not a match rate that agrees by</text><text x="442.0" y="378" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12.5" fill="#A2A9B6">construction.</text>
+<path d="M 442.0 406 H 738.0" stroke="#2B323F" stroke-width="1.5"/>
+<text x="442.0" y="428" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11.5" fill="#F1EDE4">73.0% proven vs 90.9% matched</text>
+<path d="M 970.0 238 V 266" stroke="#DFA82A" stroke-width="1.6" opacity=".55"/>
+<path d="M 966.0 261 L 970.0 267 L 974.0 261" fill="none" stroke="#DFA82A" stroke-width="1.6" opacity=".55"/>
+<rect x="800.0" y="272" width="340" height="180" rx="14" fill="#1B1F29" stroke="#2B323F" stroke-width="1.5"/>
+<rect x="800.0" y="272" width="340" height="4" rx="2" fill="#E88A6C"/>
+<text x="822.0" y="314" font-family="Georgia, 'Times New Roman', serif" font-size="19" fill="#E88A6C">Beat the clock</text>
+<text x="822.0" y="342" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12.5" fill="#A2A9B6">Each exception carries its counterparty</text><text x="822.0" y="360" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12.5" fill="#A2A9B6">and the date the claim window shuts.</text>
+<path d="M 822.0 406 H 1118.0" stroke="#2B323F" stroke-width="1.5"/>
+<text x="822.0" y="428" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11.5" fill="#F1EDE4">₹5,365 expires unfiled at a monthly cadence</text>
+<rect x="40.0" y="492" width="1100" height="132" rx="14" fill="#171B23" stroke="#2B323F" stroke-width="1.5"/>
+<text x="64.0" y="526" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11.5" letter-spacing="2.6" fill="#6C7481">THE BUYER</text>
+<text x="64.0" y="554" font-family="Georgia, 'Times New Roman', serif" font-size="16" fill="#F2CB5C">The CA</text>
+<text x="64.0" y="572" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11" fill="#6C7481">₹40L – ₹5cr merchants</text>
+<text x="64.0" y="592" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#A2A9B6">Feels it across twenty clients a month.</text><text x="64.0" y="610" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#A2A9B6">The merchant never does.</text>
+<text x="414.6666666666667" y="554" font-family="Georgia, 'Times New Roman', serif" font-size="16" fill="#5FC79B">The finance team</text>
+<text x="414.6666666666667" y="572" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11" fill="#6C7481">₹5cr – ₹100cr</text>
+<text x="414.6666666666667" y="592" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#A2A9B6">20–50 hours a month across three to five</text><text x="414.6666666666667" y="610" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#A2A9B6">systems. Best fit.</text>
+<text x="765.3333333333334" y="554" font-family="Georgia, 'Times New Roman', serif" font-size="16" fill="#6C7481">Not micro, not enterprise</text>
+<text x="765.3333333333334" y="572" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11" fill="#6C7481">&lt;₹40L / &gt;₹100cr</text>
+<text x="765.3333333333334" y="592" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#A2A9B6">Too small to hurt, or already inside an</text><text x="765.3333333333334" y="610" text-anchor="start" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#A2A9B6">ERP recon module.</text>
+</svg>

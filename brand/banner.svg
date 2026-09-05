@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 320" width="1200" height="320"
+     role="img" aria-label="Attest — proof of close for Indian merchants">
+  <title>Attest</title>
+  <defs>
+    <radialGradient id="cg1" cx="34%" cy="28%" r="78%">
+      <stop offset="0" stop-color="#FBE9A8"/><stop offset="34%" stop-color="#F2CB5C"/>
+      <stop offset="64%" stop-color="#DFA82A"/><stop offset="100%" stop-color="#B87C15"/>
+    </radialGradient>
+    <linearGradient id="glow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#DFA82A" stop-opacity=".13"/>
+      <stop offset="60%" stop-color="#DFA82A" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="320" fill="#101319"/>
+  <rect width="1200" height="320" fill="url(#glow)"/>
+  <g stroke="#FFFFFF" stroke-opacity=".035" stroke-width="1">
+    <line x1="0" y1="44" x2="1200" y2="44"/><line x1="0" y1="88" x2="1200" y2="88"/><line x1="0" y1="132" x2="1200" y2="132"/><line x1="0" y1="176" x2="1200" y2="176"/><line x1="0" y1="220" x2="1200" y2="220"/><line x1="0" y1="264" x2="1200" y2="264"/><line x1="0" y1="308" x2="1200" y2="308"/>
+  </g>
+
+  <g transform="translate(64 44) scale(1.5)" stroke="#DFA82A" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M8 20.6 L16 4.6 L24 20.6" stroke-width="2.7"/><path d="M11.4 15.7 H20.6" stroke-width="2.7"/><path d="M8 24.6 H24" stroke-width="1.9"/><path d="M8 27.8 H24" stroke-width="1.9"/></g>
+  <text x="130" y="80" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace" font-size="27" font-weight="600"
+        letter-spacing="7" fill="#F1EDE4">ATTEST</text>
+
+  <text x="64" y="152" font-family="Georgia, 'Times New Roman', serif" font-size="42" fill="#F1EDE4">Your books balance.</text>
+  <text x="64" y="204" font-family="Georgia, 'Times New Roman', serif" font-size="42" font-style="italic"
+        fill="#F2CB5C">But can you prove them?</text>
+  <text x="64" y="248" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="17" fill="#A2A9B6">
+    Proof of close for Indian merchants on Razorpay settlements.</text>
+
+  <g transform="translate(1010 150)">
+    <circle r="82" fill="url(#cg1)"/>
+    <circle r="77.1" fill="none" stroke="#FFF6DA" stroke-opacity=".5" stroke-width="4.51"/>
+    <circle r="65.6" fill="none" stroke="#8A5A12" stroke-opacity=".3" stroke-width="1"/>
+    <text y="28.7" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="78"
+          font-weight="600" fill="#6A4707">&#8377;</text>
+  </g>
+  <ellipse cx="1010" cy="252" rx="60" ry="7" fill="#7A5410" fill-opacity=".3"/>
+  <text x="1010" y="288" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace" font-size="11"
+        letter-spacing="3.4" fill="#6C7481">MONEY / PROOF</text>
+
+  <g font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace" font-size="12.5" letter-spacing="1.6">
+    <text x="64" y="292" fill="#6C7481">RAZORPAY AI BUILDATHON</text>
+    <text x="300" y="292" fill="#2B323F">|</text>
+    <text x="326" y="292" fill="#6C7481">TRACK 4 &#183; AI FINANCE CONTROLLER</text>
+  </g>
+</svg>
