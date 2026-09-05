@@ -164,8 +164,9 @@ def _investigate(src) -> dict | None:
     try:
         from attest.controller import Budget, run as controller_run
         return controller_run(src, planner_name="auto",
-                              budget=Budget(max_steps=12, max_tool_calls=20,
-                                            timeout_seconds=12))
+                              budget=Budget(max_steps=16, max_tool_calls=26,
+                                            timeout_seconds=24,
+                                            model_seconds=13))
     except Exception:                                        # noqa: BLE001
         return None
 

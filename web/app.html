@@ -238,6 +238,7 @@ section{margin-top:56px}
 .gist{margin-top:24px;padding:24px 26px;background:var(--deep);color:var(--on-deep2);
   font-size:1.04rem;line-height:1.6;border-left:4px solid var(--gold)}
 .gist b{color:var(--on-deep);font-weight:600}
+.gist .hand{color:var(--gold-lit);font-size:.93rem}
 .tl .who{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;
   text-transform:uppercase;padding:3px 7px;white-space:nowrap;align-self:center}
 .tl .ttl{font-weight:600;font-size:1.04rem;display:block}
@@ -253,6 +254,7 @@ section{margin-top:56px}
 .tl.bad{background:var(--bad-soft)}
 .tl.bad .ic{color:var(--bad)}
 .who.ai{background:var(--accent-soft);color:var(--accent)}
+.who.rules{background:var(--surface);color:var(--ink3);border:1px solid var(--rule)}
 .who.engine{background:var(--good-soft);color:var(--good)}
 .who.policy{background:var(--ink);color:var(--on-deep)}
 .decision{padding:28px 24px;border-top:2px solid var(--ink);background:var(--surface)}
@@ -1159,7 +1161,8 @@ function render(out, mode) {
         <span><span class="ttl">${ASKS[key] || key}</span>
           <span class="why">${st.reason || ''}</span>
           <span class="tool">${key}()</span></span>
-        <span class="who ai">${plannerLabel} asks</span></div>`;
+        <span class="who ${st.source === 'model' ? 'ai' : 'rules'}">${
+          st.source === 'model' ? 'AI controller' : 'Rules planner'} asks</span></div>`;
       const got = `<div class="tl ${CLS[st.status] || ''}">
         <span class="ic">${ICON[st.status] || '\u00b7'}</span>
         <span><span class="res">${st.rejected
@@ -1180,7 +1183,11 @@ function render(out, mode) {
       + `called <b>${inv.tool_calls} verification tools</b>, found `
       + `<b>${hits} confirmed problem${hits === 1 ? '' : 's'}</b>, and then `
       + `<b>refused to certify the close</b>. Nothing below was scripted \u2014 and no `
-      + `action available to it can sign off a month.`;
+      + `action available to it can sign off a month.`
+      + (inv.handover
+          ? `<br><br><span class="hand">Handover: ${esc(inv.handover)}. Each step `
+            + `below is labelled with the planner that chose it.</span>`
+          : '');
 
     const v = inv.policy.verdict;
     const box = $('ctrl-decision');

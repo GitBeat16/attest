@@ -50,6 +50,13 @@ class Budget:
     max_tool_calls: int = 20
     max_model_calls: int = 14
     timeout_seconds: float = 30.0
+    # A model call over the network costs seconds; a deterministic step costs
+    # microseconds. Inside one serverless request a model cannot finish a full
+    # investigation, so it gets a slice of the clock and the rules planner
+    # finishes the rest. Stopping early with nothing established would be the
+    # worse answer — and the handover is the architecture's own claim, that the
+    # planner is the replaceable part.
+    model_seconds: float = 13.0
 
     def exhausted(self, steps, tool_calls, model_calls, started) -> str:
         if steps >= self.max_steps:
@@ -102,6 +109,7 @@ class Investigation:
     model_calls: int = 0
     tool_calls: int = 0
     seconds: float = 0.0
+    handover: str = ""
     missing_evidence: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
@@ -113,6 +121,7 @@ class Investigation:
             "verdict": self.verdict,
             "verdict_reason": self.verdict_reason,
             "stopped_because": self.stopped_because,
+            "handover": self.handover,
             "evidence_seen": self.evidence_seen,
             "missing_evidence": self.missing_evidence,
             "tool_calls": self.tool_calls,
@@ -402,6 +411,19 @@ def investigate(box: Toolbox, policy, goal: str, *, planner=None,
             "last_rejection": last_rejection,
             "top_claimable": top_claimable,
         }
+
+        # the model's slice of the clock is up: finish deterministically
+        # rather than abandoning the close half-examined
+        if (getattr(planner, "name", "") == "model"
+                and time.time() - started > budget.model_seconds
+                and len(inv.steps) < budget.max_steps):
+            done_by_model = len(inv.steps)
+            planner = RulesPlanner()
+            inv.handover = (
+                f"the model planned the first {done_by_model} step"
+                f"{'' if done_by_model == 1 else 's'} and used its "
+                f"{budget.model_seconds:.0f}s slice; the deterministic planner "
+                "finished the investigation")
 
         action = planner.propose(observation, inv.steps)
         if getattr(planner, "name", "") == "model":
