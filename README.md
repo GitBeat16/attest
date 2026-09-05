@@ -1,407 +1,586 @@
-# Attest
+<div align="center">
 
-**Razorpay tells you what happened. Attest proves whether it should have.**
+<img src="https://raw.githubusercontent.com/GitBeat16/attest/main/brand/attest-mark.svg" alt="Attest logo" width="88" />
 
-Razorpay AI Buildathon — Track 4, AI Finance Controller.
+# ATTEST
+
+### Prove where the money came from — and whether it should have.
+
+**An AI Finance Controller for merchant reconciliation.**
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-attest--nu.vercel.app-1B4B73?style=for-the-badge)](https://attest-nu.vercel.app)
+[![License](https://img.shields.io/badge/license-MIT-16181D?style=for-the-badge)](LICENSE)
+
+<img src="https://raw.githubusercontent.com/GitBeat16/attest/main/brand/attest-mark-gold.svg" alt="Attest gold mark" width="44" />
+
+</div>
 
 ---
 
-## See it in thirty seconds
+## What is Attest?
 
-**Live:** [attest-nu.vercel.app](https://attest-nu.vercel.app) → press **Run the
-demo close**. No account, no credentials, no setup. You will see one settlement
-batch that agrees with the bank **exactly** — ₹0.00 variance, every automated
-check passing — and **₹8,495.80** of real error sitting inside it.
+Imagine a shop gets **₹19.4 lakh** from a payment gateway.
 
+The gateway report says the money is correct. The bank says the same money arrived. Everything appears to match.
+
+But inside that total, the gateway could have **overcharged a fee** while a different refund was **under-deducted**. The two mistakes can cancel each other out.
+
+So the books say **₹0 variance** — while the merchant is actually wrong by **₹8,495.80**.
+
+**That is the problem Attest solves.**
+
+Attest does not stop at *“the totals match.”* It traces the money line by line, checks the evidence, attacks suspicious matches, and refuses to certify a close when the evidence is not strong enough.
+
+> **Razorpay tells you what happened. Attest proves whether it should have.**
+
+---
+
+## 🪙 The Attest coin
+
+![Attest coin](docs/assets/attest-coin.png)
+
+---
+
+## See it in 30 seconds
+
+Open the **[live demo](https://attest-nu.vercel.app)** and run the demo.
+
+You will see a settlement batch where conventional reconciliation says:
+
+```text
+Bank credit              ₹19,40,799.80
+Settlement total         ₹19,40,799.80
+Variance                         ₹0.00
+Status                    ✓ Reconciled
 ```
-                          traditional             Attest
-  Settlement           ₹19,40,799.80      fee overcharged      ₹3,600.00
-  Bank credit          ₹19,40,799.80      GST on that            ₹648.00
-  ─────────────────────────────────      refund under-deducted ₹4,247.80
-  Variance                     ₹0.00      ─────────────────────────────
-  ✓ Reconciled                            actually wrong by    ₹8,495.80
+
+Attest then looks inside the batch:
+
+```text
+Fee overcharged             ₹3,600.00
+GST on fee                    ₹648.00
+Refund under-deducted       ₹4,247.80
+────────────────────────────────────
+Actually wrong by           ₹8,495.80
 ```
 
-**Understated 42,479×.** That gap is the entire reason this project exists.
+The totals match. **The evidence does not.**
 
-Locally, the same thing in one command:
+---
 
-```bash
-python3 -m attest.demo
+# How Attest works
+
+## Architecture
+
+![Attest system architecture](docs/assets/attest-architecture.png)
+
+```text
+                    ┌──────────────────────┐
+                    │     MERCHANT DATA    │
+                    │                      │
+                    │ Orders               │
+                    │ Settlements          │
+                    │ Bank statements      │
+                    │ Refunds / disputes   │
+                    │ COD / shipments      │
+                    │ Contracts / tax      │
+                    └──────────┬───────────┘
+                               │
+                               ▼
+                    ┌──────────────────────┐
+                    │ INGEST + NORMALISE   │
+                    │                      │
+                    │ ₹ → integer paise    │
+                    │ Clean + standardise  │
+                    └──────────┬───────────┘
+                               │
+                               ▼
+                    ┌──────────────────────┐
+                    │ IDENTITY RESOLUTION  │
+                    │                      │
+                    │ Bank credit →        │
+                    │ settlement_id        │
+                    │ Ambiguity → escalate │
+                    └──────────┬───────────┘
+                               │
+                               ▼
+                    ┌──────────────────────┐
+                    │ DETERMINISTIC ENGINE │
+                    │                      │
+                    │ Match batches        │
+                    │ Build proof chains   │
+                    │ Calculate variances  │
+                    └──────────┬───────────┘
+                               │
+                               ▼
+                    ┌──────────────────────┐
+                    │ AI FINANCE CONTROLLER│
+                    │                      │
+                    │ What should I check? │
+                    │ What should happen   │
+                    │ next?                │
+                    └──────────┬───────────┘
+                               │
+                               ▼
+                    ┌──────────────────────┐
+                    │ ADVERSARIAL AUDITOR  │
+                    │                      │
+                    │ Try to break a       │
+                    │ match before trusting│
+                    │ it                    │
+                    └──────────┬───────────┘
+                               │
+                               ▼
+                    ┌──────────────────────┐
+                    │ POLICY ENGINE        │
+                    │                      │
+                    │ CERTIFIABLE          │
+                    │ HUMAN REVIEW         │
+                    │ NOT ATTESTABLE       │
+                    └──────────┬───────────┘
+                               │
+                               ▼
+                    ┌──────────────────────┐
+                    │ CLOSE PACK           │
+                    │                      │
+                    │ Proof rate           │
+                    │ Exceptions           │
+                    │ Recovery actions     │
+                    │ Unexplained residual │
+                    └──────────────────────┘
 ```
 
-## The problem with a match rate
+**Core principle:** AI can decide what to investigate, but the money math and certification rules stay deterministic.
 
-Reconciliation software tells you what percentage of records matched. That number
-is close to meaningless on its own, because **two numbers can agree for the wrong
-reasons.**
+---
 
-In the batch above, a gateway fee was charged at 2.18% against a contracted 2.00%
-— ₹4,248.00 too much including GST. In the same batch, a ₹12,000 refund was
-deducted ₹4,247.80 short. The two errors point in opposite directions and cancel
-to twenty paise. Every total-level check passes. Two real errors are now in the
-books, netted into invisibility.
+## Verification workflow
 
-Accounting calls these *compensating errors*. A total-level check cannot detect
-them, by construction. Neither can a match rate.
+![Attest money-moves verification process](docs/assets/attest-verification-workflow.png)
 
-The Track 4 brief says the bottleneck is **verification capacity, not generation
-speed**, and that *"one cherry-picked match proves nothing."* Attest takes both
-statements literally.
+The workflow moves from matching to proof, then challenges the match before certification. The final outcome can be **Certifiable**, **Human Review**, or **Not Attestable**.
 
-## What it does instead
+## The key idea: prove the chain, not just the total
 
-Attest closes one finance-ops loop — a merchant's incoming money for one month,
-across five systems — and reports three numbers instead of one:
+A transaction is considered proven only when the evidence chain holds:
 
-| Metric | Question it answers |
+```text
+order
+  ↓
+payment
+  ↓
+fee calculation
+  ↓
+tax base
+  ↓
+settlement batch
+  ↓
+bank credit
+  ↓
+ledger
+```
+
+One broken link means the line is **not proven**, even if the final totals happen to agree.
+
+---
+
+# Where AI fits
+
+Attest deliberately separates **reasoning** from **financial truth**.
+
+| Part | AI? | Why |
+|---|:---:|---|
+| What to investigate next | ✅ | Good problem-solving task for an agent |
+| Root-cause explanation | ✅ | Turns evidence into an understandable finding |
+| Narration / document parsing | ✅ | Handles messy language and changing formats |
+| Claim / journal drafting | ✅ | Produces a useful human-review draft |
+| Match arithmetic | ❌ | Must be auditable and deterministic |
+| Tolerances / thresholds | ❌ | Policy should not drift because of a model |
+| Ledger posting | ❌ | Human approval remains required |
+
+The model planner and deterministic rules planner use the same validation, tools, and policy safety envelope.
+
+---
+
+# Why Attest is different
+
+### Traditional reconciliation
+
+```text
+Do the totals match?
+        ↓
+      YES ✅
+        ↓
+      CLOSE
+```
+
+### Attest
+
+```text
+Do the totals match?
+        ↓
+Can every line be proven?
+        ↓
+Attack the matches
+        ↓
+Investigate exceptions
+        ↓
+Measure unexplained residual
+        ↓
+Can policy certify it?
+   ↙       ↓        ↘
+ YES    REVIEW      NO
+ ✅       👤        ❌
+```
+
+This is why Attest reports more than a match rate:
+
+| Metric | Simple question |
 |---|---|
-| **Match rate** | Do the totals agree? *(what everyone reports)* |
-| **Proof rate** | Can every line be traced end to end through an unbroken evidence chain? |
-| **False-match rate** | How many of those matches did an adversarial pass overturn? |
+| **Match rate** | Did the totals agree? |
+| **Proof rate** | Can the money be traced end to end? |
+| **False-match rate** | How many “matches” failed an adversarial check? |
+| **Unexplained residual** | How much money is still not accounted for? |
 
-Plus an honest exception register — typed, ranked by rupee exposure, each entry
-naming the counterparty it is claimable from, the evidence that would settle it,
-and the date the claim window closes — and a stated **unexplained residual** in
-rupees.
+---
 
-A line counts as *proven* only when every stage holds:
+# 💼 Business approach
 
-```
-order → payment → fee calculation → tax base → batch → bank credit → ledger
-```
+Attest is best understood as a **financial control layer**, not just another reconciliation screen.
 
-Break any link and the line is not proven, however well the totals agree.
+## Who pays for it?
 
-## Current results
+The immediate customer is a merchant or finance team that already has to reconcile money across multiple systems.
 
-Run against the generated benchmark corpus (1,200 orders, 3,043 source records,
-seven systems):
+Typical users:
 
-```
-processed 3,043 records in 0.02s
+- D2C and e-commerce merchants
+- Marketplaces
+- Finance / accounting teams
+- CA and bookkeeping firms managing multiple merchants
+- Businesses with large refund, COD, courier, or payment-gateway flows
 
-BATCHES TIED (conventional check)     20/22   =  90.9%
-LINES PROVEN (evidence chain)        743/1018 =  73.0%
-MATCHES OVERTURNED (adversarial)      15/22   =  68.2%
+## What problem are they buying?
 
-recall, held-out defect classes            75.0%   (3 of 4 found, 1 missed)
-false positives                                0
-recoverable                           ₹87,256.57   across 283 items
-cost of closing monthly                ₹5,365.00   (16 claims expire unfiled)
-unexplained residual                  ₹46,617.32   (254.5 bps)  -> NOT ATTESTABLE
-```
+They are not really buying a “better match rate.”
 
-The 18-point gap between the first two rates is the point of the project, and the
-third rate is why: of the 22 claims put under test, 15 were overturned by the
-adversarial pass. The held-out recall is reported here rather than buried,
-because a scorecard that only grades the defects its own author wrote detectors
-for proves nothing; the one missed class is left visible for the same reason.
+They are buying:
 
-**The close is refused.** ₹46,617.32 could not be attributed to any cause, which
-is 254.5 bps against a 25 bps limit, so the status is `NOT ATTESTABLE`. Refusing
-to certify is the point of an attestation — a system that always signs is not
-attesting to anything.
+**less money leakage + fewer hidden accounting errors + a defensible month-end close.**
 
-## Why the numbers are trustworthy
+### Business value
 
-The benchmark corpus is synthetic, as the track brief specifies — which means
-**the design of the dataset is part of the work.** Attest generates it in a
-specific order:
+![Attest Framework Objectives — Find Leakage, Prove Close, Reduce Risk](docs/assets/attest-framework-objectives.png)
 
-1. Build the **true world** — every rupee, as it should have moved.
-2. **Freeze** the truth.
-3. Derive the source documents from that truth.
-4. Inject **labelled defects into the documents only**.
+### Business model at a glance
 
-Because the truth exists before the system does, every accuracy figure is
-*measured against labels the agent never sees*, rather than asserted.
+Attest is positioned as **B2B SaaS for finance teams**, with pricing tied to reconciliation volume and the value of recovered leakage.
 
-The dataset also distinguishes **defects** from **world facts** — things that
-make reconciliation genuinely hard without anyone having erred, such as two
-identical orders on the same day, or a refund that legitimately nets against next
-month's batch. Flagging one of those counts as a **false positive**. Most
-reconciliation demos have no concept of a false positive at all.
-
-**On your own data, no accuracy figure is quoted at all.** There is no answer key
-for a real month; a tool that quotes you recall on your own data is quoting a
-number it cannot have measured. The close pack says so on its face.
-
-## The AI Finance Controller
-
-The AI does not compute a number here. It decides **what to investigate next**.
-
-```
-        AI CONTROLLER          "what should I look at?"      chooses actions
-              |
-        DETERMINISTIC TOOLS    "what did the evidence show?"  returns facts
-              |
-        EVIDENCE               ids, amounts in paise, provenance
-              |
-        POLICY ENGINE          "what may be certified?"       returns a verdict
-              |
-      CERTIFIABLE  /  NOT ATTESTABLE  /  HUMAN REVIEW
-```
-
-Run it:
-
-```bash
-python3 -m attest.controller --demo            # investigate the demo month
-python3 -m attest.agentbench                   # benchmark the controller
-```
-
-On the demo month the controller chooses this path on its own — nothing below is
-scripted, and removing the fee discrepancy changes the route:
-
-```
- →  inspect_close_state        2 of 3 batches tie; 40 of 159 lines proven
- →  list_exceptions            rank by exposure, investigate the largest first
- →  check_fee_contract         100 lines off-contract, ₹3,600.00 over
- →  check_refund_netting       a tie plus a fee error means something absorbed it
- →  find_compensating_errors   confirmed: they cancel to ₹0.20
- →  run_adversarial_check      2 of 4 passing claims overturned
- →  find_unexplained_residual  ₹4,30,592.40 unattributed
- ●  conclude
-
-    POLICY:  NOT_ATTESTABLE — 1414.34 bps against a 25 bps limit
-```
-
-**What the controller may not do.** There is no action that certifies — asking
-for one is rejected, and so is `sign`, `approve` or `attest`. It cannot widen a
-threshold, cite an evidence id no tool returned, or put a number into a finding.
-Budgets stop it; an exhausted budget escalates rather than guessing. Every one of
-those is a test in `tests/test_controller.py`, driven by a scripted hostile
-planner.
-
-**Two planners, one safety envelope.** A `ModelPlanner` emits the action schema
-from an LLM; a `RulesPlanner` emits the same schema deterministically. Both go
-through the same validator, tools and policy gate, so the safety properties do
-not depend on which is driving — and the demo needs no API key. The interface
-says which one ran, because claiming "AI" while a rules planner drives would be
-the exact overclaim this project argues against.
-
-| Metric (6 scenarios, `python3 -m attest.agentbench`) | |
-|---|---|
-| False certification rate | **0%** |
-| Correct escalation rate | 100% |
-| Correct tool selection | 100% |
-| AI-assisted safe resolution rate | 100% |
-| Unnecessary tool calls | 41.3% |
-| Average steps / tool calls | 8.7 / 7.7 |
-
-Six scenarios is a small sample and the perfect scores should be read that way.
-The unnecessary-call rate is the honest weak spot: the deterministic planner
-sweeps more broadly than it needs to, and it is reported rather than tuned away.
-
-## Where AI is used, and where it is deliberately not
-
-| Component | AI? | Why |
+| Revenue stream | Customer | Value |
 |---|---|---|
-| Root-cause explanation | yes | Turning a ₹3,600 variance into a stated cause needs reasoning over context |
-| Narration parsing | yes | Bank statement formats drift; free text is a language problem |
-| **Match arithmetic** | **no** | Must be auditable. A probabilistic matcher cannot be trusted with money. |
-| **Tolerance and threshold logic** | **no** | Deterministic by design |
-| **Posting to the ledger** | **no** | Drafted for human approval, never automatic |
+| **SaaS subscription** | Merchants / finance teams | Continuous reconciliation + proof of close |
+| **Usage-based** | High-volume merchants | Pay by settlements or records processed |
+| **CA / finance firm plan** | Accounting partners | One workspace for many merchant closes |
+| **Recovery success fee** | Merchants with claimable leakage | Pay when verified recoverable money is won |
 
-The division is visible in the interface. Every explanation is labelled either
-**Verified by Attest engine** (deterministic, produced by the same code that
-computed the figures) or **AI explanation** (written by a model from figures the
-engine had already published). The model is handed a nine-field allowlist and no
-source documents, so it has nothing to hallucinate a number from.
+## How it could make money
 
-**The whole pipeline runs with no API key, no account and no network.** With no
-model configured, explanations fall back to the deterministic path and nothing
-else changes. That is a design decision, not a limitation — for a product
-handling a merchant's financial records, inference you can run locally is an
-architectural advantage.
+### 1. SaaS subscription
 
-## A close pack you cannot quietly edit
+Charge merchants based on reconciliation volume, such as monthly transactions or settlements.
 
-Every close pack carries a SHA-256 digest of the **entire rendered document**,
-printed on its face:
-
-```bash
-python3 -m attest.seal --verify web/close-pack.html
+```text
+Starter       → small merchant
+Growth        → growing D2C / marketplace
+Enterprise    → high-volume finance teams
 ```
 
-`INTACT` means nobody has changed a figure since it was sealed. Change one rupee,
-one date, or one letter of the business name and it reads `ALTERED`. The
-benchmark pack is byte-reproducible, so the same inputs always produce the same
-digest.
+### 2. Usage-based pricing
 
-A digest printed inside the file it covers proves integrity, not authorship —
-which is why **tamper-evident** is the honest word and tamper-proof would be a
-lie. Authorship comes from `attest_seals`, a table with insert and select
-policies and deliberately **no update and no delete policy**: a merchant can add
-a seal, and nobody can alter one afterwards, including us.
+A lower fixed platform fee plus a small fee per processed settlement / reconciliation batch.
 
-## Quick start
+### 3. CA / finance-firm plan
+
+A multi-client workspace where one finance partner can run closes for many merchants.
+
+### 4. Recovery-linked upside
+
+For specific claim workflows, Attest could eventually charge a small success fee on **verified, recoverable leakage**.
+
+That model aligns the product with the customer's outcome:
+
+> **Money recovered, not dashboards opened.**
+
+---
+
+# Why a merchant would keep paying
+
+The strongest retention loop is not “more AI features.” It is:
+
+```text
+Connect financial sources
+        ↓
+Run every close
+        ↓
+Find exceptions
+        ↓
+Recover money / close safely
+        ↓
+Store the evidence trail
+        ↓
+Return next month
+```
+
+Once Attest becomes the system that produces the monthly **proof of close**, replacing it means losing historical evidence, exception context, and recovery tracking.
+
+---
+
+# Product loop
+
+```text
+SOURCE DATA
+   ↓
+RECONCILE
+   ↓
+PROVE
+   ↓
+ATTACK
+   ↓
+EXCEPTION REGISTER
+   ↓
+RECOVERY / HUMAN REVIEW
+   ↓
+SEALED CLOSE PACK
+   ↓
+NEXT PERIOD
+```
+
+The long-term opportunity is to move from a **month-end detective tool** to a **continuous finance control system**.
+
+Continuous ingest is the most important roadmap change because some recoverable findings can expire before a monthly close.
+
+---
+
+# Results from the benchmark
+
+Against the generated benchmark corpus:
+
+```text
+Orders processed                 1,200
+Source records                   3,043
+
+Batches tied by conventional check   20 / 22   = 90.9%
+Lines proven                         743 / 1018 = 73.0%
+Matches overturned                   15 / 22   = 68.2%
+Held-out recall                            75.0%
+False positives                            0
+Recoverable money                  ₹87,256.57
+Unexplained residual               ₹46,617.32
+```
+
+The important number is not that the match rate is high.
+
+It is that **proof rate is lower**, and the adversarial pass overturns matches that look safe at first glance.
+
+In the showcased benchmark close, the final residual exceeds the policy threshold, so Attest refuses to certify:
+
+> **NOT ATTESTABLE**
+
+That refusal is a feature, not a failure.
+
+---
+
+# Security & trust
+
+Attest treats financial data as something the system must **earn the right to certify**.
+
+### Money is integer paise
+
+No floating-point arithmetic touches money.
+
+### Ambiguity is escalated
+
+When multiple records could explain the same bank credit, Attest does not guess. It escalates the ambiguity instead.
+
+### Tamper-evident close packs
+
+Every close pack carries a SHA-256 digest of the rendered document.
+
+### Optional AI
+
+The core pipeline can run without an API key, account, or network. AI is an enrichment layer rather than the source of truth for the financial numbers.
+
+---
+
+# Quick start
 
 Zero runtime dependencies. Python 3.10+.
 
 ```bash
-# the compensating-error demo, start to finish
+# Run the compensating-error demo
 python3 -m attest.demo
 
-# generate the benchmark corpus (sources + held-out ground truth)
+# Generate the benchmark corpus
 python3 -m attest.generate --out data --orders 1200
 
-# close it, and write the pack the site links to
+# Run a close and generate the HTML close pack
 python3 -m attest.run --data data --html web/close-pack.html
 
-# check the seal on what that produced
+# Verify the close-pack seal
 python3 -m attest.seal --verify web/close-pack.html
 ```
 
-### One command that checks the whole thing
+Run the full verification suite with:
 
 ```bash
 python3 scripts/verify.py
 ```
 
-Fifty checks. It regenerates the corpus, runs the pipeline, exercises both API
-endpoints and every failure path, and asserts the three numbers that carry the
-argument — proof rate **below** match rate, held-out recall **strictly between 0
-and 100%**, false positives **at zero**. Those are integrity checks, not smoke
-tests: a change that improves every other number while pushing held-out recall to
-100% has broken the project, and this command fails on it.
+---
 
-Money arithmetic has its own suite, runnable without pytest:
+# Running against real Razorpay data
+
+Attest includes a Razorpay Settlement Recon connector using the Settlement Recon API.
 
 ```bash
-python3 tests/test_money_edges.py
+python3 -m attest.connect --year 2026 --month 8 --ping
+python3 -m attest.connect --year 2026 --month 8
 ```
 
-## Running against real Razorpay data
+A key design choice is that Attest keeps `settlement_id` as the authoritative batch identity and treats the bank UTR as audit evidence rather than blindly using it as the grouping key.
 
-`attest/sources/razorpay_api.py` calls the live Settlement Recon API over HTTP
-Basic auth, using only the standard library:
+---
 
-```
-GET https://api.razorpay.com/v1/settlements/recon/combined?year=YYYY&month=MM
-```
+# Repository structure
 
-```bash
-python3 -m attest.connect --year 2026 --month 8 --ping   # check credentials
-python3 -m attest.connect --year 2026 --month 8          # pull and audit a month
-```
-
-Two things about the real API shaped the design. Amounts arrive as **integers in
-paise**, which is why Attest is integer-paise throughout and no float touches the
-money. And every row carries **both `settlement_id` and `settlement_utr`** — the
-UTR is issued by the correspondent bank, is not a Razorpay key, and grouping on
-it produces confident wrong batches. Attest groups on `settlement_id` and keeps
-the UTR for the audit trail only.
-
-Before reconciling anything, the importer audits the source data itself: whether
-Razorpay's own `credit` agrees with `amount − fee − tax`, and whether any two
-batches share a UTR. Both are reported rather than smoothed over.
-
-**Razorpay cannot prove Razorpay.** Connect a Razorpay key and supply nothing
-else and both rates are 0% — the report and the payment agree by construction, so
-that agreement carries no information. Evidence has to come from somewhere that
-is not the party being checked.
-
-## Security posture
-
-| | |
-|---|---|
-| **Razorpay secrets** | Never stored. The hosted app refuses `rzp_live_…` outright; a test key is used for one request and discarded. The database holds a masked key id and nothing else. |
-| **The serverless function** | Holds no credential of its own — no service key, no admin role, no database password. Every write goes to PostgREST bearing the caller's own token, so it can never touch a row its caller could not. If `api/close.py` leaked in full it would grant an attacker nothing. |
-| **Data isolation** | Row-level security, tested rather than assumed: as the owner 1 row visible, as another signed-in user 0, anonymous 0, and a forged insert claiming another user's id rejected. |
-| **Accounts** | Optional. The demo and the full reconciliation path work signed out; an account only keeps your closes. |
-| **AI prompts** | A nine-field allowlist of already-published figures. No source document, key or statement line can reach a model. |
-
-## Two financial bugs found during the audit
-
-Both are the quiet kind — wrong numbers rather than crashes — and both are worth
-reading if you are assessing whether this was built carefully.
-
-**A legitimate zero treated as missing.** `ReconRow.net` read
-`self.credit if self.credit else (amount - fee - tax)`. A credit of exactly zero
-— a fully refunded payment, an adjustment that nets out — is falsy, so it fell
-through to a *computed* figure, silently replacing what Razorpay reported with
-something else. `net_disagrees_by` had the same shape, so a reported zero that
-disagreed was reported as agreeing: the check failed precisely where it mattered
-most. `credit` is now `int | None`, absence and zero are distinct, and
-`tests/test_money_edges.py` covers it.
-
-**Adversarial verdicts counted as recoverable money.** The exception register
-mixes broken proof chains, batch findings and verdicts from the adversarial pass.
-An "offsetting pair" is the *same rupees* as the MDR chain break and the refund
-variance that compose it — and all three were being summed into the recoverable
-total, overstating the benchmark by ₹846.90 and the demo by roughly ₹17,000.
-Verdicts are now tagged, excluded from recovery, and shown separately. Overstating
-what a merchant can recover is the one direction a finance tool must never err in.
-
-## Repository layout
-
-```
+```text
 attest/
-  money.py       integer paise arithmetic — no float touches money
-  world.py       generates the true world for one merchant-month
-  defects.py     injects labelled defect classes into the documents only
-  documents.py   renders the world into the source files a merchant receives
-  generate.py    corpus CLI
-  demo.py        the deterministic compensating-error scenario
-  ingest.py      loading, normalisation, and key resolution
-  engine.py      deterministic matching and proof-chain construction
-  audit.py       six falsification hypotheses attacking every match that passed
-  score.py       accuracy against held-out ground truth
-  recovery.py    counterparties, claim windows and the clock on each one
-  close.py       closing a merchant's own month, where no answer key exists
-  report.py      the self-contained close pack
-  seal.py        tamper-evidence, and a CLI to check it
-  engines.py     the reasoning layer — rules, Gemini, OpenAI, Ollama
-  config.py      contextual capability checks that never print a secret
-  connect.py     the live Razorpay CLI
-  sources/       the Razorpay Settlement Recon API client
+├── money.py       # integer-paise arithmetic
+├── world.py       # true-world benchmark generation
+├── defects.py     # labelled defect injection
+├── documents.py   # source document generation
+├── ingest.py      # normalisation + key resolution
+├── engine.py      # deterministic matching + proof chains
+├── audit.py       # adversarial checks
+├── recovery.py    # recoverable exceptions + deadlines
+├── score.py       # benchmark scoring
+├── report.py      # close-pack generation
+├── seal.py        # tamper-evidence verification
+├── engines.py     # reasoning layer
+└── sources/       # Razorpay connector
+
 api/
-  close.py       POST /api/close  — run a close; demo mode needs no account
-  explain.py     POST /api/explain — put a finding into words
-web/             the landing page, the app, and a rendered close pack
-brand/           the mark, in every form it is used
-scripts/         verify.py, and environment tooling
-tests/           money edge cases: zero, refunds, rounding, large amounts
-data/            generated; sources/ is readable, truth/ is held out
+├── close.py       # close API
+└── explain.py     # explanation API
+
+web/
+├── index.html     # landing page
+└── app.html       # application UI
+
+brand/
+└── attest-mark.svg
 ```
 
-Further reading: [`ARCHITECTURE.md`](ARCHITECTURE.md) for how it works,
-[`USE-CASES.md`](USE-CASES.md) for what four different merchants actually do with
-it, and [`CLAUDE.md`](CLAUDE.md) for the invariants that must not be broken.
+---
 
-## Environment and secrets
+# What is built vs roadmap
 
-`.env.example` is committed and is the source of truth for **which** variables
-exist. `.env` holds the real values, is gitignored, and is never committed.
+### ✅ Built
 
-```bash
-python3 scripts/sync_env.py           # bring .env in step with the template
-python3 scripts/sync_env.py --check   # report drift only, change nothing (CI)
-python3 -m attest.config              # what is configured, without secrets
+- Synthetic truth-first benchmark corpus
+- Seven-source ingestion and normalisation
+- Deterministic reconciliation engine
+- Per-line proof chains
+- Six adversarial falsification hypotheses
+- Typed exception register
+- Deadline-aware recovery layer
+- Held-out accuracy scoring
+- Self-contained HTML close pack
+- Refusal / `NOT ATTESTABLE` path
+- Optional AI reasoning layer
+
+## Product roadmap
+
+![Attest product roadmap](docs/assets/attest-roadmap.png)
+
+The roadmap moves Attest from a month-end reconciliation tool toward **continuous financial control** — connecting financial sources, detecting issues earlier, supporting multiple merchants, tracking recovery, integrating with ledgers, and learning from resolved exceptions.
+
+### 🚧 Roadmap
+
+- Direct OAuth / API connectors for more financial systems
+- Continuous daily ingest instead of batch-only close
+- Multi-tenant CA / accounting-firm workspace
+- Claim filing and status tracking
+- Tally / Zoho ledger export
+- Learning from real recovery outcomes
+
+---
+
+# The idea in one picture
+
+```text
+             ┌────────────────────┐
+             │      MONEY MOVES   │
+             └─────────┬──────────┘
+                       ↓
+             ┌────────────────────┐
+             │   DOES IT MATCH?   │
+             └─────────┬──────────┘
+                       ↓
+                ┌─────────────┐
+                │   ATTEST    │
+                │     🪙      │
+                └──────┬──────┘
+                       ↓
+             ┌────────────────────┐
+             │   CAN WE PROVE IT?│
+             └─────────┬──────────┘
+                       ↓
+             ┌────────────────────┐
+             │   ATTACK THE MATCH│
+             └─────────┬──────────┘
+                       ↓
+              ┌────────┴────────┐
+              ↓                 ↓
+        ✅ CERTIFIABLE      ❌ NOT ATTESTABLE
+              │                 │
+              └────────┬────────┘
+                       ↓
+             HUMAN-TRUSTED CLOSE
 ```
 
-The sync tool is **append-only by design**. It never rewrites, reorders or
-reformats `.env`, because that file holds live credentials and every rewrite is a
-chance to corrupt one. It creates `.env` with every value blank, appends newly
-added variables, leaves existing values byte-for-byte untouched, keeps variables
-that have left the template rather than deleting a working credential, and prints
-variable **names** only — no value is ever written to stdout.
+---
 
-Validation is contextual. **The core pipeline requires no configuration at all**,
-so a missing Razorpay credential is only an error if you invoke the Razorpay path.
+# Design language
 
-## A note on `settlement_id`
+Attest uses an accounting-inspired visual system:
 
-A bank statement does not contain Razorpay's `settlement_id`. It contains a UTR
-issued by the correspondent bank. The UTR *looks* like a key and is not one —
-matching on it produces confident wrong answers, which is worse than producing
-none.
+- **Navy** → trust and verification
+- **Gold** → the coin / financial value
+- **A + double rule** → a verified total
+- **Paper / ink** → accounting documents and auditability
 
-Attest resolves bank credits to batches on `(value_date, amount)` and then carries
-`settlement_id` forward as the authoritative identity. Where two batches could
-both explain a credit, it escalates rather than picking one.
+The brand's double rule is inspired by the accounting convention of marking a figure as final and verified.
 
-## Licence
+---
+
+## Learn more
+
+- **Live app:** https://attest-nu.vercel.app
+- **Architecture:** [`ARCHITECTURE.md`](ARCHITECTURE.md)
+- **Use cases:** [`USE-CASES.md`](USE-CASES.md)
+- **Brand:** [`brand/README.md`](brand/README.md)
+
+---
+
+## License
 
 MIT
+
+<div align="center">
+
+<img src="https://raw.githubusercontent.com/GitBeat16/attest/main/brand/attest-mark.svg" alt="Attest" width="44" />
+
+**Attest — prove the close.**
+
+</div>
