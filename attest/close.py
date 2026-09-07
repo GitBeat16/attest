@@ -229,6 +229,9 @@ def close(src: Path, supplied: list[str], missing: list[str]) -> dict:
         "as_at": today.isoformat(),
         "recoverable": rec["recoverable"],
         "recoverable_count": rec["recoverable_count"],
+        "claim_ready": rec["claim_ready"],
+        "claim_ready_count": rec["claim_ready_count"],
+        "by_tier": rec["by_tier"],
         "expiring_soon": rec["expiring_soon"],
         "expiring_count": rec["expiring_count"],
         "by_counterparty": rec["by_counterparty"],
@@ -237,7 +240,7 @@ def close(src: Path, supplied: list[str], missing: list[str]) -> dict:
         "late_date": late.isoformat(),
         "deadlines": [
             {"deadline": c.deadline.isoformat(), "days": c.days_left(today),
-             "cls": c.exception_class, "exposure": c.exposure,
+             "cls": c.exception_class, "exposure": c.exposure, "tier": c.tier,
              "party": c.counterparty, "urgency": c.urgency(today)}
             for c in claims[:6]
         ],
@@ -264,6 +267,13 @@ def close(src: Path, supplied: list[str], missing: list[str]) -> dict:
         "residual_bps": round(residual_bps, 2),
         "recoverable_paise": rec.get("recoverable", 0),
         "recoverable_display": fmt(rec.get("recoverable", 0)),
+        "claim_ready_paise": rec.get("claim_ready", 0),
+        "claim_ready_display": fmt(rec.get("claim_ready", 0)),
+        "recoverable_by_tier": {
+            t: {"paise": v["exposure"], "display": fmt(v["exposure"]),
+                "count": v["count"]}
+            for t, v in rec.get("by_tier", {}).items()
+        },
         "attestable": signed,
         "bank_resolution": keys,
         "naive_resolution": naive,

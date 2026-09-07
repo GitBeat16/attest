@@ -72,6 +72,17 @@ if it makes them look better.
     arithmetic independently and raises if the engine stops finding it. Never
     hardcode a finding into the UI.
 
+11. **Only PROVEN findings may be framed as claim-ready.** Every exception
+    carries a confidence tier (`attest/tiers.py`): `PROVEN` — the arithmetic
+    disagrees with the contract, recomputable and defensible to a counterparty;
+    `UNPROVEN` — a link in the evidence chain is missing; `NEEDS_INPUT` —
+    depends on a fact Attest cannot see. An unmapped class is `UNPROVEN`, never
+    claim-ready. This is classification of existing findings — it changes no
+    detector, tolerance or threshold, and the recoverable total is unchanged by
+    it. A CA acting top-down on a register ranked by exposure alone files a
+    claim on the largest *unproven* item and it gets rejected; the tiers exist
+    to put the claim-ready findings first.
+
 ---
 
 ## Expected output

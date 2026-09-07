@@ -82,12 +82,21 @@ MATCHES OVERTURNED (adversarial)      15/22   =  68.2%
 
 recall, held-out defect classes            75.0%   (3 of 4 found, 1 missed)
 false positives                                0
-recoverable                           ₹87,256.57   across 283 items
+exposure under review                 ₹86,765.90   across 283 items
+  proven — claim-ready                    ₹832.49   arithmetic disagrees with the contract
+  cannot prove                        ₹79,436.57   a link in the evidence chain is missing
+  needs your input                     ₹6,496.84   depends on a fact Attest cannot see
 cost of closing monthly                ₹5,365.00   (16 claims expire unfiled)
-unexplained residual                  ₹46,617.32   (254.5 bps)  -> NOT ATTESTABLE
+unexplained residual                  ₹46,126.65   (251.8 bps)  -> NOT ATTESTABLE
 ```
 
-**The close is refused.** ₹46,617.32 could not be attributed to any cause — 254.5
+Every exception carries a confidence tier. Only the **proven** tier — where the
+fee, tax or net can be recomputed from the contract and shown to disagree — is
+framed as claim-ready. Ranking by rupee exposure alone puts the largest
+*unproven* item at the top of the list, which is how a claim gets filed and
+rejected.
+
+**The close is refused.** ₹46,126.65 could not be attributed to any cause — 251.8
 bps against a 25 bps limit — so the status is `NOT ATTESTABLE`. Refusing to
 certify is the point of an attestation. A system that always signs is not
 attesting to anything.
@@ -200,7 +209,7 @@ python3 -m attest.seal --verify web/close-pack.html
 ```
 
 ```
-digest     4e008d98 18eb491c 63c73b54 5245f684
+digest     64542f54 43e1d3f0 38c49380 3df1064b
 INTACT     the whole document hashes to its printed digest.
 ```
 

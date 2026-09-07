@@ -203,6 +203,7 @@ class Toolbox:
 
     def _list_exceptions(self) -> ToolResult:
         rows = [{"exception_class": e["class"], "kind": e.get("kind", "chain"),
+                 "tier": e.get("tier", "UNPROVEN"),
                  "count": e["count"], "exposure_paise": e["exposure"],
                  "exposure_display": fmt(e["exposure"]),
                  "occurred_on": e.get("occurred_on")}
@@ -228,8 +229,11 @@ class Toolbox:
             amount_paise=total,
             evidence_ids=[s for e in hits for s in e.get("sample", [])][:8],
             detail={"groups": len(hits), "kind": hits[0].get("kind", "chain"),
+                    "tier": hits[0].get("tier", "UNPROVEN"),
                     "evidence_required": hits[0].get("evidence_required", ""),
-                    "claimable": hits[0].get("kind") != "verdict"})
+                    "claimable": hits[0].get("kind") != "verdict",
+                    "claim_ready": (hits[0].get("kind") != "verdict"
+                                    and hits[0].get("tier") == "PROVEN")})
 
     # ---------------------------------------------------------------- checks
     def _rate(self, key: str) -> Decimal:

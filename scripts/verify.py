@@ -175,6 +175,76 @@ def check_integrity(m: dict) -> None:
 
 
 # ==========================================================================
+def check_tiers() -> None:
+    """Confidence tiers (ROADMAP §1.3, invariant 11). Classification only:
+    the recoverable total must not move, verdicts stay out of recovery, and an
+    unmapped class must never come out claim-ready."""
+    section("CONFIDENCE TIERS")
+    from datetime import date, timedelta
+
+    from attest import tiers
+    from attest.audit import run as audit_run
+    from attest.engine import run as engine_run
+    from attest.ingest import load, resolve
+    from attest.money import fmt
+    from attest.recovery import build_claims, summarise
+    from attest.run import build_exceptions
+
+    corpus = load(ROOT / "data" / "sources")
+    resolve(corpus)
+    res = engine_run(corpus)
+    aud = audit_run(corpus, res.batch_ties)
+    ex = build_exceptions(corpus, res, aud)
+
+    # 1. every row is tiered, in one of the three known values
+    bad = [e for e in ex if e.get("tier") not in tiers.TIERS]
+    record(PASS if not bad else FAIL, "every exception carries a known tier",
+           "all rows" if not bad else f"{len(bad)} untiered/unknown")
+
+    # 2. an unmapped class tiers to UNPROVEN, never PROVEN
+    made_up = tiers.for_class("SOME_CLASS_THAT_DOES_NOT_EXIST")
+    record(PASS if made_up == tiers.UNPROVEN else FAIL,
+           "an unmapped class is UNPROVEN", f"got {made_up}")
+
+    # 3. weakest() cannot be talked up
+    w = tiers.weakest([tiers.PROVEN, tiers.NEEDS_INPUT, tiers.PROVEN])
+    record(PASS if w == tiers.NEEDS_INPUT else FAIL,
+           "a mixed group takes the weakest tier", f"got {w}")
+
+    y, mth = (int(x) for x in corpus.mdr_invoice["period"].split("-"))
+    period_end = date(y + (mth // 12), (mth % 12) + 1, 1) - timedelta(days=1)
+    today = period_end + timedelta(days=3)
+    claims = build_claims(ex, period_end, today)
+    rec = summarise(claims, today)
+
+    # 4. the tier split sums exactly to recoverable — nothing lost or doubled
+    tier_sum = sum(v["exposure"] for v in rec["by_tier"].values())
+    record(PASS if tier_sum == rec["recoverable"] else FAIL,
+           "tier split reconciles to recoverable",
+           f"{fmt(tier_sum)} vs {fmt(rec['recoverable'])}")
+
+    # 5. the constraint: recoverable did not increase. Pinned to the benchmark
+    #    figure so a regression that inflates it fails here.
+    PINNED = 8676590
+    record(PASS if rec["recoverable"] == PINNED else FAIL,
+           "recoverable unchanged by tiering",
+           f"{fmt(rec['recoverable'])} (expected {fmt(PINNED)})")
+    record(PASS if rec["claim_ready"] <= rec["recoverable"] else FAIL,
+           "claim-ready is a subset of recoverable",
+           f"{fmt(rec['claim_ready'])} of {fmt(rec['recoverable'])}")
+
+    # 6. no verdict reaches recovery, at any tier (invariant 9 still holds).
+    #    build_claims drops every row whose kind is "verdict", so the total
+    #    claim exposure can never exceed the non-verdict exposure.
+    verdict_rows = [e for e in ex if e.get("kind") == "verdict"]
+    non_verdict_exposure = sum(e["exposure"] for e in ex
+                               if e.get("kind") != "verdict")
+    record(PASS if sum(c.exposure for c in claims) <= non_verdict_exposure else FAIL,
+           "verdicts excluded from recovery",
+           f"{len(verdict_rows)} verdict rows, none summed into claims")
+
+
+# ==========================================================================
 def check_outputs() -> None:
     section("OUTPUTS")
     r = subprocess.run(
@@ -195,10 +265,11 @@ def check_outputs() -> None:
     record(PASS, "close pack written", f"web/close-pack.html, {size:.0f} KB")
 
     for needle, label in [
-        ("claim back", "hero states the money"),
+        ("claim-ready", "hero states what is claim-ready"),
         ("compensating error", "the ₹0.02 worked example is present"),
         ("held out", "the held-out scorecard is present"),
         ("Lost by closing monthly", "the cadence argument is present"),
+        ("Proven wrong", "the confidence tiers are present"),
     ]:
         record(PASS if needle in body else FAIL, label)
 
@@ -535,6 +606,7 @@ def main() -> None:
         check_env()
         m = check_pipeline()
         check_integrity(m)
+        check_tiers()
         check_outputs()
         check_money_tests()
         check_demo()

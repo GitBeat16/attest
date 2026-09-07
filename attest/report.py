@@ -10,7 +10,20 @@ plain-English label; the code is secondary, for people who want it.
 """
 from __future__ import annotations
 
+from . import tiers
 from .money import fmt
+
+# Tier -> (badge text, css class). The three tiers are the whole point of the
+# register now: only PROVEN is framed as claim-ready.
+TIER_BADGE = {
+    tiers.PROVEN:      ("Proven wrong",    "t-proven"),
+    tiers.UNPROVEN:    ("Cannot prove",    "t-unproven"),
+    tiers.NEEDS_INPUT: ("Needs your input", "t-input"),
+}
+
+
+def _tb(tier: str) -> tuple[str, str]:
+    return TIER_BADGE.get(tier or tiers.UNPROVEN, TIER_BADGE[tiers.UNPROVEN])
 
 # Plain-English names. The internal codes are precise and unreadable; a reader
 # should never have to decode SELF_REFERENTIAL_TIE to follow the page.
@@ -35,6 +48,7 @@ LABELS = {
     "DUPLICATE_SETTLEMENT_LINE": ("Payment settled twice", "Revenue counted twice across two batches"),
     "ORPHAN_BANK_CREDIT": ("Money in with no explanation", "A credit no settlement accounts for"),
     "OUT_OF_PERIOD_SETTLEMENT": ("Settlement outside the period", "Would overstate the month if pulled in"),
+    "ITC_MISMATCH": ("Input credit at risk", "The MDR tax invoice disagrees with the GST deducted"),
 }
 
 CSS = """
@@ -158,6 +172,13 @@ tr.miss td{background:var(--bad-soft)}
 .t-held{background:var(--accent-soft);color:var(--accent)}
 .t-urg{background:var(--bad-soft);color:var(--bad)}
 .t-soon{background:var(--warn-soft);color:var(--warn)}
+/* confidence tiers — only the first is claim-ready */
+.t-proven{background:var(--bad-soft);color:var(--bad)}
+.t-unproven{background:var(--warn-soft);color:var(--warn)}
+.t-input{background:var(--accent-soft);color:var(--accent)}
+.tiers-note b{color:var(--ink)}
+.tiers-note .k{font-family:var(--mono);font-size:10px;letter-spacing:.09em;
+  text-transform:uppercase;padding:2px 6px;border-radius:3px;font-weight:500}
 
 .note{background:var(--accent-soft);border-left:3px solid var(--accent);padding:18px 22px;
   margin-top:16px;font-size:.95rem;color:var(--ink2);line-height:1.6;max-width:74ch}
@@ -335,17 +356,23 @@ def render(p: dict) -> str:
         f"{d['days']} days</span></td>"
         f"<td class='k' data-l='What happened'>{esc(_label(d['cls'])[0])}"
         f"<small>{esc(_label(d['cls'])[1])}</small></td>"
+        f"<td data-l='Confidence'><span class='tag {_tb(d.get('tier'))[1]}'>"
+        f"{_tb(d.get('tier'))[0]}</span></td>"
         f"<td class='n' data-l='Exposure'>{fmt(d['exposure'])}</td>"
         f"<td data-l='Counterparty'>{esc(d['party'])}</td></tr>"
         for d in rc.get("deadlines", [])
     )
 
+    # Claim-ready first, then by exposure — the inverse of ranking by rupee
+    # exposure alone, which puts the largest unprovable item where a reader acts.
     ex_rows = "".join(
         f"<tr><td class='k'>{esc(_label(e['class'])[0])}<small>{esc(_label(e['class'])[1])}</small></td>"
+        f"<td data-l='Confidence'><span class='tag {_tb(e.get('tier'))[1]}'>"
+        f"{_tb(e.get('tier'))[0]}</span></td>"
         f"<td class='n' data-l='Items'>{e['count']}</td>"
         f"<td class='n' data-l='Exposure'>{fmt(e['exposure'])}</td>"
         f"<td data-l='Evidence required'>{esc(e['evidence_required'])}</td></tr>"
-        for e in p["exceptions"][:8]
+        for e in tiers.rank(p["exceptions"])[:8]
     )
 
     sc_rows = ""
@@ -411,20 +438,23 @@ def render(p: dict) -> str:
 <div class="wrap">
 <header class="page">
   <p class="eyebrow">Close pack &middot; generated {p['generated']}</p>
-  <h1>We found <b>{fmt(rc.get('recoverable', 0))}</b> you can still claim back
-    &mdash; and <i>{fmt(rc.get('monthly_lapsed', 0))}</i> of it dies if you close
-    monthly.</h1>
-  <p>This month's books tie to the bank. They are still wrong. Below is what was
-    taken that shouldn't have been, who to claim it from, and how long you have.</p>
+  <h1><b>{fmt(rc.get('claim_ready', 0))}</b> you can prove today &mdash; inside
+    <i>{fmt(rc.get('recoverable', 0))}</i> of exposure this month's books do not
+    explain.</h1>
+  <p>This month's books tie to the bank. They are still wrong. Not every finding
+    can be proven, though &mdash; so each carries a confidence tier, and only the
+    proven ones are framed as claim-ready.</p>
 </header>
 
 <div class="split">
-  <div><div class="l">Claimable now</div>
-    <div class="v money">{fmt(rc.get('recoverable', 0))}</div>
-    <div class="n">across {rc.get('recoverable_count', 0)} items, from three counterparties</div></div>
-  <div><div class="l">Expires within 7 days</div>
-    <div class="v" style="color:var(--gold)">{fmt(rc.get('expiring_soon', 0))}</div>
-    <div class="n">{rc.get('expiring_count', 0)} claim windows closing</div></div>
+  <div><div class="l">Proven &mdash; claim-ready</div>
+    <div class="v money">{fmt(rc.get('claim_ready', 0))}</div>
+    <div class="n">{rc.get('claim_ready_count', 0)} items where the arithmetic
+      disagrees with the contract</div></div>
+  <div><div class="l">Exposure under review</div>
+    <div class="v" style="color:var(--gold)">{fmt(rc.get('recoverable', 0))}</div>
+    <div class="n">{rc.get('recoverable_count', 0)} items total; the rest is
+      evidence missing or needs your input</div></div>
   <div><div class="l">Lost by closing monthly</div>
     <div class="v no">{fmt(rc.get('monthly_lapsed', 0))}</div>
     <div class="n">{rc.get('monthly_lapsed_count', 0)} claims expire unfiled at a
@@ -445,16 +475,25 @@ def render(p: dict) -> str:
   day-8 finding on day 31, by which time the money is gone.</p>
 <div class="tbl"><table>
 <thead><tr><th>Deadline</th><th class="n">Left</th><th>What happened</th>
-<th class="n">Amount</th><th>Claim from</th></tr></thead>
+<th>Confidence</th><th class="n">Amount</th><th>Claim from</th></tr></thead>
 <tbody>{dl_rows}</tbody></table></div>
 
 <h2>Everything unresolved</h2>
-<p class="lede">Each one says what evidence would close it &mdash; not just that it
-  didn't match.</p>
+<p class="lede">Claim-ready findings first. Each one says what evidence would
+  close it &mdash; not just that it didn't match.</p>
 <div class="tbl"><table>
-<thead><tr><th>What happened</th><th class="n">Items</th><th class="n">Exposure</th>
-<th>Evidence required</th></tr></thead>
+<thead><tr><th>What happened</th><th>Confidence</th><th class="n">Items</th>
+<th class="n">Exposure</th><th>Evidence required</th></tr></thead>
 <tbody>{ex_rows}</tbody></table></div>
+<div class="note tiers-note"><b>Not every finding means the same thing.</b>
+  <span class="k t-proven">Proven wrong</span> &mdash; the arithmetic disagrees
+  with the contract; recomputable and defensible to the counterparty, and the
+  only tier framed as claim-ready.
+  <span class="k t-unproven">Cannot prove</span> &mdash; a link in the evidence
+  chain is missing; the money may be correct, so this asks rather than accuses.
+  <span class="k t-input">Needs your input</span> &mdash; depends on a fact
+  Attest cannot see: an off-system agreement, a negotiated rate, a credit
+  note.</div>
 
 {accuracy_section}
 

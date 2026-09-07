@@ -60,7 +60,7 @@ def canonical(p: dict) -> dict:
     materially different closes seal identically.
     """
     return {
-        "v": 1,
+        "v": 2,
         "merchant": str(p.get("merchant", ""))[:200],
         "period": str(p.get("period", "")),
         "records": int(p.get("records", 0)),
@@ -73,8 +73,13 @@ def canonical(p: dict) -> dict:
         "volume_paise": int(p.get("volume", 0)),
         "residual_paise": int(p.get("residual_paise", 0)),
         "attestable": bool(p.get("signed", False)),
+        # The tier is a material assertion of the pack — only PROVEN findings are
+        # framed as claim-ready — so a verifier reading the embedded canonical
+        # block alone must see it. An unmapped or tier-less row seals as
+        # UNPROVEN, never as claim-ready.
         "exceptions": sorted(
-            [[str(e["class"]), int(e["count"]), int(e["exposure"])]
+            [[str(e["class"]), str(e.get("tier", "UNPROVEN")),
+              int(e["count"]), int(e["exposure"])]
              for e in p.get("exceptions", [])]
         ),
     }

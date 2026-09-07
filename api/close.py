@@ -172,8 +172,11 @@ def _investigate(src) -> dict | None:
 
 
 def _top(exceptions: list[dict], claims=None, today=None) -> list[dict]:
-    """The exception register, ranked by rupee exposure, in the merchant's
-    language and with the counterparty and claim window attached."""
+    """The exception register in the merchant's language, with the counterparty,
+    the claim window and the confidence tier attached. Claim-ready findings are
+    ranked first, then by rupee exposure — the inverse of exposure alone, which
+    puts the largest unprovable item where a CA acts."""
+    from attest import tiers
     from attest.money import fmt
     # Attach the clock. A claim window that has already closed must say so
     # rather than sit in the list looking recoverable -- the whole cadence
@@ -186,14 +189,18 @@ def _top(exceptions: list[dict], claims=None, today=None) -> list[dict]:
                 clock[c.exception_class] = (c.deadline, c.days_left(today),
                                             c.urgency(today), c.counterparty)
 
-    claimable = [e for e in exceptions if e.get("kind") != "verdict"][:8]
+    claimable = tiers.rank([e for e in exceptions if e.get("kind") != "verdict"])[:8]
     verdicts = [e for e in exceptions if e.get("kind") == "verdict"][:4]
     out = []
     for e in claimable + verdicts:
+        tier = e.get("tier", tiers.UNPROVEN)
         out.append({
             "class": e["class"],
             "kind": e.get("kind", "chain"),
             "label": LABELS.get(e["class"], e["class"].replace("_", " ").title()),
+            "tier": tier,
+            "tier_label": tiers.LABEL.get(tier, tiers.LABEL[tiers.UNPROVEN]),
+            "claim_ready": e.get("kind") != "verdict" and tier == tiers.PROVEN,
             "count": e["count"],
             "exposure": fmt(e["exposure"]),
             "exposure_paise": e["exposure"],
@@ -311,6 +318,10 @@ def handle(body: dict) -> dict:
         else:
             s["seal_recorded"] = True
 
+    # `tier` is deliberately NOT written here yet: attest_findings has no tier
+    # column in the deployed schema, and PostgREST rejects an unknown key, which
+    # would fail the whole close. Add the column, then add "tier": e.get("tier")
+    # to this dict — the value is already on every exception.
     findings = [{
         "close_id": close_id,
         "class": e["class"],
