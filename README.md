@@ -232,7 +232,6 @@ python3 -m attest.seal --verify web/close-pack.html
 
 ```
 digest     0ba7e1c2 3abe58c3 830da4af cb5b6cfc
-0ba7e1c2 3abe58c3 830da4af cb5b6cfc
 INTACT     the whole document hashes to its printed digest.
 ```
 

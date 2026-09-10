@@ -344,11 +344,27 @@ def check_outputs() -> None:
         return
 
     from attest.seal import grouped
-    if grouped(r["digest"]) in lb:
-        record(PASS, "landing page shows the real digest")
-    else:
-        record(FAIL, "landing page shows the real digest",
-               f"paste this into web/index.html: {grouped(r['digest'])}")
+    # Exactly once, in both files -- not merely present, and not only on the
+    # landing page. The `in` test this replaces passed happily while both files
+    # printed the 32-character prefix TWICE on consecutive lines, which reads as
+    # a full 64-character digest and is not one. Comparing the site against
+    # `attest.seal --verify` by eye is the one manual check this product invites
+    # a reader to perform, and they would have found two lines where the tool
+    # prints one. The README was never checked at all.
+    want = grouped(r["digest"])
+    for rel, text in (("web/index.html", lb),
+                      ("README.md",
+                       (ROOT / "README.md").read_text(encoding="utf-8"))):
+        n = text.count(want)
+        if n == 1:
+            record(PASS, f"{rel} shows the real digest, once")
+        elif n == 0:
+            record(FAIL, f"{rel} shows the real digest, once",
+                   f"paste this into {rel}: {want}")
+        else:
+            record(FAIL, f"{rel} shows the real digest, once",
+                   f"printed {n} times — it must appear exactly once, or it "
+                   "reads as a longer digest than it is")
 
     # A sealed artefact that hashes differently every run is not much of a
     # seal, so reproducibility is asserted rather than assumed.
