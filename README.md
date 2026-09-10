@@ -345,9 +345,25 @@ is not the party being checked.
 |---|---|
 | **Razorpay secrets** | Never stored. The hosted app refuses `rzp_live_…` outright; a test key is used for one request and discarded. The database holds a masked key id and nothing else. |
 | **The serverless function** | Holds no credential of its own — no service key, no admin role, no database password. Every write goes to PostgREST bearing the caller's own token, so it can never touch a row its caller could not. If `api/close.py` leaked in full it would grant an attacker nothing. |
-| **Data isolation** | Row-level security, tested rather than assumed: as the owner 1 row visible, as another signed-in user 0, anonymous 0, and a forged insert claiming another user's id rejected. |
+| **Data isolation** | Row-level security, committed as SQL in `db/policies.sql` and tested rather than assumed. `db/isolation_test.sql` runs ten checks against a live project — cross-tenant read, update, delete, a forged insert claiming another user's id, and a finding attached to somebody else's close. It rolls itself back, so it can be run against production without leaving a trace. 10/10. |
+| **The close pack** | The seal embeds a canonical block inside an HTML comment, and the merchant name goes in it. A name containing `-->` used to close that comment early and turn the rest of an auditor-facing document into live markup — while the seal still read INTACT. `<` and `>` are now escaped in the embedded blob only, so the digest and every pack sealed before the fix still verify. `tests/test_security.py` covers both halves. |
+| **Closes are immutable** | There is no update policy on `attest_closes` and none on `attest_seals`. A close is a statement about a month as it was found; correcting it means running the month again, which produces a new row and a new seal. The absence of those policies *is* the guarantee — adding one silently ends it, which is why the isolation test asserts the absence. |
 | **Accounts** | Optional. The demo and the full reconciliation path work signed out; an account only keeps your closes. |
 | **AI prompts** | A nine-field allowlist of already-published figures. No source document, key or statement line can reach a model. |
+
+**What this posture does not cover.** Stated rather than left to be assumed.
+
+Encryption at rest, backup retention and employee access to the database are
+Supabase's posture, not this codebase's; Attest inherits whatever the project is
+configured with and makes no claim of its own. The isolation test proves the
+policy expressions, not the layer above them — that PostgREST validates a token
+signature, honours expiry and maps the claim to a role is Supabase's code, and
+asserting it here would be theatre. Prompt injection is out of scope by
+construction rather than by effort: the model chooses *which tool to call* from
+a fixed tuple validated against `ACTIONS`, so a hostile string in a merchant
+name can at worst waste a step. And no month has yet been closed against real
+merchant data — every number in this README is measured against a corpus this
+repository generates.
 
 ## Financial bugs found during the build
 
