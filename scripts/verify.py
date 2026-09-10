@@ -111,6 +111,18 @@ def check_pipeline() -> dict:
     if elapsed > 5:
         record(WARN, "throughput", f"{elapsed:.1f}s is slower than expected")
 
+    # The benchmark corpus is clean ISO with exact headers. If it stops reading
+    # READY, ingest has started rejecting or silently dropping rows it should
+    # not — fail the build rather than publish numbers over a partial read.
+    rd = corpus.readiness
+    if rd.ready and rd.rows_rejected() == 0:
+        record(PASS, "benchmark corpus reads READY",
+               f"{rd.rows_read():,}/{rd.rows_in():,} rows, 0 rejected")
+    else:
+        record(FAIL, "benchmark corpus reads READY",
+               f"verdict {rd.verdict}, {rd.rows_rejected()} rejected: "
+               + "; ".join(rd.reasons[:2]))
+
     card = score(corpus, res, aud, ROOT / "data" / "truth")
     return {
         "match": match_rate, "proof": proof_rate, "fmr": fmr,
@@ -175,6 +187,76 @@ def check_integrity(m: dict) -> None:
 
 
 # ==========================================================================
+def check_tiers() -> None:
+    """Confidence tiers (ROADMAP §1.3, invariant 11). Classification only:
+    the recoverable total must not move, verdicts stay out of recovery, and an
+    unmapped class must never come out claim-ready."""
+    section("CONFIDENCE TIERS")
+    from datetime import date, timedelta
+
+    from attest import tiers
+    from attest.audit import run as audit_run
+    from attest.engine import run as engine_run
+    from attest.ingest import load, resolve
+    from attest.money import fmt
+    from attest.recovery import build_claims, summarise
+    from attest.run import build_exceptions
+
+    corpus = load(ROOT / "data" / "sources")
+    resolve(corpus)
+    res = engine_run(corpus)
+    aud = audit_run(corpus, res.batch_ties)
+    ex = build_exceptions(corpus, res, aud)
+
+    # 1. every row is tiered, in one of the three known values
+    bad = [e for e in ex if e.get("tier") not in tiers.TIERS]
+    record(PASS if not bad else FAIL, "every exception carries a known tier",
+           "all rows" if not bad else f"{len(bad)} untiered/unknown")
+
+    # 2. an unmapped class tiers to UNPROVEN, never PROVEN
+    made_up = tiers.for_class("SOME_CLASS_THAT_DOES_NOT_EXIST")
+    record(PASS if made_up == tiers.UNPROVEN else FAIL,
+           "an unmapped class is UNPROVEN", f"got {made_up}")
+
+    # 3. weakest() cannot be talked up
+    w = tiers.weakest([tiers.PROVEN, tiers.NEEDS_INPUT, tiers.PROVEN])
+    record(PASS if w == tiers.NEEDS_INPUT else FAIL,
+           "a mixed group takes the weakest tier", f"got {w}")
+
+    y, mth = (int(x) for x in corpus.mdr_invoice["period"].split("-"))
+    period_end = date(y + (mth // 12), (mth % 12) + 1, 1) - timedelta(days=1)
+    today = period_end + timedelta(days=3)
+    claims = build_claims(ex, period_end, today)
+    rec = summarise(claims, today)
+
+    # 4. the tier split sums exactly to recoverable — nothing lost or doubled
+    tier_sum = sum(v["exposure"] for v in rec["by_tier"].values())
+    record(PASS if tier_sum == rec["recoverable"] else FAIL,
+           "tier split reconciles to recoverable",
+           f"{fmt(tier_sum)} vs {fmt(rec['recoverable'])}")
+
+    # 5. the constraint: recoverable did not increase. Pinned to the benchmark
+    #    figure so a regression that inflates it fails here.
+    PINNED = 8676590
+    record(PASS if rec["recoverable"] == PINNED else FAIL,
+           "recoverable unchanged by tiering",
+           f"{fmt(rec['recoverable'])} (expected {fmt(PINNED)})")
+    record(PASS if rec["claim_ready"] <= rec["recoverable"] else FAIL,
+           "claim-ready is a subset of recoverable",
+           f"{fmt(rec['claim_ready'])} of {fmt(rec['recoverable'])}")
+
+    # 6. no verdict reaches recovery, at any tier (invariant 9 still holds).
+    #    build_claims drops every row whose kind is "verdict", so the total
+    #    claim exposure can never exceed the non-verdict exposure.
+    verdict_rows = [e for e in ex if e.get("kind") == "verdict"]
+    non_verdict_exposure = sum(e["exposure"] for e in ex
+                               if e.get("kind") != "verdict")
+    record(PASS if sum(c.exposure for c in claims) <= non_verdict_exposure else FAIL,
+           "verdicts excluded from recovery",
+           f"{len(verdict_rows)} verdict rows, none summed into claims")
+
+
+# ==========================================================================
 def check_outputs() -> None:
     section("OUTPUTS")
     r = subprocess.run(
@@ -195,10 +277,11 @@ def check_outputs() -> None:
     record(PASS, "close pack written", f"web/close-pack.html, {size:.0f} KB")
 
     for needle, label in [
-        ("claim back", "hero states the money"),
+        ("claim-ready", "hero states what is claim-ready"),
         ("compensating error", "the ₹0.02 worked example is present"),
         ("held out", "the held-out scorecard is present"),
         ("Lost by closing monthly", "the cadence argument is present"),
+        ("Proven wrong", "the confidence tiers are present"),
     ]:
         record(PASS if needle in body else FAIL, label)
 
@@ -261,11 +344,27 @@ def check_outputs() -> None:
         return
 
     from attest.seal import grouped
-    if grouped(r["digest"]) in lb:
-        record(PASS, "landing page shows the real digest")
-    else:
-        record(FAIL, "landing page shows the real digest",
-               f"paste this into web/index.html: {grouped(r['digest'])}")
+    # Exactly once, in both files -- not merely present, and not only on the
+    # landing page. The `in` test this replaces passed happily while both files
+    # printed the 32-character prefix TWICE on consecutive lines, which reads as
+    # a full 64-character digest and is not one. Comparing the site against
+    # `attest.seal --verify` by eye is the one manual check this product invites
+    # a reader to perform, and they would have found two lines where the tool
+    # prints one. The README was never checked at all.
+    want = grouped(r["digest"])
+    for rel, text in (("web/index.html", lb),
+                      ("README.md",
+                       (ROOT / "README.md").read_text(encoding="utf-8"))):
+        n = text.count(want)
+        if n == 1:
+            record(PASS, f"{rel} shows the real digest, once")
+        elif n == 0:
+            record(FAIL, f"{rel} shows the real digest, once",
+                   f"paste this into {rel}: {want}")
+        else:
+            record(FAIL, f"{rel} shows the real digest, once",
+                   f"printed {n} times — it must appear exactly once, or it "
+                   "reads as a longer digest than it is")
 
     # A sealed artefact that hashes differently every run is not much of a
     # seal, so reproducibility is asserted rather than assumed.
@@ -401,6 +500,38 @@ def check_money_tests() -> None:
     record(PASS if r.returncode == 0 else FAIL, "money edge cases", line.strip())
 
 
+def check_readiness() -> None:
+    """The ingest gate: never close on data that could not be fully read.
+    ROADMAP §1.2. A real export differs from the generator's in every boring
+    way, and each of those must produce a stated verdict, never a silent
+    partial close."""
+    section("READINESS")
+    import subprocess as sp
+    r = sp.run([sys.executable, "tests/test_ingest_readiness.py"], cwd=ROOT,
+               capture_output=True, text=True)
+    line = (r.stdout.strip().splitlines() or ["no output"])[-1]
+    record(PASS if r.returncode == 0 else FAIL, "ingest readiness",
+           line.strip() or r.stderr[-300:])
+
+    # The refuse/partial verdict must actually reach the close: a PARTIAL ingest
+    # can never be SIGNED, whatever the residual.
+    from attest.ingest import load
+    import tempfile as _tf, json as _json
+    d = Path(_tf.mkdtemp()) / "sources"
+    d.mkdir(parents=True)
+    (d / "razorpay_settlements.csv").write_text(
+        (ROOT / "tests/fixtures/ingest/half_month_settlements.csv").read_text())
+    (d / "razorpay_mdr_invoice.json").write_text(_json.dumps(
+        {"period": "2026-08", "total_tax": ""}))
+    (d / "contract_terms.json").write_text(_json.dumps(
+        {"merchant": "T", "period": "2026-08", "contracted_mdr_rate_pct": "2.00",
+         "gst_on_mdr_rate_pct": "18.00", "courier_cod_fee_pct": "1.50",
+         "courier_rto_freight_inr": "85.00"}))
+    verdict = load(d).readiness.verdict
+    record(PASS if verdict == "PARTIAL" else FAIL,
+           "a half-month reads PARTIAL, not READY", f"verdict {verdict}")
+
+
 # ==========================================================================
 def check_controller() -> None:
     """The layer above the engine. Checked for safety first, ability second."""
@@ -494,6 +625,91 @@ def check_engine() -> None:
 
 
 # ==========================================================================
+def check_versioning() -> None:
+    """Can an old pack say what produced it?"""
+    section("VERSIONING")
+    from attest import __version__, ruleset
+    from attest.seal import extract
+
+    record(PASS, "engine version declared", __version__)
+    record(PASS, "ruleset digest computed", ruleset.short())
+
+    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    if f"## {__version__}" in changelog and ruleset.short() in changelog:
+        record(PASS, "CHANGELOG describes this version",
+               f"{__version__} @ {ruleset.short()}")
+    else:
+        record(FAIL, "CHANGELOG describes this version",
+               f"no entry pairing {__version__} with {ruleset.short()}")
+
+    _, canon = extract((ROOT / "web" / "close-pack.html").read_text(encoding="utf-8"))
+    rs = (canon or {}).get("ruleset") or {}
+    if rs.get("engine_version") == __version__ and rs.get("ruleset_digest") == ruleset.short():
+        record(PASS, "sealed pack states what produced it",
+               f"v{canon.get('v')} carries {rs['engine_version']} @ {rs['ruleset_digest']}")
+    else:
+        record(FAIL, "sealed pack states what produced it", f"got {rs}")
+
+
+def check_pooled_recall() -> None:
+    """The README's pooled figures, checked rather than asserted.
+
+    A per-world recall percentage cannot be averaged into anything meaningful:
+    each held-out class plants one instance per world, so per-world held-out
+    recall only ever reads 0, 25, 50, 75 or 100. The pooled figure sums the
+    counts first and divides once, which is the number the README quotes -- so
+    it is the number that has to be true.
+    """
+    section("POOLED RECALL")
+    sys.path.insert(0, str(ROOT / "scripts"))
+    try:
+        from stability import HEADLINE_SEED, one_world
+    except Exception as e:                      # pragma: no cover
+        record(WARN, "pooled recall", f"harness unavailable: {type(e).__name__}")
+        return
+
+    pooled: dict[str, dict] = {}
+    n = 20
+    for i in range(n):
+        for cls, c in one_world(HEADLINE_SEED + i, 1200)["by_class"].items():
+            d = pooled.setdefault(cls, {"planted": 0, "detected": 0,
+                                        "held_out": c["held_out"]})
+            d["planted"] += c["planted"]
+            d["detected"] += c["detected"]
+
+    def pool(held: bool) -> tuple[int, int, float]:
+        pl = sum(d["planted"] for d in pooled.values() if d["held_out"] is held)
+        dt = sum(d["detected"] for d in pooled.values() if d["held_out"] is held)
+        return pl, dt, (dt / pl * 100 if pl else 0.0)
+
+    ho_pl, ho_dt, ho = pool(True)
+    df_pl, df_dt, df = pool(False)
+
+    if ho_pl == 0:
+        record(FAIL, "held-out defects are planted",
+               "none planted -- the held-out score is vacuous")
+    else:
+        record(PASS, "held-out defects are planted", f"{ho_pl} across {n} worlds")
+
+    # Invariant 4. Not a target to beat -- a condition that must keep failing.
+    if ho < 100.0:
+        record(PASS, "held-out recall stays under 100%",
+               f"{ho:.1f}% ({ho_dt}/{ho_pl}) pooled")
+    else:
+        record(FAIL, "held-out recall stays under 100%",
+               f"{ho:.1f}% -- a targeted detector was written for a held-out class")
+
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    for label, got, planted, found in (
+            ("held-out", ho, ho_pl, ho_dt), ("designed-for", df, df_pl, df_dt)):
+        quoted = f"{got:.1f}%"
+        if quoted in readme and f"{found} of {planted}" in readme:
+            record(PASS, f"README quotes pooled {label} recall", f"{quoted} ({found} of {planted})")
+        else:
+            record(FAIL, f"README quotes pooled {label} recall",
+                   f"code says {quoted} ({found} of {planted}) -- README disagrees")
+
+
 def check_razorpay() -> None:
     section("RAZORPAY — LIVE")
     import os
@@ -535,12 +751,16 @@ def main() -> None:
         check_env()
         m = check_pipeline()
         check_integrity(m)
+        check_tiers()
         check_outputs()
         check_money_tests()
+        check_readiness()
         check_demo()
         check_api()
         check_controller()
         check_engine()
+        check_versioning()
+        check_pooled_recall()
         check_razorpay()
     except Exception as ex:                       # a crash is itself a failure
         import traceback

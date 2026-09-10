@@ -59,8 +59,40 @@ def canonical(p: dict) -> dict:
     rendering of a fact and not the fact itself, and rounding it would let two
     materially different closes seal identically.
     """
+    # A partial close must not seal indistinguishably from a whole one, so the
+    # coverage facts — rows in, rows rejected, which sources were supplied, the
+    # range actually covered — are part of what the digest attests to. A pack
+    # produced before readiness existed carries none, and seals as it did.
+    rd = p.get("readiness") or {}
+    coverage = {
+        "verdict": str(rd.get("verdict", "READY")),
+        "rows_in": int(rd.get("rows_in", p.get("records", 0)) or 0),
+        "rows_read": int(rd.get("rows_read", p.get("records", 0)) or 0),
+        "rows_rejected": int(rd.get("rows_rejected", 0) or 0),
+        "rows_outside_period": int(rd.get("rows_outside_period", 0) or 0),
+        "sources_supplied": sorted(
+            n for n, s in (rd.get("sources") or {}).items() if s.get("present")
+        ),
+        "activity_first": str(rd.get("activity_first") or ""),
+        "activity_last": str(rd.get("activity_last") or ""),
+    }
+    # What produced this conclusion, not merely that it was not edited. The
+    # digest is computed from the rule VALUES (see attest/ruleset.py), so a
+    # threshold cannot be changed without this moving -- no discipline required
+    # from anyone. A pack sealed before versioning existed carries none of this
+    # and still verifies, because `verify()` re-hashes the block embedded in
+    # that pack rather than recomputing today's shape.
+    rs = p.get("ruleset") or {}
+    ruleset_block = {
+        "engine_version": str(rs.get("engine_version", "")),
+        "ruleset_digest": str(rs.get("ruleset_digest", "")),
+        "batch_tolerance_paise": int(rs.get("batch_tolerance_paise", 0) or 0),
+        "line_tolerance_paise": int(rs.get("line_tolerance_paise", 0) or 0),
+        "residual_limit_bps": int(rs.get("residual_limit_bps", 0) or 0),
+    }
     return {
-        "v": 1,
+        "v": 4,
+        "ruleset": ruleset_block,
         "merchant": str(p.get("merchant", ""))[:200],
         "period": str(p.get("period", "")),
         "records": int(p.get("records", 0)),
@@ -73,8 +105,14 @@ def canonical(p: dict) -> dict:
         "volume_paise": int(p.get("volume", 0)),
         "residual_paise": int(p.get("residual_paise", 0)),
         "attestable": bool(p.get("signed", False)),
+        "coverage": coverage,
+        # The tier is a material assertion of the pack — only PROVEN findings are
+        # framed as claim-ready — so a verifier reading the embedded canonical
+        # block alone must see it. An unmapped or tier-less row seals as
+        # UNPROVEN, never as claim-ready.
         "exceptions": sorted(
-            [[str(e["class"]), int(e["count"]), int(e["exposure"])]
+            [[str(e["class"]), str(e.get("tier", "UNPROVEN")),
+              int(e["count"]), int(e["exposure"])]
              for e in p.get("exceptions", [])]
         ),
     }
@@ -97,10 +135,42 @@ def grouped(d: str, size: int = 8, groups: int = 4) -> str:
     return " ".join(d[i:i + size] for i in range(0, size * groups, size))
 
 
-def embed(d: str, canon: dict) -> str:
-    """The machine-readable half, kept out of the visible document."""
-    blob = json.dumps(canon, sort_keys=True, separators=(",", ":"))
+def _inert(blob: str) -> str:
+    """Make a JSON blob safe to sit inside an HTML comment.
+
+    The canonical block carries merchant-controlled text -- the merchant name
+    comes from the uploaded contract terms. A name containing `-->` closes the
+    comment early, and everything after it renders as live HTML in a document an
+    auditor opens *because* it is sealed. That was real: an `<img onerror=...>`
+    executed, and the seal still verified, so the pack looked legitimate.
+
+    `\u003c` and `\u003e` decode back to `<` and `>`, so `extract()` recovers a
+    byte-identical dict and `verify()` -- which re-serialises the PARSED dict --
+    still matches. The digest is computed over the canonical dict, never over
+    this text, so no existing pack is invalidated.
+
+    This escaping belongs here and nowhere else. Apply it anywhere the digest is
+    computed and the two paths disagree, and every pack ever sealed stops
+    verifying.
+    """
+    return blob.replace("<", "\\u003c").replace(">", "\\u003e")
+
+
+def marker(d: str, canon: dict) -> str:
+    """The machine-readable half, kept out of the visible document.
+
+    THE one place this comment is built. `report.py` used to inline the same
+    three lines, so escaping added here would have missed the path that actually
+    renders the pack -- which is exactly how the injection survived review.
+    Both callers go through this now.
+    """
+    blob = _inert(json.dumps(canon, sort_keys=True, separators=(",", ":")))
     return f"{MARK_OPEN}{d} {blob}{MARK_CLOSE}"
+
+
+def embed(d: str, canon: dict) -> str:
+    """Backwards-compatible alias."""
+    return marker(d, canon)
 
 
 # ==========================================================================

@@ -81,13 +81,25 @@ LINES PROVEN (evidence chain)        743/1018 =  73.0%
 MATCHES OVERTURNED (adversarial)      15/22   =  68.2%
 
 recall, held-out defect classes            75.0%   (3 of 4 found, 1 missed)
+  pooled over 20 seeded worlds             75.0%   (60 of 80 instances)
+recall, designed-for classes              100.0%   on this seed
+  pooled over 20 seeded worlds              99.4%   (1054 of 1060)
 false positives                                0
-recoverable                           ₹87,256.57   across 283 items
+exposure under review                 ₹86,765.90   across 283 items
+  proven — claim-ready                    ₹832.49   arithmetic disagrees with the contract
+  cannot prove                        ₹79,436.57   a link in the evidence chain is missing
+  needs your input                     ₹6,496.84   depends on a fact Attest cannot see
 cost of closing monthly                ₹5,365.00   (16 claims expire unfiled)
-unexplained residual                  ₹46,617.32   (254.5 bps)  -> NOT ATTESTABLE
+unexplained residual                  ₹46,126.65   (251.8 bps)  -> NOT ATTESTABLE
 ```
 
-**The close is refused.** ₹46,617.32 could not be attributed to any cause — 254.5
+Every exception carries a confidence tier. Only the **proven** tier — where the
+fee, tax or net can be recomputed from the contract and shown to disagree — is
+framed as claim-ready. Ranking by rupee exposure alone puts the largest
+*unproven* item at the top of the list, which is how a claim gets filed and
+rejected.
+
+**The close is refused.** ₹46,126.65 could not be attributed to any cause — 251.8
 bps against a 25 bps limit — so the status is `NOT ATTESTABLE`. Refusing to
 certify is the point of an attestation. A system that always signs is not
 attesting to anything.
@@ -138,9 +150,28 @@ Because the truth exists before the system does, every accuracy figure is
 
 **Four defect classes were planted with no detector written for them.** Three
 were caught anyway by generic integrity checks. One is still missed, and it is
-reported as missed. Recall on the classes we designed for is 100%, which on its
-own proves nothing at all. Recall on the held-out classes is **75%** — that is the
+reported as missed. Recall on the classes we designed for is 100% on this seed —
+99.4% pooled across twenty independently seeded worlds, because `UTR_UNRESOLVABLE`
+and `CHARGEBACK_ORPHAN` miss on some months — and on its own it proves nothing at
+all. Recall on the held-out classes is **75%** — that is the
 number that means something, and the missed class is deliberately left unfixed.
+
+**Why the pooled figure is the honest one.** In any single world each held-out
+class plants exactly one instance, so per-world held-out recall can only read 0,
+25, 50, 75 or 100 percent — a four-point scale that looks stable because nothing
+was varying. Pooled over twenty worlds it rests on eighty instances, and the
+picture is sharper than "one of four missed":
+
+| held-out class | found |
+|---|---|
+| `DUPLICATE_AWB` | 20 / 20 |
+| `DUPLICATE_SETTLEMENT_LINE` | 20 / 20 |
+| `ORPHAN_BANK_CREDIT` | 20 / 20 |
+| **`OUT_OF_PERIOD_SETTLEMENT`** | **0 / 20 — never caught, in any world** |
+
+Three classes caught every single time and one caught never. That is systematic,
+not noise, and it is exactly what invariant 4 predicts. `scripts/stability.py`
+prints this table, and CI fails if the pooled figure ever reaches 100%.
 
 The corpus also separates **defects** from **world facts** — things that make
 reconciliation genuinely hard without anyone having erred, such as two identical
@@ -200,7 +231,7 @@ python3 -m attest.seal --verify web/close-pack.html
 ```
 
 ```
-digest     4e008d98 18eb491c 63c73b54 5245f684
+digest     0ba7e1c2 3abe58c3 830da4af cb5b6cfc
 INTACT     the whole document hashes to its printed digest.
 ```
 
@@ -313,9 +344,25 @@ is not the party being checked.
 |---|---|
 | **Razorpay secrets** | Never stored. The hosted app refuses `rzp_live_…` outright; a test key is used for one request and discarded. The database holds a masked key id and nothing else. |
 | **The serverless function** | Holds no credential of its own — no service key, no admin role, no database password. Every write goes to PostgREST bearing the caller's own token, so it can never touch a row its caller could not. If `api/close.py` leaked in full it would grant an attacker nothing. |
-| **Data isolation** | Row-level security, tested rather than assumed: as the owner 1 row visible, as another signed-in user 0, anonymous 0, and a forged insert claiming another user's id rejected. |
+| **Data isolation** | Row-level security, committed as SQL in `db/policies.sql` and tested rather than assumed. `db/isolation_test.sql` runs ten checks against a live project — cross-tenant read, update, delete, a forged insert claiming another user's id, and a finding attached to somebody else's close. It rolls itself back, so it can be run against production without leaving a trace. 10/10. |
+| **The close pack** | The seal embeds a canonical block inside an HTML comment, and the merchant name goes in it. A name containing `-->` used to close that comment early and turn the rest of an auditor-facing document into live markup — while the seal still read INTACT. `<` and `>` are now escaped in the embedded blob only, so the digest and every pack sealed before the fix still verify. `tests/test_security.py` covers both halves. |
+| **Closes are immutable** | There is no update policy on `attest_closes` and none on `attest_seals`. A close is a statement about a month as it was found; correcting it means running the month again, which produces a new row and a new seal. The absence of those policies *is* the guarantee — adding one silently ends it, which is why the isolation test asserts the absence. |
 | **Accounts** | Optional. The demo and the full reconciliation path work signed out; an account only keeps your closes. |
 | **AI prompts** | A nine-field allowlist of already-published figures. No source document, key or statement line can reach a model. |
+
+**What this posture does not cover.** Stated rather than left to be assumed.
+
+Encryption at rest, backup retention and employee access to the database are
+Supabase's posture, not this codebase's; Attest inherits whatever the project is
+configured with and makes no claim of its own. The isolation test proves the
+policy expressions, not the layer above them — that PostgREST validates a token
+signature, honours expiry and maps the claim to a role is Supabase's code, and
+asserting it here would be theatre. Prompt injection is out of scope by
+construction rather than by effort: the model chooses *which tool to call* from
+a fixed tuple validated against `ACTIONS`, so a hostile string in a merchant
+name can at worst waste a step. And no month has yet been closed against real
+merchant data — every number in this README is measured against a corpus this
+repository generates.
 
 ## Financial bugs found during the build
 

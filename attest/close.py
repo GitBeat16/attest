@@ -28,7 +28,9 @@ from . import audit as audit_mod
 from . import engine as engine_mod
 from .ingest import load, resolve, resolve_naive
 from .money import fmt, pct
+from .readiness import corroborate
 from .recovery import build_claims, summarise
+from .policy import RESIDUAL_LIMIT_BPS
 from .run import build_exceptions, _payload
 
 # Every source the pipeline can use, what it contributes, and whether the close
@@ -44,6 +46,10 @@ SOURCES: list[tuple[str, str, bool]] = [
     ("razorpay_mdr_invoice.json", "Razorpay MDR tax invoice", False),
 ]
 
+# The generator's canonical schema, kept for reference. It is NOT a validation
+# gate any more — `readiness.SPECS` maps these plus the real-world header names
+# (`amount`/`fee`/`tax`/`credit`/`type`, `DD/MM/YYYY`, a BOM, …) and is the one
+# authority on what a column may be called.
 HEADERS: dict[str, str] = {
     "razorpay_settlements.csv":
         "settlement_id,settled_on,payment_id,order_id,gross_amount,mdr,"
@@ -98,11 +104,16 @@ class CloseError(Exception):
 
 def stage(files: dict[str, str], merchant: str, period: str,
           terms: dict | None, dest: Path) -> tuple[list[str], list[str]]:
-    """Write the supplied sources to `dest`, stubbing the ones that are absent.
+    """Write the supplied sources to `dest`. An absent optional source is left
+    absent, not stubbed: `readiness.read_table` reads a missing file as "this
+    system was not supplied", which the readiness report then states plainly.
 
-    Returns (supplied, missing). A stub is a header row and nothing else, which
-    the loader reads as "this system reported no rows" -- true, and materially
-    different from pretending the rows exist.
+    Column recognition is NOT done here. It belongs to `readiness.py`, which maps
+    real-world header names through an explicit alias table and reports — never
+    guesses — a column it does not know. A hand-rolled exact-match check here
+    would reject every genuine Razorpay export before that map ever ran.
+
+    Returns (supplied, missing).
     """
     dest.mkdir(parents=True, exist_ok=True)
     supplied, missing = [], []
@@ -110,22 +121,7 @@ def stage(files: dict[str, str], merchant: str, period: str,
     for name, label, required in SOURCES:
         body = (files.get(name) or "").strip()
         if body:
-            # Check the header before the engine does. A missing column would
-            # otherwise surface as a KeyError several layers down, which tells a
-            # merchant nothing about which file they uploaded or what is wrong
-            # with it.
-            if name.endswith(".csv"):
-                want = set(HEADERS[name].split(","))
-                got = {h.strip().lstrip("\ufeff")
-                       for h in body.splitlines()[0].split(",")}
-                gap = want - got
-                if gap:
-                    raise CloseError(
-                        f"{label} is missing {len(gap)} column"
-                        f"{'' if len(gap) == 1 else 's'}: "
-                        f"{', '.join(sorted(gap))}. Expected the header "
-                        f"{HEADERS[name]}")
-            elif name.endswith(".json"):
+            if name.endswith(".json"):
                 try:
                     json.loads(body)
                 except json.JSONDecodeError as e:
@@ -139,8 +135,6 @@ def stage(files: dict[str, str], merchant: str, period: str,
                 f"{name} is required — without the settlement report there is "
                 "nothing to reconcile against.")
         missing.append(name)
-        if name.endswith(".csv"):
-            (dest / name).write_text(HEADERS[name] + "\n", encoding="utf-8")
 
     # The declared period anchors the month being closed. It is taken from the
     # merchant, never inferred from max(settled_on): a single stray out-of-period
@@ -172,8 +166,23 @@ def close(src: Path, supplied: list[str], missing: list[str]) -> dict:
     """Run the pipeline and return everything the app and the pack both need."""
     t0 = time.time()
     corpus = load(src)
+    rd = corpus.readiness
+    if rd.refused:
+        raise CloseError(
+            "the files could not be read in full, so no close was produced. "
+            + " ".join(rd.reasons[:3])
+            + (("  First rejected row: " + rd.all_rejections()[0].describe())
+               if rd.all_rejections() else ""))
     naive = resolve_naive(corpus)
     keys = resolve(corpus)
+
+    # Completeness is only answerable once records are resolved -- `resolve()` is
+    # what writes settlement_id onto each bank row. Everything checked before
+    # this point asks "could I read what I was given?", which cannot see rows
+    # that were never supplied. This may downgrade READY to PARTIAL; it never
+    # refuses, so a short file distrusts the close rather than blocking it.
+    corroborate(rd, corpus)
+
     res = engine_mod.run(corpus)
     aud = audit_mod.run(corpus, res.batch_ties)
     elapsed = time.time() - t0
@@ -193,13 +202,23 @@ def close(src: Path, supplied: list[str], missing: list[str]) -> dict:
     if not volume:
         volume = sum(l.gross for b in corpus.batches.values() for l in b.lines)
         volume_basis = "settled gross"
+        if volume:
+            rd.downgrade("period volume computed from settled gross — no order "
+                         "export was supplied")
+        else:
+            raise CloseError("no order export and no settled line items — there "
+                             "is no volume to measure the residual against.")
 
     exceptions = build_exceptions(corpus, res, aud)
     residual = sum(e["exposure"] for e in exceptions
                    if e["class"] in ("CREDIT", "CHARGEBACK_ORPHAN",
                                      "UNREFERENCED_ADJ"))
     residual_bps = (residual / volume * 10000) if volume else 0
-    signed = residual_bps <= 25
+    # A close over data that could not be fully read is not attestable, whatever
+    # the residual says. ROADMAP §1.2.
+    # Named constant, not a literal: run.py gates on RESIDUAL_LIMIT_BPS and
+    # these two must never drift apart.
+    signed = residual_bps <= RESIDUAL_LIMIT_BPS and rd.ready
 
     y, m = (int(x) for x in corpus.mdr_invoice["period"].split("-"))
     period_end = date(y + (m // 12), (m % 12) + 1, 1) - timedelta(days=1)
@@ -225,10 +244,14 @@ def close(src: Path, supplied: list[str], missing: list[str]) -> dict:
         {"target": a.target, "reasoning": a.reasoning, **a.evidence}
         for a in aud.overturned if a.hypothesis == "offsetting_pair"
     ]
+    payload["readiness"] = rd.as_dict()
     payload["recovery"] = {
         "as_at": today.isoformat(),
         "recoverable": rec["recoverable"],
         "recoverable_count": rec["recoverable_count"],
+        "claim_ready": rec["claim_ready"],
+        "claim_ready_count": rec["claim_ready_count"],
+        "by_tier": rec["by_tier"],
         "expiring_soon": rec["expiring_soon"],
         "expiring_count": rec["expiring_count"],
         "by_counterparty": rec["by_counterparty"],
@@ -237,7 +260,7 @@ def close(src: Path, supplied: list[str], missing: list[str]) -> dict:
         "late_date": late.isoformat(),
         "deadlines": [
             {"deadline": c.deadline.isoformat(), "days": c.days_left(today),
-             "cls": c.exception_class, "exposure": c.exposure,
+             "cls": c.exception_class, "exposure": c.exposure, "tier": c.tier,
              "party": c.counterparty, "urgency": c.urgency(today)}
             for c in claims[:6]
         ],
@@ -247,6 +270,7 @@ def close(src: Path, supplied: list[str], missing: list[str]) -> dict:
         "merchant": corpus.terms["merchant"],
         "period": corpus.mdr_invoice["period"],
         "records": corpus.record_count(),
+        "rows_in": corpus.rows_in(),
         "seconds": round(elapsed, 3),
         "batches_total": batches,
         "batches_tied": tied,
@@ -264,7 +288,17 @@ def close(src: Path, supplied: list[str], missing: list[str]) -> dict:
         "residual_bps": round(residual_bps, 2),
         "recoverable_paise": rec.get("recoverable", 0),
         "recoverable_display": fmt(rec.get("recoverable", 0)),
+        "claim_ready_paise": rec.get("claim_ready", 0),
+        "claim_ready_display": fmt(rec.get("claim_ready", 0)),
+        "recoverable_by_tier": {
+            t: {"paise": v["exposure"], "display": fmt(v["exposure"]),
+                "count": v["count"]}
+            for t, v in rec.get("by_tier", {}).items()
+        },
         "attestable": signed,
+        "readiness": rd.as_dict(),
+        "readiness_verdict": rd.verdict,
+        "readiness_reasons": list(rd.reasons),
         "bank_resolution": keys,
         "naive_resolution": naive,
         "evidence_supplied": supplied,

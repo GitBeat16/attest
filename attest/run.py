@@ -20,12 +20,18 @@ from pathlib import Path
 
 from . import audit as audit_mod
 from . import engine as engine_mod
+from . import tiers
 from .ingest import load, resolve, resolve_naive
 from .money import fmt
 from .recovery import build_claims, summarise
+from .readiness import corroborate
+from . import ruleset
 from .score import render, score
 
-RESIDUAL_LIMIT_BPS = 25          # 0.25% of period volume
+# Re-exported from policy, which owns it. Defined here once too, these two
+# drifted apart silently and the pack and the controller could then disagree
+# about whether the same month was attestable.
+from .policy import RESIDUAL_LIMIT_BPS  # noqa: F401
 
 
 def build_exceptions(corpus, res, aud) -> list[dict]:
@@ -60,11 +66,18 @@ def build_exceptions(corpus, res, aud) -> list[dict]:
     }
 
     for (stage, when), chains in grouped.items():
+        # Tier the group by its least-provable member. A chain break at `order`
+        # is PROVEN when the order was found and disagrees, UNPROVEN when it is
+        # absent, so the tier is read per chain and the weakest wins — tiering
+        # can only ever pull a row down, never overstate it.
+        tset = {tiers.for_chain(c) for c in chains}
         ex.append({
             "class": stage.upper(),
             "kind": "chain",
             "count": len(chains),
             "exposure": sum(abs(c.delta) for c in chains),
+            "tier": tiers.weakest(tset),
+            "tier_mixed": len(tset) > 1,
             "evidence_required": remedy.get(stage, "manual investigation"),
             "sample": [c.subject_id for c in chains[:3]],
             "occurred_on": when.isoformat() if when else None,
@@ -77,6 +90,7 @@ def build_exceptions(corpus, res, aud) -> list[dict]:
         ex.append({
             "class": f["class"], "kind": "finding",
             "count": 1, "exposure": abs(f["delta"]),
+            "tier": tiers.for_class(f["class"]),
             "evidence_required": "counterparty confirmation",
             "sample": [f["container"]],
             "occurred_on": _when.isoformat() if _when else None,
@@ -93,13 +107,58 @@ def build_exceptions(corpus, res, aud) -> list[dict]:
         ex.append({
             "class": a.hypothesis.upper(), "kind": "verdict",
             "count": 1, "exposure": abs(a.delta),
+            "tier": tiers.for_class(a.hypothesis),
             "evidence_required": "review the overturned match before posting",
             "sample": [a.target], "reasoning": a.reasoning,
             "occurred_on": _when.isoformat() if _when else None,
         })
 
+    # Exposure order, deliberately: the controller reads the first non-verdict
+    # row as its investigation subject (controller.py), so this must not become
+    # tier order. Presentation surfaces re-rank through tiers.rank().
     ex.sort(key=lambda e: -e["exposure"])
     return ex
+
+
+def _print_readiness(rd) -> None:
+    """The pre-close readiness report: what was read, what was not, and whether
+    the covered range is the month that was declared."""
+    P = print
+    P("  READINESS")
+    P(f"    verdict                      {rd.verdict}")
+    P(f"    rows                         {rd.rows_read():,} read of {rd.rows_in():,}"
+      + (f", {rd.rows_rejected()} rejected" if rd.rows_rejected() else ""))
+    P(f"    {rd.coverage_line()}")
+    absent = rd.sources_absent()
+    if absent:
+        P(f"    not supplied                 {', '.join(absent)}")
+    for r in rd.all_rejections()[:8]:
+        P(f"    rejected                     {r.describe()}")
+    if rd.unrecognised_columns():
+        P(f"    columns not recognised       {', '.join(rd.unrecognised_columns())}")
+    if rd.verdict != "READY":
+        for reason in rd.reasons[:4]:
+            P(f"    · {reason}")
+    P("")
+
+
+def _print_refusal(rd) -> None:
+    P = print
+    P("")
+    P("  ATTEST — CLOSE REFUSED")
+    P("  " + "=" * 68)
+    P("  The files could not be read in full, so no close was produced.")
+    P("")
+    for reason in rd.reasons:
+        P(f"    · {reason}")
+    P("")
+    for r in rd.all_rejections()[:12]:
+        P(f"    {r.describe()}")
+    P("")
+    P("  Fix the file(s) above and run the close again. A close over data that")
+    P("  could not be fully read would report a clean month on incomplete input,")
+    P("  which is the one failure this tool exists to prevent.")
+    P("")
 
 
 def main() -> None:
@@ -111,8 +170,34 @@ def main() -> None:
 
     t0 = time.time()
     corpus = load(args.data / "sources")
+    rd = corpus.readiness
+
+    # The volume denominator decides whether a residual in bps can be computed at
+    # all, and a close that cannot be judged must not be signed. Prefer the order
+    # export; fall back to settled gross and say so; refuse if neither exists.
+    volume = sum(o.gross for o in corpus.orders.values())
+    if not volume:
+        volume = sum(l.gross for b in corpus.batches.values() for l in b.lines)
+        if volume:
+            rd.downgrade("period volume computed from settled gross, not the order "
+                         "export — the order export was not supplied")
+        else:
+            rd.refuse("no order export and no settled line items — there is no "
+                      "volume to measure the residual against, so the close "
+                      "cannot be judged")
+
+    if rd.refused:
+        _print_refusal(rd)
+        raise SystemExit(1)
+
     naive = resolve_naive(corpus)
     keys = resolve(corpus)
+
+    # The CLI and the hosted close must reach the same verdict on the same
+    # files. `close.py` corroborates here too -- if only one path did, the pack
+    # a CA downloads and the screen they were shown could disagree.
+    corroborate(corpus.readiness, corpus)
+
     res = engine_mod.run(corpus)
     aud = audit_mod.run(corpus, res.batch_ties)
     elapsed = time.time() - t0
@@ -120,7 +205,6 @@ def main() -> None:
     tied = sum(1 for v in res.batch_ties.values() if v)
     proven = sum(1 for c in res.chains if c.complete)
     total = len(res.chains)
-    volume = sum(o.gross for o in corpus.orders.values())
     exceptions = build_exceptions(corpus, res, aud)
     residual = sum(e["exposure"] for e in exceptions if e["class"] in
                    ("CREDIT", "CHARGEBACK_ORPHAN", "UNREFERENCED_ADJ"))
@@ -130,8 +214,10 @@ def main() -> None:
     P(f"\n  ATTEST  ·  period {corpus.mdr_invoice['period']}  ·  "
       f"{corpus.terms['merchant']}")
     P("  " + "=" * 68)
-    P(f"  {corpus.record_count():,} records from 7 sources closed in {elapsed:.2f}s")
+    P(f"  {corpus.record_count():,} of {corpus.rows_in():,} rows from "
+      f"{len(rd.sources_supplied())}/7 sources closed in {elapsed:.2f}s")
     P("")
+    _print_readiness(rd)
     P("  KEY RESOLUTION")
     P(f"    naive  (narration/UTR key)   {naive['resolved']:>4}/{naive['bank_rows']} resolved")
     P(f"    attest (settlement_id)       {keys['exact']:>4}/{keys['bank_rows']} exact, "
@@ -145,11 +231,11 @@ def main() -> None:
     P(f"    false-match  (overturned)        {len(aud.overturned)}/{aud.tested}"
       f"    = {aud.false_match_rate()*100:>5.1f}%   <- what nobody reports")
     P("")
-    P("  EXCEPTION REGISTER (ranked by exposure)")
+    P("  EXCEPTION REGISTER (claim-ready first, then by exposure)")
     P("  " + "-" * 68)
-    for e in exceptions[:10]:
-        P(f"    {e['class']:<22}{e['count']:>4}  {fmt(e['exposure']):>14}   "
-          f"{e['evidence_required'][:34]}")
+    for e in tiers.rank(exceptions)[:10]:
+        P(f"    {e['class']:<21}{e['count']:>4} {fmt(e['exposure']):>13}  "
+          f"{tiers.LABEL[e['tier']]:<15} {e['evidence_required'][:19]}")
     P("  " + "-" * 68)
     P(f"    {'TOTAL EXPOSURE':<22}{sum(e['count'] for e in exceptions):>4}  "
       f"{fmt(sum(e['exposure'] for e in exceptions)):>14}")
@@ -164,8 +250,14 @@ def main() -> None:
 
     P("  RECOVERY  (as at " + today.isoformat() + ")")
     P("  " + "-" * 68)
-    P(f"    {'recoverable':<24}{fmt(rec['recoverable']):>16}"
+    P(f"    {'exposure under review':<24}{fmt(rec['recoverable']):>16}"
       f"   across {rec['recoverable_count']} items")
+    for t in tiers.TIERS:
+        bt = rec["by_tier"].get(t, {"exposure": 0, "count": 0})
+        P(f"      {tiers.LABEL[t]:<22}{fmt(bt['exposure']):>14}"
+          f"   {bt['count']} items")
+    P(f"    {'claim-ready (proven)':<24}{fmt(rec['claim_ready']):>16}"
+      f"   {rec['claim_ready_count']} items")
     P(f"    {'expiring within 7 days':<24}{fmt(rec['expiring_soon']):>16}"
       f"   {rec['expiring_count']} items")
     P(f"    {'already lapsed':<24}{fmt(rec['lapsed']):>16}"
@@ -205,12 +297,21 @@ def main() -> None:
     P(f"    period volume            {fmt(volume):>16}")
     P(f"    unexplained residual     {fmt(residual):>16}   "
       f"({residual_bps:.1f} bps of volume)")
-    signed = residual_bps <= RESIDUAL_LIMIT_BPS and not card.false_positives
+    residual_ok = residual_bps <= RESIDUAL_LIMIT_BPS and not card.false_positives
+    # A close over data that could not be fully read is not attestable, whatever
+    # the residual says — an unread row is an unmeasured one. ROADMAP §1.2.
+    signed = residual_ok and rd.ready
     P(f"    close status             {'SIGNED' if signed else 'NOT ATTESTABLE':>16}")
     if not signed:
-        P(f"    reason                   residual exceeds the "
-          f"{RESIDUAL_LIMIT_BPS} bps limit; the close is")
-        P(f"                             not certified until it is investigated.")
+        if not residual_ok:
+            P(f"    reason                   residual exceeds the "
+              f"{RESIDUAL_LIMIT_BPS} bps limit; the close is")
+            P(f"                             not certified until it is investigated.")
+        if not rd.ready:
+            P(f"    reason                   ingest is {rd.verdict}: "
+              f"{rd.reasons[0] if rd.reasons else 'data could not be fully read'}")
+            for extra in rd.reasons[1:3]:
+                P(f"                             · {extra}")
     P("")
 
     payload = _payload(corpus, res, aud, card, exceptions, elapsed, volume,
@@ -227,9 +328,12 @@ def main() -> None:
         {"target": a.target, "reasoning": a.reasoning, **a.evidence}
         for a in aud.overturned if a.hypothesis == "offsetting_pair"
     ]
+    payload["readiness"] = rd.as_dict()
     payload["recovery"] = {
         "as_at": today.isoformat(),
         "recoverable": rec["recoverable"], "recoverable_count": rec["recoverable_count"],
+        "claim_ready": rec["claim_ready"], "claim_ready_count": rec["claim_ready_count"],
+        "by_tier": rec["by_tier"],
         "expiring_soon": rec["expiring_soon"], "expiring_count": rec["expiring_count"],
         "by_counterparty": rec["by_counterparty"],
         "monthly_lapsed": rec_late["lapsed"],
@@ -237,7 +341,7 @@ def main() -> None:
         "late_date": late.isoformat(),
         "deadlines": [
             {"deadline": c.deadline.isoformat(), "days": c.days_left(today),
-             "cls": c.exception_class, "exposure": c.exposure,
+             "cls": c.exception_class, "exposure": c.exposure, "tier": c.tier,
              "party": c.counterparty, "urgency": c.urgency(today)}
             for c in claims[:6]
         ],
@@ -262,6 +366,7 @@ def main() -> None:
             "residual_paise": residual,
             "residual_bps": round(residual_bps, 2),
             "signed": signed,
+            "readiness": rd.as_dict(),
             "exceptions": exceptions,
         }, indent=2), encoding="utf-8")
         P(f"  attestation written to {args.json}\n")
@@ -298,6 +403,7 @@ def _payload(corpus, res, aud, card, exceptions, elapsed, volume, residual,
                 "detected": v.detected, "recall": v.recall}
             for k, v in card.by_class.items()
         } if card else None),
+        "ruleset": ruleset.summary(),   # what produced this, not just that it was not edited
         "designed_recall": card.designed_recall() if card else None,
         "holdout_recall": card.holdout_recall() if card else None,
         "notes": card.notes if card else [],

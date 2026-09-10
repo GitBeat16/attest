@@ -10,7 +10,20 @@ plain-English label; the code is secondary, for people who want it.
 """
 from __future__ import annotations
 
+from . import tiers
 from .money import fmt
+
+# Tier -> (badge text, css class). The three tiers are the whole point of the
+# register now: only PROVEN is framed as claim-ready.
+TIER_BADGE = {
+    tiers.PROVEN:      ("Proven wrong",    "t-proven"),
+    tiers.UNPROVEN:    ("Cannot prove",    "t-unproven"),
+    tiers.NEEDS_INPUT: ("Needs your input", "t-input"),
+}
+
+
+def _tb(tier: str) -> tuple[str, str]:
+    return TIER_BADGE.get(tier or tiers.UNPROVEN, TIER_BADGE[tiers.UNPROVEN])
 
 # Plain-English names. The internal codes are precise and unreadable; a reader
 # should never have to decode SELF_REFERENTIAL_TIE to follow the page.
@@ -35,6 +48,7 @@ LABELS = {
     "DUPLICATE_SETTLEMENT_LINE": ("Payment settled twice", "Revenue counted twice across two batches"),
     "ORPHAN_BANK_CREDIT": ("Money in with no explanation", "A credit no settlement accounts for"),
     "OUT_OF_PERIOD_SETTLEMENT": ("Settlement outside the period", "Would overstate the month if pulled in"),
+    "ITC_MISMATCH": ("Input credit at risk", "The MDR tax invoice disagrees with the GST deducted"),
 }
 
 CSS = """
@@ -158,11 +172,27 @@ tr.miss td{background:var(--bad-soft)}
 .t-held{background:var(--accent-soft);color:var(--accent)}
 .t-urg{background:var(--bad-soft);color:var(--bad)}
 .t-soon{background:var(--warn-soft);color:var(--warn)}
+/* confidence tiers — only the first is claim-ready */
+.t-proven{background:var(--bad-soft);color:var(--bad)}
+.t-unproven{background:var(--warn-soft);color:var(--warn)}
+.t-input{background:var(--accent-soft);color:var(--accent)}
+.tiers-note b{color:var(--ink)}
+.tiers-note .k{font-family:var(--mono);font-size:10px;letter-spacing:.09em;
+  text-transform:uppercase;padding:2px 6px;border-radius:3px;font-weight:500}
 
 .note{background:var(--accent-soft);border-left:3px solid var(--accent);padding:18px 22px;
   margin-top:16px;font-size:.95rem;color:var(--ink2);line-height:1.6;max-width:74ch}
 .note b{color:var(--ink);font-weight:600}
 .note.warnb{background:var(--warn-soft);border-left-color:var(--warn)}
+
+.pband{background:var(--warn-soft);border:1px solid var(--warn);border-left:4px solid var(--warn);
+  padding:16px 20px;margin:22px 0 4px;font-size:.92rem;color:var(--ink);line-height:1.6}
+.pband b{font-family:var(--mono);letter-spacing:.04em;text-transform:uppercase;font-size:12px}
+.pband ul{margin:8px 0 0;padding-left:20px}
+.rdy dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 18px;margin:0;font-size:.92rem}
+.rdy dt{color:var(--ink3);font-family:var(--mono);font-size:11.5px;letter-spacing:.03em}
+.rdy dd{margin:0;color:var(--ink2)}
+.rdy .mono{font-family:var(--mono);font-size:12px}
 
 .status{border:1px solid var(--rule);background:var(--surface);padding:24px 26px;
   display:flex;gap:26px;align-items:center;flex-wrap:wrap}
@@ -256,12 +286,12 @@ def esc(v) -> str:
 
 
 def render(p: dict) -> str:
-    from .seal import MARK_CLOSE, MARK_OPEN, PH, PH_GROUPED, canonical
+    from .seal import PH, PH_GROUPED, canonical, marker
     seal_canon = canonical(p)
-    seal_blob = (MARK_OPEN + PH + " "
-                 + __import__("json").dumps(seal_canon, sort_keys=True,
-                                            separators=(",", ":"))
-                 + MARK_CLOSE)
+    # Built by seal.marker(), never inlined: the blob carries merchant-supplied
+    # text and must be escaped so a name containing "-->" cannot close the
+    # comment and turn the rest of the document into live HTML.
+    seal_blob = marker(PH, seal_canon)
     rc = p.get("recovery") or {}
     comp = (p.get("compensating") or [{}])[0]
 
@@ -335,17 +365,23 @@ def render(p: dict) -> str:
         f"{d['days']} days</span></td>"
         f"<td class='k' data-l='What happened'>{esc(_label(d['cls'])[0])}"
         f"<small>{esc(_label(d['cls'])[1])}</small></td>"
+        f"<td data-l='Confidence'><span class='tag {_tb(d.get('tier'))[1]}'>"
+        f"{_tb(d.get('tier'))[0]}</span></td>"
         f"<td class='n' data-l='Exposure'>{fmt(d['exposure'])}</td>"
         f"<td data-l='Counterparty'>{esc(d['party'])}</td></tr>"
         for d in rc.get("deadlines", [])
     )
 
+    # Claim-ready first, then by exposure — the inverse of ranking by rupee
+    # exposure alone, which puts the largest unprovable item where a reader acts.
     ex_rows = "".join(
         f"<tr><td class='k'>{esc(_label(e['class'])[0])}<small>{esc(_label(e['class'])[1])}</small></td>"
+        f"<td data-l='Confidence'><span class='tag {_tb(e.get('tier'))[1]}'>"
+        f"{_tb(e.get('tier'))[0]}</span></td>"
         f"<td class='n' data-l='Items'>{e['count']}</td>"
         f"<td class='n' data-l='Exposure'>{fmt(e['exposure'])}</td>"
         f"<td data-l='Evidence required'>{esc(e['evidence_required'])}</td></tr>"
-        for e in p["exceptions"][:8]
+        for e in tiers.rank(p["exceptions"])[:8]
     )
 
     sc_rows = ""
@@ -392,6 +428,78 @@ def render(p: dict) -> str:
   not transferred to this page. What is on this page is evidence: what tied, what
   traced end to end, and what did not.</div>"""
 
+    # --- what was read, and what was not (ROADMAP §1.2) ------------------
+    rd = p.get("readiness") or {}
+    partial_band = ""
+    readiness_section = ""
+    if rd:
+        verdict = rd.get("verdict", "READY")
+        if verdict != "READY":
+            reasons = "".join(f"<li>{esc(r)}</li>" for r in rd.get("reasons", [])[:5])
+            partial_band = (
+                f'<div class="pband"><b>Close marked {esc(verdict.lower())}</b> &mdash; '
+                "it was produced over data that could not be fully read, and must "
+                "not be treated as a complete month.<ul>" + reasons + "</ul></div>"
+            )
+        src = rd.get("sources", {})
+        rej = sum(s.get("rows_rejected", 0) for s in src.values())
+        absent = [n for n, s in src.items() if not s.get("present")]
+        unrec = [f"{n}:{c}" for n, s in src.items()
+                 for c in s.get("columns_unrecognised", [])]
+        rej_lines = "".join(
+            f"<li class='mono'>{esc(x)}</li>"
+            for s in src.values() for x in s.get("rejections", [])[:6]
+        )
+        readiness_section = f"""<h2>What was read</h2>
+<p class="lede">Every source, and what came out of it. A close is only as complete
+  as the rows behind it &mdash; so the rows that did not parse, the columns not
+  recognised, and the range actually covered are stated here rather than
+  assumed.</p>
+<div class="rdy"><dl>
+  <dt>verdict</dt><dd><b>{esc(verdict)}</b></dd>
+  <dt>rows</dt><dd>{rd.get('rows_read', 0):,} read of {rd.get('rows_in', 0):,}
+    {f'&mdash; {rej} rejected' if rej else ''}</dd>
+  <dt>coverage</dt><dd class="mono">{esc(rd.get('coverage', ''))}</dd>
+  <dt>declared</dt><dd class="mono">{esc(rd.get('declared_period', ''))}</dd>
+  {f'<dt>not supplied</dt><dd>{esc(", ".join(absent))}</dd>' if absent else ''}
+  {f'<dt>columns not recognised</dt><dd class="mono">{esc(", ".join(unrec))}</dd>' if unrec else ''}
+</dl></div>
+{f'<div class="note warnb"><b>Rows rejected, not coerced.</b><ul>{rej_lines}</ul></div>' if rej_lines else ''}"""
+
+    # What produced this conclusion. An auditor reading an old pack should not
+    # have to check out the repository at the right commit to find out which
+    # tolerances applied -- the answer belongs in the document.
+    rs = p.get("ruleset") or {}
+    rules_section = ""
+    if rs:
+        from .recovery import WINDOWS
+        from .tiers import LABEL, _MAP
+        win_rows = "".join(
+            f"<tr><td class='mono'>{esc(k)}</td><td>{esc(v[0])}</td>"
+            f"<td class='n'>{int(v[1])} days</td></tr>"
+            for k, v in sorted(WINDOWS.items()))
+        tier_rows = "".join(
+            f"<tr><td class='mono'>{esc(k)}</td><td>{esc(LABEL.get(v, v))}</td></tr>"
+            for k, v in sorted(_MAP.items()))
+        rules_section = f"""<h2>What produced this</h2>
+<p class="lede">The seal proves this document was not edited. This states what
+  was <em>applied</em>. The ruleset digest is computed from the rule values
+  themselves, so a threshold cannot change without it changing &mdash; and the
+  contract rates below are the merchant&rsquo;s, not ours.</p>
+<div class="rdy"><dl>
+  <dt>engine</dt><dd class="mono">{esc(rs.get('engine_version', ''))}</dd>
+  <dt>ruleset</dt><dd class="mono">{esc(rs.get('ruleset_digest', ''))}</dd>
+  <dt>batch tolerance</dt><dd class="mono">{int(rs.get('batch_tolerance_paise', 0))} paise</dd>
+  <dt>line tolerance</dt><dd class="mono">{int(rs.get('line_tolerance_paise', 0))} paise</dd>
+  <dt>residual limit</dt><dd class="mono">{int(rs.get('residual_limit_bps', 0))} bps</dd>
+</dl></div>
+<details><summary>Claim windows and confidence tiers applied</summary>
+<table class="tbl"><thead><tr><th>exception</th><th>counterparty</th><th class="n">window</th></tr></thead>
+<tbody>{win_rows}</tbody></table>
+<table class="tbl"><thead><tr><th>exception</th><th>may assert</th></tr></thead>
+<tbody>{tier_rows}</tbody></table>
+</details>"""
+
     doc = f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -409,27 +517,34 @@ def render(p: dict) -> str:
 </div></nav>
 
 <div class="wrap">
+{partial_band}
 <header class="page">
   <p class="eyebrow">Close pack &middot; generated {p['generated']}</p>
-  <h1>We found <b>{fmt(rc.get('recoverable', 0))}</b> you can still claim back
-    &mdash; and <i>{fmt(rc.get('monthly_lapsed', 0))}</i> of it dies if you close
-    monthly.</h1>
-  <p>This month's books tie to the bank. They are still wrong. Below is what was
-    taken that shouldn't have been, who to claim it from, and how long you have.</p>
+  <h1><b>{fmt(rc.get('claim_ready', 0))}</b> you can prove today &mdash; inside
+    <i>{fmt(rc.get('recoverable', 0))}</i> of exposure this month's books do not
+    explain.</h1>
+  <p>This month's books tie to the bank. They are still wrong. Not every finding
+    can be proven, though &mdash; so each carries a confidence tier, and only the
+    proven ones are framed as claim-ready.</p>
 </header>
 
 <div class="split">
-  <div><div class="l">Claimable now</div>
-    <div class="v money">{fmt(rc.get('recoverable', 0))}</div>
-    <div class="n">across {rc.get('recoverable_count', 0)} items, from three counterparties</div></div>
-  <div><div class="l">Expires within 7 days</div>
-    <div class="v" style="color:var(--gold)">{fmt(rc.get('expiring_soon', 0))}</div>
-    <div class="n">{rc.get('expiring_count', 0)} claim windows closing</div></div>
+  <div><div class="l">Proven &mdash; claim-ready</div>
+    <div class="v money">{fmt(rc.get('claim_ready', 0))}</div>
+    <div class="n">{rc.get('claim_ready_count', 0)} items where the arithmetic
+      disagrees with the contract</div></div>
+  <div><div class="l">Exposure under review</div>
+    <div class="v" style="color:var(--gold)">{fmt(rc.get('recoverable', 0))}</div>
+    <div class="n">{rc.get('recoverable_count', 0)} items total; the rest is
+      evidence missing or needs your input</div></div>
   <div><div class="l">Lost by closing monthly</div>
     <div class="v no">{fmt(rc.get('monthly_lapsed', 0))}</div>
     <div class="n">{rc.get('monthly_lapsed_count', 0)} claims expire unfiled at a
       {rc.get('late_date','')} close</div></div>
 </div>
+
+{readiness_section}
+{rules_section}
 
 <h2>The error a match rate can never find</h2>
 <p class="lede">One batch from this month, in full. It reconciles perfectly.</p>
@@ -445,16 +560,25 @@ def render(p: dict) -> str:
   day-8 finding on day 31, by which time the money is gone.</p>
 <div class="tbl"><table>
 <thead><tr><th>Deadline</th><th class="n">Left</th><th>What happened</th>
-<th class="n">Amount</th><th>Claim from</th></tr></thead>
+<th>Confidence</th><th class="n">Amount</th><th>Claim from</th></tr></thead>
 <tbody>{dl_rows}</tbody></table></div>
 
 <h2>Everything unresolved</h2>
-<p class="lede">Each one says what evidence would close it &mdash; not just that it
-  didn't match.</p>
+<p class="lede">Claim-ready findings first. Each one says what evidence would
+  close it &mdash; not just that it didn't match.</p>
 <div class="tbl"><table>
-<thead><tr><th>What happened</th><th class="n">Items</th><th class="n">Exposure</th>
-<th>Evidence required</th></tr></thead>
+<thead><tr><th>What happened</th><th>Confidence</th><th class="n">Items</th>
+<th class="n">Exposure</th><th>Evidence required</th></tr></thead>
 <tbody>{ex_rows}</tbody></table></div>
+<div class="note tiers-note"><b>Not every finding means the same thing.</b>
+  <span class="k t-proven">Proven wrong</span> &mdash; the arithmetic disagrees
+  with the contract; recomputable and defensible to the counterparty, and the
+  only tier framed as claim-ready.
+  <span class="k t-unproven">Cannot prove</span> &mdash; a link in the evidence
+  chain is missing; the money may be correct, so this asks rather than accuses.
+  <span class="k t-input">Needs your input</span> &mdash; depends on a fact
+  Attest cannot see: an off-system agreement, a negotiated rate, a credit
+  note.</div>
 
 {accuracy_section}
 
@@ -464,6 +588,7 @@ def render(p: dict) -> str:
   <span class="why">{fmt(p['residual_paise'])} of {fmt(p['volume'])} cannot be
     attributed to any cause &mdash; {p['residual_bps']} bps of volume, against a
     25 bps limit. The close stays open until that is investigated.
+    {'<b>Ingest is ' + esc(rd.get('verdict','').lower()) + ':</b> a close is not attestable over data that could not be fully read, whatever the residual.' if rd and rd.get('verdict') not in ('READY', None) else ''}
     <b>Refusing to certify is the point of an attestation:</b> a system that always
     signs is not attesting to anything.</span>
 </div>

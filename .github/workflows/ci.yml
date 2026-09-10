@@ -1,0 +1,124 @@
+# The gates.
+#
+# Attest's whole claim is that its numbers are honest. Until a machine enforces
+# that, every rule in INVARIANTS.md is aspirational — 71 verify checks and 76
+# tests are worth nothing if they only run when someone remembers.
+#
+# Three of the steps below are not tests in the ordinary sense. They are the
+# integrity conditions of the project, and they are meant to break the build:
+#
+#   · a false positive, in any generated world or the clean control
+#   · held-out recall reaching 100%  (invariant 4 — a targeted detector)
+#   · a false certification rate above zero  (the controller signed something)
+#
+# Note there is no `pip install` anywhere in this file. The pipeline is pure
+# stdlib, and this workflow passing on a bare runner is the proof of it. If a
+# step ever needs a dependency installed, that is a finding, not a fix.
+
+name: gates
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gates-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gates:
+    name: gates (python 3.10)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      # data/ is gitignored on purpose — it regenerates from a seed, and a
+      # committed corpus is a corpus nobody re-derives.
+      - name: Generate the corpus
+        run: python3 -m attest.generate --out data --orders 1200
+
+      - name: Money invariants
+        run: python3 tests/test_money_edges.py
+
+      - name: Controller safety
+        run: python3 tests/test_controller.py
+
+      - name: Ingest readiness
+        run: python3 tests/test_ingest_readiness.py
+
+      # A month with nothing wrong in it must produce nothing, and must be
+      # signable. This is what caught the chargeback scope bug.
+      - name: Clean-world control
+        run: python3 tests/test_clean_world.py
+
+      # Rows that were never supplied. Truncating a source used to report READY
+      # and *raise* the proof rate. Carries its own false-positive guard: a
+      # clean month must still be READY.
+      - name: Input completeness
+        run: python3 tests/test_completeness.py
+
+      # A pack must be able to say what rules produced it, and the ruleset
+      # digest must move when any rule value moves — otherwise the version is
+      # decoration, which in a finance tool is worse than none.
+      - name: Versioning
+        run: python3 tests/test_versioning.py
+
+      # The close pack is a self-contained file an auditor opens BECAUSE it is
+      # sealed. A merchant name containing "-->" once closed the seal's comment
+      # early and turned the rest of the document into live markup.
+      - name: Security
+        run: python3 tests/test_security.py
+
+      # INTEGRITY GATE. Fails on any false positive across 20 seeded worlds or
+      # the control, on a refused control, or on held-out recall hitting 100%.
+      - name: Benchmark stability
+        run: python3 scripts/stability.py --seeds 20
+
+      # INTEGRITY GATE. False certification rate must be 0.0%.
+      - name: Controller benchmark
+        run: python3 -m attest.agentbench
+
+      # Every published figure, checked against what the code actually produces.
+      - name: Full verification
+        run: python3 scripts/verify.py
+
+      # A sealed document whose value is a hash must rebuild to the same bytes.
+      # If a timestamp, a locale or dict ordering ever leaks into the render,
+      # two honest closes of the same month would disagree — this catches it.
+      - name: Close pack is reproducible
+        run: |
+          python3 -m attest.run --data data --html web/close-pack.html
+          git diff --exit-code -- web/close-pack.html
+
+  # Early warning only. Not a gate: a deprecation on a newer interpreter is
+  # something to know about, not a reason to block work on the current one.
+  future-python:
+    name: early warning (python 3.12)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python3 -m attest.generate --out data --orders 1200
+      - run: python3 tests/test_money_edges.py
+      - run: python3 tests/test_controller.py
+      - run: python3 tests/test_ingest_readiness.py
+      - run: python3 tests/test_clean_world.py
+      - run: python3 tests/test_completeness.py
+      - run: python3 tests/test_versioning.py
+      - run: python3 tests/test_security.py
+      - run: python3 scripts/stability.py --seeds 6
+      - run: python3 -m attest.agentbench

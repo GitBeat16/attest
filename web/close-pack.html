@@ -127,11 +127,27 @@ tr.miss td{background:var(--bad-soft)}
 .t-held{background:var(--accent-soft);color:var(--accent)}
 .t-urg{background:var(--bad-soft);color:var(--bad)}
 .t-soon{background:var(--warn-soft);color:var(--warn)}
+/* confidence tiers — only the first is claim-ready */
+.t-proven{background:var(--bad-soft);color:var(--bad)}
+.t-unproven{background:var(--warn-soft);color:var(--warn)}
+.t-input{background:var(--accent-soft);color:var(--accent)}
+.tiers-note b{color:var(--ink)}
+.tiers-note .k{font-family:var(--mono);font-size:10px;letter-spacing:.09em;
+  text-transform:uppercase;padding:2px 6px;border-radius:3px;font-weight:500}
 
 .note{background:var(--accent-soft);border-left:3px solid var(--accent);padding:18px 22px;
   margin-top:16px;font-size:.95rem;color:var(--ink2);line-height:1.6;max-width:74ch}
 .note b{color:var(--ink);font-weight:600}
 .note.warnb{background:var(--warn-soft);border-left-color:var(--warn)}
+
+.pband{background:var(--warn-soft);border:1px solid var(--warn);border-left:4px solid var(--warn);
+  padding:16px 20px;margin:22px 0 4px;font-size:.92rem;color:var(--ink);line-height:1.6}
+.pband b{font-family:var(--mono);letter-spacing:.04em;text-transform:uppercase;font-size:12px}
+.pband ul{margin:8px 0 0;padding-left:20px}
+.rdy dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 18px;margin:0;font-size:.92rem}
+.rdy dt{color:var(--ink3);font-family:var(--mono);font-size:11.5px;letter-spacing:.03em}
+.rdy dd{margin:0;color:var(--ink2)}
+.rdy .mono{font-family:var(--mono);font-size:12px}
 
 .status{border:1px solid var(--rule);background:var(--surface);padding:24px 26px;
   display:flex;gap:26px;align-items:center;flex-wrap:wrap}
@@ -210,27 +226,65 @@ footer .fbase{border-top:1px solid var(--rule);padding-top:18px;display:flex;
 </div></nav>
 
 <div class="wrap">
+<div class="pband"><b>Close marked partial</b> &mdash; it was produced over data that could not be fully read, and must not be treated as a complete month.<ul><li>2 bank credit(s) totalling ₹32,343.60 have no matching entry in the settlement report -- either settlement rows are missing from what was supplied, or these credits are orphans; both need answering before this close can be relied on</li><li>2 settlement batch(es) have no corresponding bank credit -- either the bank statement is incomplete, or the money never arrived</li></ul></div>
 <header class="page">
   <p class="eyebrow">Close pack &middot; generated from the 2026-08 benchmark corpus</p>
-  <h1>We found <b>₹87,256.57</b> you can still claim back
-    &mdash; and <i>₹5,365.00</i> of it dies if you close
-    monthly.</h1>
-  <p>This month's books tie to the bank. They are still wrong. Below is what was
-    taken that shouldn't have been, who to claim it from, and how long you have.</p>
+  <h1><b>₹832.49</b> you can prove today &mdash; inside
+    <i>₹86,765.90</i> of exposure this month's books do not
+    explain.</h1>
+  <p>This month's books tie to the bank. They are still wrong. Not every finding
+    can be proven, though &mdash; so each carries a confidence tier, and only the
+    proven ones are framed as claim-ready.</p>
 </header>
 
 <div class="split">
-  <div><div class="l">Claimable now</div>
-    <div class="v money">₹87,256.57</div>
-    <div class="n">across 283 items, from three counterparties</div></div>
-  <div><div class="l">Expires within 7 days</div>
-    <div class="v" style="color:var(--gold)">₹71.58</div>
-    <div class="n">3 claim windows closing</div></div>
+  <div><div class="l">Proven &mdash; claim-ready</div>
+    <div class="v money">₹832.49</div>
+    <div class="n">229 items where the arithmetic
+      disagrees with the contract</div></div>
+  <div><div class="l">Exposure under review</div>
+    <div class="v" style="color:var(--gold)">₹86,765.90</div>
+    <div class="n">283 items total; the rest is
+      evidence missing or needs your input</div></div>
   <div><div class="l">Lost by closing monthly</div>
     <div class="v no">₹5,365.00</div>
     <div class="n">16 claims expire unfiled at a
       2026-10-03 close</div></div>
 </div>
+
+<h2>What was read</h2>
+<p class="lede">Every source, and what came out of it. A close is only as complete
+  as the rows behind it &mdash; so the rows that did not parse, the columns not
+  recognised, and the range actually covered are stated here rather than
+  assumed.</p>
+<div class="rdy"><dl>
+  <dt>verdict</dt><dd><b>PARTIAL</b></dd>
+  <dt>rows</dt><dd>3,043 read of 3,043
+    </dd>
+  <dt>coverage</dt><dd class="mono">covers 2026-08-01 – 2026-08-31 of 2026-08-01 – 2026-08-31 (by orders placed)</dd>
+  <dt>declared</dt><dd class="mono">2026-08</dd>
+  
+  
+</dl></div>
+
+<h2>What produced this</h2>
+<p class="lede">The seal proves this document was not edited. This states what
+  was <em>applied</em>. The ruleset digest is computed from the rule values
+  themselves, so a threshold cannot change without it changing &mdash; and the
+  contract rates below are the merchant&rsquo;s, not ours.</p>
+<div class="rdy"><dl>
+  <dt>engine</dt><dd class="mono">0.3.0</dd>
+  <dt>ruleset</dt><dd class="mono">82be09261684</dd>
+  <dt>batch tolerance</dt><dd class="mono">100 paise</dd>
+  <dt>line tolerance</dt><dd class="mono">0 paise</dd>
+  <dt>residual limit</dt><dd class="mono">25 bps</dd>
+</dl></div>
+<details><summary>Claim windows and confidence tiers applied</summary>
+<table class="tbl"><thead><tr><th>exception</th><th>counterparty</th><th class="n">window</th></tr></thead>
+<tbody><tr><td class='mono'>ADJUSTMENT</td><td>courier</td><td class='n'>14 days</td></tr><tr><td class='mono'>CHARGEBACK_ORPHAN</td><td>razorpay</td><td class='n'>45 days</td></tr><tr><td class='mono'>COD_FEE</td><td>courier</td><td class='n'>14 days</td></tr><tr><td class='mono'>COD_VALUE</td><td>courier</td><td class='n'>14 days</td></tr><tr><td class='mono'>CREDIT</td><td>bank</td><td class='n'>90 days</td></tr><tr><td class='mono'>DUPLICATE_AWB</td><td>courier</td><td class='n'>14 days</td></tr><tr><td class='mono'>DUPLICATE_SETTLEMENT_LINE</td><td>razorpay</td><td class='n'>60 days</td></tr><tr><td class='mono'>FREIGHT</td><td>courier</td><td class='n'>14 days</td></tr><tr><td class='mono'>GST</td><td>razorpay</td><td class='n'>60 days</td></tr><tr><td class='mono'>MDR</td><td>razorpay</td><td class='n'>60 days</td></tr><tr><td class='mono'>MISSING_CREDIT</td><td>bank</td><td class='n'>90 days</td></tr><tr><td class='mono'>OFFSETTING_PAIR</td><td>razorpay</td><td class='n'>60 days</td></tr><tr><td class='mono'>ORPHAN_BANK_CREDIT</td><td>bank</td><td class='n'>90 days</td></tr><tr><td class='mono'>REFUND_MISMATCH</td><td>razorpay</td><td class='n'>60 days</td></tr><tr><td class='mono'>SELF_REFERENTIAL_TIE</td><td>razorpay</td><td class='n'>60 days</td></tr><tr><td class='mono'>TOLERANCE_ABUSE</td><td>razorpay</td><td class='n'>60 days</td></tr><tr><td class='mono'>UNREFERENCED_ADJ</td><td>razorpay</td><td class='n'>45 days</td></tr></tbody></table>
+<table class="tbl"><thead><tr><th>exception</th><th>may assert</th></tr></thead>
+<tbody><tr><td class='mono'>ADJUSTMENT</td><td>Needs your input</td></tr><tr><td class='mono'>AMBIGUOUS_COLLAPSE</td><td>Cannot prove</td></tr><tr><td class='mono'>CHARGEBACK_ORPHAN</td><td>Cannot prove</td></tr><tr><td class='mono'>COD_FEE</td><td>Proven wrong</td></tr><tr><td class='mono'>COD_VALUE</td><td>Cannot prove</td></tr><tr><td class='mono'>COINCIDENTAL_EQUALITY</td><td>Cannot prove</td></tr><tr><td class='mono'>CREDIT</td><td>Cannot prove</td></tr><tr><td class='mono'>DUPLICATE_AWB</td><td>Cannot prove</td></tr><tr><td class='mono'>DUPLICATE_SETTLEMENT_LINE</td><td>Cannot prove</td></tr><tr><td class='mono'>FREIGHT</td><td>Proven wrong</td></tr><tr><td class='mono'>GST</td><td>Proven wrong</td></tr><tr><td class='mono'>ITC_MISMATCH</td><td>Proven wrong</td></tr><tr><td class='mono'>KEY_SUBSTITUTION</td><td>Cannot prove</td></tr><tr><td class='mono'>MDR</td><td>Proven wrong</td></tr><tr><td class='mono'>NET</td><td>Proven wrong</td></tr><tr><td class='mono'>OFFSETTING_PAIR</td><td>Proven wrong</td></tr><tr><td class='mono'>ORDER</td><td>Cannot prove</td></tr><tr><td class='mono'>ORPHAN_BANK_CREDIT</td><td>Cannot prove</td></tr><tr><td class='mono'>OUT_OF_PERIOD_SETTLEMENT</td><td>Cannot prove</td></tr><tr><td class='mono'>REFUND_MISMATCH</td><td>Cannot prove</td></tr><tr><td class='mono'>SELF_REFERENTIAL_TIE</td><td>Proven wrong</td></tr><tr><td class='mono'>SHIPMENT</td><td>Cannot prove</td></tr><tr><td class='mono'>TOLERANCE_ABUSE</td><td>Cannot prove</td></tr><tr><td class='mono'>UNREFERENCED_ADJ</td><td>Needs your input</td></tr></tbody></table>
+</details>
 
 <h2>The error a match rate can never find</h2>
 <p class="lede">One batch from this month, in full. It reconciles perfectly.</p>
@@ -295,16 +349,25 @@ footer .fbase{border-top:1px solid var(--rule);padding-top:18px;display:flex;
   day-8 finding on day 31, by which time the money is gone.</p>
 <div class="tbl"><table>
 <thead><tr><th>Deadline</th><th class="n">Left</th><th>What happened</th>
-<th class="n">Amount</th><th>Claim from</th></tr></thead>
-<tbody><tr><td class='mono'>2026-09-05</td><td class='n' data-l='Days left'><span class='tag t-urg'>2 days</span></td><td class='k' data-l='What happened'>Courier paid short<small>An unexplained deduction with no AWB-level reason</small></td><td class='n' data-l='Exposure'>₹71.58</td><td data-l='Counterparty'>courier</td></tr><tr><td class='mono'>2026-09-12</td><td class='n' data-l='Days left'><span class='tag t-ok'>9 days</span></td><td class='k' data-l='What happened'>Courier paid short<small>An unexplained deduction with no AWB-level reason</small></td><td class='n' data-l='Exposure'>₹149.43</td><td data-l='Counterparty'>courier</td></tr><tr><td class='mono'>2026-09-14</td><td class='n' data-l='Days left'><span class='tag t-ok'>11 days</span></td><td class='k' data-l='What happened'>Shipment remitted twice<small>One AWB appears twice in a courier statement</small></td><td class='n' data-l='Exposure'>₹2,801.16</td><td data-l='Counterparty'>courier</td></tr><tr><td class='mono'>2026-09-19</td><td class='n' data-l='Days left'><span class='tag t-ok'>16 days</span></td><td class='k' data-l='What happened'>Courier paid short<small>An unexplained deduction with no AWB-level reason</small></td><td class='n' data-l='Exposure'>₹91.83</td><td data-l='Counterparty'>courier</td></tr><tr><td class='mono'>2026-09-20</td><td class='n' data-l='Days left'><span class='tag t-ok'>17 days</span></td><td class='k' data-l='What happened'>Adjustment with no reference<small>Money moved with no order or payment attached</small></td><td class='n' data-l='Exposure'>₹2,251.00</td><td data-l='Counterparty'>razorpay</td></tr><tr><td class='mono'>2026-10-03</td><td class='n' data-l='Days left'><span class='tag t-ok'>30 days</span></td><td class='k' data-l='What happened'>Tax calculated on the wrong base<small>GST computed on the transaction, not on the fee</small></td><td class='n' data-l='Exposure'>₹412.16</td><td data-l='Counterparty'>razorpay</td></tr></tbody></table></div>
+<th>Confidence</th><th class="n">Amount</th><th>Claim from</th></tr></thead>
+<tbody><tr><td class='mono'>2026-09-05</td><td class='n' data-l='Days left'><span class='tag t-urg'>2 days</span></td><td class='k' data-l='What happened'>Courier paid short<small>An unexplained deduction with no AWB-level reason</small></td><td data-l='Confidence'><span class='tag t-input'>Needs your input</span></td><td class='n' data-l='Exposure'>₹71.58</td><td data-l='Counterparty'>courier</td></tr><tr><td class='mono'>2026-09-12</td><td class='n' data-l='Days left'><span class='tag t-ok'>9 days</span></td><td class='k' data-l='What happened'>Courier paid short<small>An unexplained deduction with no AWB-level reason</small></td><td data-l='Confidence'><span class='tag t-input'>Needs your input</span></td><td class='n' data-l='Exposure'>₹149.43</td><td data-l='Counterparty'>courier</td></tr><tr><td class='mono'>2026-09-14</td><td class='n' data-l='Days left'><span class='tag t-ok'>11 days</span></td><td class='k' data-l='What happened'>Shipment remitted twice<small>One AWB appears twice in a courier statement</small></td><td data-l='Confidence'><span class='tag t-unproven'>Cannot prove</span></td><td class='n' data-l='Exposure'>₹2,801.16</td><td data-l='Counterparty'>courier</td></tr><tr><td class='mono'>2026-09-19</td><td class='n' data-l='Days left'><span class='tag t-ok'>16 days</span></td><td class='k' data-l='What happened'>Courier paid short<small>An unexplained deduction with no AWB-level reason</small></td><td data-l='Confidence'><span class='tag t-input'>Needs your input</span></td><td class='n' data-l='Exposure'>₹91.83</td><td data-l='Counterparty'>courier</td></tr><tr><td class='mono'>2026-09-20</td><td class='n' data-l='Days left'><span class='tag t-ok'>17 days</span></td><td class='k' data-l='What happened'>Adjustment with no reference<small>Money moved with no order or payment attached</small></td><td data-l='Confidence'><span class='tag t-input'>Needs your input</span></td><td class='n' data-l='Exposure'>₹2,251.00</td><td data-l='Counterparty'>razorpay</td></tr><tr><td class='mono'>2026-10-03</td><td class='n' data-l='Days left'><span class='tag t-ok'>30 days</span></td><td class='k' data-l='What happened'>Tax calculated on the wrong base<small>GST computed on the transaction, not on the fee</small></td><td data-l='Confidence'><span class='tag t-proven'>Proven wrong</span></td><td class='n' data-l='Exposure'>₹412.16</td><td data-l='Counterparty'>razorpay</td></tr></tbody></table></div>
 
 <h2>Everything unresolved</h2>
-<p class="lede">Each one says what evidence would close it &mdash; not just that it
-  didn't match.</p>
+<p class="lede">Claim-ready findings first. Each one says what evidence would
+  close it &mdash; not just that it didn't match.</p>
 <div class="tbl"><table>
-<thead><tr><th>What happened</th><th class="n">Items</th><th class="n">Exposure</th>
-<th>Evidence required</th></tr></thead>
-<tbody><tr><td class='k'>Settlement never reached the bank<small>The report says it was paid; no credit arrived</small></td><td class='n' data-l='Items'>22</td><td class='n' data-l='Exposure'>₹27,852.65</td><td data-l='Evidence required'>bank advice or Razorpay settlement trace for the missing credit</td></tr><tr><td class='k'>Money in with no explanation<small>A credit no settlement accounts for</small></td><td class='n' data-l='Items'>1</td><td class='n' data-l='Exposure'>₹27,173.60</td><td data-l='Evidence required'>counterparty confirmation</td></tr><tr><td class='k'>Settlement never reached the bank<small>The report says it was paid; no credit arrived</small></td><td class='n' data-l='Items'>10</td><td class='n' data-l='Exposure'>₹11,049.50</td><td data-l='Evidence required'>bank advice or Razorpay settlement trace for the missing credit</td></tr><tr><td class='k'>Money in with no explanation<small>A credit no settlement accounts for</small></td><td class='n' data-l='Items'>1</td><td class='n' data-l='Exposure'>₹5,170.00</td><td data-l='Evidence required'>counterparty confirmation</td></tr><tr><td class='k'>Adjustment with no reference<small>Money moved with no order or payment attached</small></td><td class='n' data-l='Items'>1</td><td class='n' data-l='Exposure'>₹3,933.00</td><td data-l='Evidence required'>counterparty confirmation</td></tr><tr><td class='k'>Refund deducted more than once<small>The same refund netted twice</small></td><td class='n' data-l='Items'>1</td><td class='n' data-l='Exposure'>₹3,386.53</td><td data-l='Evidence required'>counterparty confirmation</td></tr><tr><td class='k'>Shipment remitted twice<small>One AWB appears twice in a courier statement</small></td><td class='n' data-l='Items'>1</td><td class='n' data-l='Exposure'>₹2,801.16</td><td data-l='Evidence required'>counterparty confirmation</td></tr><tr><td class='k'>Adjustment with no reference<small>Money moved with no order or payment attached</small></td><td class='n' data-l='Items'>1</td><td class='n' data-l='Exposure'>₹2,251.00</td><td data-l='Evidence required'>counterparty confirmation</td></tr></tbody></table></div>
+<thead><tr><th>What happened</th><th>Confidence</th><th class="n">Items</th>
+<th class="n">Exposure</th><th>Evidence required</th></tr></thead>
+<tbody><tr><td class='k'>Tax calculated on the wrong base<small>GST computed on the transaction, not on the fee</small></td><td data-l='Confidence'><span class='tag t-proven'>Proven wrong</span></td><td class='n' data-l='Items'>2</td><td class='n' data-l='Exposure'>₹412.16</td><td data-l='Evidence required'>corrected GST computation on MDR; also revise the ITC claimed</td></tr><tr><td class='k'>Tax calculated on the wrong base<small>GST computed on the transaction, not on the fee</small></td><td data-l='Confidence'><span class='tag t-proven'>Proven wrong</span></td><td class='n' data-l='Items'>1</td><td class='n' data-l='Exposure'>₹181.03</td><td data-l='Evidence required'>corrected GST computation on MDR; also revise the ITC claimed</td></tr><tr><td class='k'>Tax calculated on the wrong base<small>GST computed on the transaction, not on the fee</small></td><td data-l='Confidence'><span class='tag t-proven'>Proven wrong</span></td><td class='n' data-l='Items'>1</td><td class='n' data-l='Exposure'>₹117.40</td><td data-l='Evidence required'>corrected GST computation on MDR; also revise the ITC claimed</td></tr><tr><td class='k'>Gateway fee charged above contract<small>Razorpay applied a rate higher than the agreed one</small></td><td data-l='Confidence'><span class='tag t-proven'>Proven wrong</span></td><td class='n' data-l='Items'>20</td><td class='n' data-l='Exposure'>₹21.91</td><td data-l='Evidence required'>Razorpay rate-card confirmation for the period; recoverable if the contracted rate applies</td></tr><tr><td class='k'>Gateway fee charged above contract<small>Razorpay applied a rate higher than the agreed one</small></td><td data-l='Confidence'><span class='tag t-proven'>Proven wrong</span></td><td class='n' data-l='Items'>29</td><td class='n' data-l='Exposure'>₹19.01</td><td data-l='Evidence required'>Razorpay rate-card confirmation for the period; recoverable if the contracted rate applies</td></tr><tr><td class='k'>Gateway fee charged above contract<small>Razorpay applied a rate higher than the agreed one</small></td><td data-l='Confidence'><span class='tag t-proven'>Proven wrong</span></td><td class='n' data-l='Items'>13</td><td class='n' data-l='Exposure'>₹19.01</td><td data-l='Evidence required'>Razorpay rate-card confirmation for the period; recoverable if the contracted rate applies</td></tr><tr><td class='k'>Gateway fee charged above contract<small>Razorpay applied a rate higher than the agreed one</small></td><td data-l='Confidence'><span class='tag t-proven'>Proven wrong</span></td><td class='n' data-l='Items'>7</td><td class='n' data-l='Exposure'>₹10.10</td><td data-l='Evidence required'>Razorpay rate-card confirmation for the period; recoverable if the contracted rate applies</td></tr><tr><td class='k'>Gateway fee charged above contract<small>Razorpay applied a rate higher than the agreed one</small></td><td data-l='Confidence'><span class='tag t-proven'>Proven wrong</span></td><td class='n' data-l='Items'>19</td><td class='n' data-l='Exposure'>₹9.76</td><td data-l='Evidence required'>Razorpay rate-card confirmation for the period; recoverable if the contracted rate applies</td></tr></tbody></table></div>
+<div class="note tiers-note"><b>Not every finding means the same thing.</b>
+  <span class="k t-proven">Proven wrong</span> &mdash; the arithmetic disagrees
+  with the contract; recomputable and defensible to the counterparty, and the
+  only tier framed as claim-ready.
+  <span class="k t-unproven">Cannot prove</span> &mdash; a link in the evidence
+  chain is missing; the money may be correct, so this asks rather than accuses.
+  <span class="k t-input">Needs your input</span> &mdash; depends on a fact
+  Attest cannot see: an off-system agreement, a negotiated rate, a credit
+  note.</div>
 
 <h2>Why you can trust these numbers</h2>
 <p class="lede">The test data was built truth-first: the real ledger was generated
@@ -325,9 +388,10 @@ footer .fbase{border-top:1px solid var(--rule);padding-top:18px;display:flex;
 <h2>Attestation</h2>
 <div class="status">
   <span class="big">NOT ATTESTABLE</span>
-  <span class="why">₹46,617.32 of ₹18,31,760.93 cannot be
-    attributed to any cause &mdash; 254.5 bps of volume, against a
+  <span class="why">₹46,126.65 of ₹18,31,760.93 cannot be
+    attributed to any cause &mdash; 251.8 bps of volume, against a
     25 bps limit. The close stays open until that is investigated.
+    <b>Ingest is partial:</b> a close is not attestable over data that could not be fully read, whatever the residual.
     <b>Refusing to certify is the point of an attestation:</b> a system that always
     signs is not attesting to anything.</span>
 </div>
@@ -336,11 +400,11 @@ footer .fbase{border-top:1px solid var(--rule);padding-top:18px;display:flex;
 <p class="lede">Every figure above is covered by this digest. Change one rupee
   anywhere on the page and it stops matching.</p>
 <div class="sealbox">
-  <div class="sd">4e008d98 18eb491c 63c73b54 5245f684</div>
+  <div class="sd">0ba7e1c2 3abe58c3 830da4af cb5b6cfc</div>
   <div class="sm">SHA-256 over 3,043 records ·
     20/22 batches tied ·
     743/1018 lines proven ·
-    residual ₹46,617.32</div>
+    residual ₹46,126.65</div>
   <div class="sc">python3 -m attest.seal --verify &lt;this file&gt;</div>
 </div>
 <div class="note"><b>What this proves, and what it does not.</b> A matching
@@ -352,7 +416,7 @@ footer .fbase{border-top:1px solid var(--rule);padding-top:18px;display:flex;
   by its owner or by us. An auditor asks one question of it: was this exact
   digest recorded, and when?</div>
 
-<!--attest-seal:v1 4e008d9818eb491c63c73b545245f6842b3484d3d63dd26adcdd85b85cfa8024 {"attestable":false,"batches":22,"exceptions":[["ADJUSTMENT",3,7158],["ADJUSTMENT",5,9183],["ADJUSTMENT",6,14943],["CHARGEBACK_ORPHAN",1,153117],["CREDIT",10,1104950],["CREDIT",22,2785265],["DUPLICATE_AWB",1,280116],["DUPLICATE_SETTLEMENT_LINE",1,96263],["GST",1,11740],["GST",1,18103],["GST",2,41216],["MDR",1,412],["MDR",1,412],["MDR",4,4],["MDR",5,733],["MDR",6,6],["MDR",6,550],["MDR",7,7],["MDR",7,7],["MDR",7,717],["MDR",7,1010],["MDR",8,8],["MDR",8,8],["MDR",8,8],["MDR",8,530],["MDR",9,9],["MDR",10,10],["MDR",13,1901],["MDR",15,194],["MDR",19,976],["MDR",20,2191],["MDR",27,596],["MDR",29,1901],["OFFSETTING_PAIR",1,822],["OFFSETTING_PAIR",1,822],["ORPHAN_BANK_CREDIT",1,517000],["ORPHAN_BANK_CREDIT",1,2717360],["REFUND_MISMATCH",1,338653],["SELF_REFERENTIAL_TIE",1,212],["SELF_REFERENTIAL_TIE",1,412],["SELF_REFERENTIAL_TIE",1,412],["SELF_REFERENTIAL_TIE",1,617],["SELF_REFERENTIAL_TIE",1,643],["SELF_REFERENTIAL_TIE",1,675],["SELF_REFERENTIAL_TIE",1,839],["SELF_REFERENTIAL_TIE",1,862],["SELF_REFERENTIAL_TIE",1,1186],["SELF_REFERENTIAL_TIE",1,14307],["SELF_REFERENTIAL_TIE",1,20334],["SELF_REFERENTIAL_TIE",1,42347],["TOLERANCE_ABUSE",1,200],["UNREFERENCED_ADJ",1,225100],["UNREFERENCED_ADJ",1,393300]],"lines":1018,"merchant":"Acme Athleisure Private Limited","overturned":15,"period":"2026-08","proven":743,"records":3043,"residual_paise":4661732,"tested":22,"tied":20,"v":1,"volume_paise":183176093} :attest-seal-->
+<!--attest-seal:v1 0ba7e1c23abe58c3830da4afcb5b6cfc69af228240141ff190ac3753c253ecda {"attestable":false,"batches":22,"coverage":{"activity_first":"2026-08-01","activity_last":"2026-08-31","rows_in":3043,"rows_outside_period":0,"rows_read":3043,"rows_rejected":0,"sources_supplied":["bank_statement.csv","cod_remittances.csv","disputes.csv","orders.csv","razorpay_settlements.csv","refunds.csv","shipments.csv"],"verdict":"PARTIAL"},"exceptions":[["ADJUSTMENT","NEEDS_INPUT",3,7158],["ADJUSTMENT","NEEDS_INPUT",5,9183],["ADJUSTMENT","NEEDS_INPUT",6,14943],["CHARGEBACK_ORPHAN","UNPROVEN",1,104050],["CREDIT","UNPROVEN",10,1104950],["CREDIT","UNPROVEN",22,2785265],["DUPLICATE_AWB","UNPROVEN",1,280116],["DUPLICATE_SETTLEMENT_LINE","UNPROVEN",1,96263],["GST","PROVEN",1,11740],["GST","PROVEN",1,18103],["GST","PROVEN",2,41216],["MDR","PROVEN",1,412],["MDR","PROVEN",1,412],["MDR","PROVEN",4,4],["MDR","PROVEN",5,733],["MDR","PROVEN",6,6],["MDR","PROVEN",6,550],["MDR","PROVEN",7,7],["MDR","PROVEN",7,7],["MDR","PROVEN",7,717],["MDR","PROVEN",7,1010],["MDR","PROVEN",8,8],["MDR","PROVEN",8,8],["MDR","PROVEN",8,8],["MDR","PROVEN",8,530],["MDR","PROVEN",9,9],["MDR","PROVEN",10,10],["MDR","PROVEN",13,1901],["MDR","PROVEN",15,194],["MDR","PROVEN",19,976],["MDR","PROVEN",20,2191],["MDR","PROVEN",27,596],["MDR","PROVEN",29,1901],["OFFSETTING_PAIR","PROVEN",1,822],["OFFSETTING_PAIR","PROVEN",1,822],["ORPHAN_BANK_CREDIT","UNPROVEN",1,517000],["ORPHAN_BANK_CREDIT","UNPROVEN",1,2717360],["REFUND_MISMATCH","UNPROVEN",1,338653],["SELF_REFERENTIAL_TIE","PROVEN",1,212],["SELF_REFERENTIAL_TIE","PROVEN",1,412],["SELF_REFERENTIAL_TIE","PROVEN",1,412],["SELF_REFERENTIAL_TIE","PROVEN",1,617],["SELF_REFERENTIAL_TIE","PROVEN",1,643],["SELF_REFERENTIAL_TIE","PROVEN",1,675],["SELF_REFERENTIAL_TIE","PROVEN",1,839],["SELF_REFERENTIAL_TIE","PROVEN",1,862],["SELF_REFERENTIAL_TIE","PROVEN",1,1186],["SELF_REFERENTIAL_TIE","PROVEN",1,14307],["SELF_REFERENTIAL_TIE","PROVEN",1,20334],["SELF_REFERENTIAL_TIE","PROVEN",1,42347],["TOLERANCE_ABUSE","UNPROVEN",1,200],["UNREFERENCED_ADJ","NEEDS_INPUT",1,225100],["UNREFERENCED_ADJ","NEEDS_INPUT",1,393300]],"lines":1018,"merchant":"Acme Athleisure Private Limited","overturned":15,"period":"2026-08","proven":743,"records":3043,"residual_paise":4612665,"ruleset":{"batch_tolerance_paise":100,"engine_version":"0.3.0","line_tolerance_paise":0,"residual_limit_bps":25,"ruleset_digest":"82be09261684"},"tested":22,"tied":20,"v":4,"volume_paise":183176093} :attest-seal-->
 
 <footer>
 <div class="fgrid">

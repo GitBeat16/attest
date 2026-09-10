@@ -312,6 +312,12 @@ section{margin-top:56px}
 .ex .lab{font-weight:500}
 .ex .lab small{display:block;color:var(--ink3);font-size:.84rem;font-weight:400;
   margin-top:3px}
+.tier{display:inline-block;font-family:var(--mono);font-size:9.5px;font-weight:500;
+  letter-spacing:.08em;text-transform:uppercase;padding:2px 6px;border-radius:3px;
+  margin-right:7px;vertical-align:1px}
+.ti-proven{background:var(--bad-soft);color:var(--bad)}
+.ti-unproven{background:var(--warn-soft);color:var(--warn)}
+.ti-input{background:var(--accent-soft);color:var(--accent)}
 .ex .amt{font-family:var(--mono);font-weight:600;text-align:right;
   font-variant-numeric:tabular-nums;font-size:1.05rem}
 .ex .meta{font-family:var(--mono);font-size:11px;color:var(--ink3);
@@ -353,6 +359,18 @@ section{margin-top:56px}
 .note.warn{border-left-color:var(--gold-deep);background:var(--warn-soft)}
 .note.bad{border-left-color:var(--bad);background:var(--bad-soft);color:var(--ink)}
 .note.good{border-left-color:var(--good);background:var(--good-soft)}
+
+.rdypanel{margin:20px 0 4px;padding:16px 20px;border-left:2px solid var(--good);
+  background:var(--good-soft);font-size:.92rem;line-height:1.6;color:var(--ink2)}
+.rdypanel.part{border-left-color:var(--gold-deep);background:var(--warn-soft)}
+.rdypanel .vd{font-family:var(--mono);font-size:11px;letter-spacing:.08em;
+  text-transform:uppercase;font-weight:600;color:var(--ink)}
+.rdypanel dl{display:grid;grid-template-columns:max-content 1fr;gap:3px 16px;margin:10px 0 0}
+.rdypanel dt{color:var(--ink3);font-family:var(--mono);font-size:11px}
+.rdypanel dd{margin:0}
+.rdypanel ul{margin:6px 0 0;padding-left:18px}
+.rdypanel .rj{margin-top:10px}
+.rdypanel .mono{font-family:var(--mono);font-size:11.5px}
 .err{margin-top:18px;padding:16px 18px;border-left:2px solid var(--bad);
   background:var(--bad-soft);color:var(--ink);font-size:.94rem}
 .drop{border:1.5px dashed var(--rule2);background:var(--surface);
@@ -620,9 +638,12 @@ footer p{color:var(--on-deep3);font-size:.89rem;max-width:38ch;line-height:1.6;m
   <p class="kicker" id="rkicker">Close complete</p>
   <h1 id="rtitle"></h1>
 
+  <!-- what was read (ROADMAP §1.2) -->
+  <div id="readiness" hidden></div>
+
   <!-- money first -->
   <div class="moneyband"><div class="money">
-    <div class="m1"><div class="t">Potentially recoverable</div>
+    <div class="m1"><div class="t">Proven &mdash; claim-ready</div>
       <div class="v" id="m-money"></div>
       <div class="d" id="m-money-d"></div></div>
     <div><div class="t">Exceptions</div><div class="v" id="m-ex"></div>
@@ -830,8 +851,8 @@ footer p{color:var(--on-deep3);font-size:.89rem;max-width:38ch;line-height:1.6;m
 </div></footer>
 
 <script type="module">
-const SUPABASE_URL = 'https://fsqozbfghumfconnhowq.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_tO-3LIT3VVJNzFUtWsZNvw_4ePwcohx';
+const SUPABASE_URL = 'https://wmdvxrxcjwreyxklbhbs.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_oCeel4YnM1a9CfElZa9Z2Q_JocpH6K6';
 
 // The auth SDK is loaded on demand, never at boot. Accounts are optional here:
 // the demo and the whole reconciliation path work without one, and a page whose
@@ -856,6 +877,48 @@ async function auth_sdk() {
 const $ = id => document.getElementById(id);
 const show = (id, on = true) => { const e = $(id); if (e) e.hidden = !on; };
 const pc = x => (x * 100).toFixed(1) + '%';
+const escHtml = t => String(t).replace(/[&<>"]/g,
+  c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// The pre-close readiness report (ROADMAP §1.2): what was read, what was not,
+// and whether the covered range is the month that was declared. A close over
+// data that could not be fully read is not a complete month, and the app must
+// say so rather than show a match rate as if nothing were missing.
+function renderReadiness(s) {
+  const el = $('readiness'), rd = s.readiness;
+  if (!el) return;
+  if (!rd) { el.hidden = true; return; }
+  el.hidden = false;
+  const partial = rd.verdict !== 'READY';
+  el.className = 'rdypanel' + (partial ? ' part' : '');
+  const src = rd.sources || {};
+  const rej = Object.values(src).reduce((a, x) => a + (x.rows_rejected || 0), 0);
+  const cost = (s.evidence_cost || []);
+  const absent = cost.length
+    ? cost.map(c => `<li><span class="mono">${escHtml(c.source)}</span> &mdash; ${escHtml(c.cost)}</li>`).join('')
+    : (rd.reasons || []).filter(r => /not supplied/.test(r))
+        .map(r => `<li>${escHtml(r)}</li>`).join('');
+  const unrec = [];
+  for (const [n, x] of Object.entries(src))
+    (x.columns_unrecognised || []).forEach(c => unrec.push(`${n}:${c}`));
+  const rejLines = [];
+  for (const x of Object.values(src))
+    (x.rejections || []).slice(0, 5).forEach(r => rejLines.push(r));
+  el.innerHTML = `
+    <span class="vd">${partial ? 'Close marked ' + escHtml(rd.verdict.toLowerCase())
+      : 'All supplied inputs read in full'}</span>${
+      partial ? ' &mdash; produced over data that could not be fully read; treat it as an incomplete month.' : ''}
+    <dl>
+      <dt>rows</dt><dd>${(rd.rows_read || 0).toLocaleString()} read of ${(rd.rows_in || 0).toLocaleString()}${rej ? ` &mdash; ${rej} rejected` : ''}</dd>
+      <dt>coverage</dt><dd class="mono">${escHtml(rd.coverage || '')}</dd>
+      ${absent ? `<dt>not supplied</dt><dd><ul>${absent}</ul></dd>` : ''}
+      ${unrec.length ? `<dt>columns not recognised</dt><dd class="mono">${escHtml(unrec.join(', '))}</dd>` : ''}
+    </dl>
+    ${rejLines.length ? `<div class="rj"><b>Rows rejected, not coerced</b><ul>${
+      rejLines.map(r => `<li class="mono">${escHtml(r)}</li>`).join('')}</ul></div>` : ''}
+    ${partial && rd.reasons && !absent ? `<ul>${
+      rd.reasons.slice(0, 4).map(r => `<li>${escHtml(r)}</li>`).join('')}</ul>` : ''}`;
+}
 
 const SOURCES = [
   ['razorpay_settlements.csv', 'Razorpay settlement report', 'Dashboard → Settlements → Reports', true],
@@ -1050,23 +1113,36 @@ function render(out, mode) {
   $('rkicker').textContent = mode === 'demo'
     ? 'Demo close · synthetic data, real engine' : 'Close complete';
   $('rtitle').textContent = `${s.merchant} · ${s.period}`;
+  renderReadiness(s);
 
   // --- money first ---------------------------------------------------
-  $('m-money').textContent = s.recoverable_display;
-  $('m-money-d').textContent = `across ${s.exceptions_top.length} exception ` +
-    `${s.exceptions_top.length === 1 ? 'type' : 'types'}, each with a counterparty and a deadline`;
+  // The big number is what can be PROVEN, not the whole exposure pile. Only
+  // findings where the arithmetic disagrees with the contract are claim-ready;
+  // the rest is evidence missing or needs the merchant's input, and saying so
+  // is the difference between a claim that gets paid and one that gets rejected.
+  const bt = s.recoverable_by_tier || {};
+  $('m-money').textContent = s.claim_ready_display || '₹0.00';
+  $('m-money-d').innerHTML = [
+    `${s.recoverable_display} total exposure under review`,
+    bt.UNPROVEN ? `${bt.UNPROVEN.display} evidence missing` : null,
+    bt.NEEDS_INPUT ? `${bt.NEEDS_INPUT.display} needs your input` : null,
+  ].filter(Boolean).join(' &middot; ');
   const items = s.exceptions_top.reduce((a, e) => a + e.count, 0);
   $('m-ex').textContent = s.exceptions_top.length;
-  $('m-ex-d').textContent = `${items.toLocaleString()} items, ranked by rupee exposure`;
+  $('m-ex-d').textContent = `${items.toLocaleString()} items, claim-ready first`;
   $('m-cov').textContent = pc(s.proof_rate);
   $('m-cov-d').textContent =
     `${s.lines_proven.toLocaleString()} of ${s.lines_total.toLocaleString()} lines trace end to end`;
   const ok = s.attestable;
+  const rdVerdict = (s.readiness && s.readiness.verdict) || 'READY';
+  const residualOver = s.residual_bps > 25;
   $('m-status').textContent = ok ? 'SIGNED' : 'REVIEW REQUIRED';
   $('m-status').className = 'v st' + (ok ? ' ok' : '');
   $('m-status-d').textContent = ok
     ? `residual ${s.residual_bps} bps, inside the 25 bps limit`
-    : `${s.residual_bps} bps unexplained, against a 25 bps limit`;
+    : residualOver
+      ? `${s.residual_bps} bps unexplained, against a 25 bps limit`
+      : `ingest ${rdVerdict.toLowerCase()} — not attestable over data that could not be fully read`;
 
   // --- naive versus attest --------------------------------------------
   if (nv) {
@@ -1231,14 +1307,28 @@ function render(out, mode) {
   const claims = s.exceptions_top.filter(e => e.kind !== 'verdict');
   const verdicts = s.exceptions_top.filter(e => e.kind === 'verdict');
 
+  // Only a PROVEN finding may be staged as a claim. UNPROVEN findings get a
+  // "draft a query" — you ask the counterparty, you do not accuse them.
+  // NEEDS_INPUT findings cannot be actioned until the merchant supplies the
+  // missing fact, so they carry no button at all.
+  const TIERCLS = { PROVEN: 'ti-proven', UNPROVEN: 'ti-unproven', NEEDS_INPUT: 'ti-input' };
+  const actFor = e => {
+    if (e.urgency === 'lapsed')
+      return '<span class="badge" style="background:var(--bad-soft);color:var(--bad)">window closed</span>';
+    if (e.tier === 'PROVEN')
+      return '<button class="btn ghost sm" data-claim="1">Add to recovery</button>';
+    if (e.tier === 'NEEDS_INPUT')
+      return '<span class="badge" style="background:var(--accent-soft);color:var(--accent)">needs your input</span>';
+    return '<button class="btn ghost sm" data-draft="1">Draft a query</button>';
+  };
+
   $('exlist').innerHTML = claims.map((e, i) => `
     <div class="ex ${e.urgency === 'lapsed' ? 'dead' : ''}" data-ex="${s.exceptions_top.indexOf(e)}">
-      <span class="lab">${e.label}<small>${e.evidence}</small></span>
+      <span class="lab"><span class="tier ${TIERCLS[e.tier] || 'ti-unproven'}">${e.tier_label || 'Cannot prove'}</span>
+        ${e.label}<small>${e.evidence}</small></span>
       <span class="amt">${e.exposure}</span>
       <span class="meta">${e.counterparty}<br>${deadlineText(e)}</span>
-      <span class="act">${e.urgency === 'lapsed'
-        ? '<span class="badge" style="background:var(--bad-soft);color:var(--bad)">window closed</span>'
-        : '<button class="btn ghost sm" data-claim="1">Add to recovery</button>'}</span>
+      <span class="act">${actFor(e)}</span>
     </div>`).join('');
 
   if (verdicts.length) {
@@ -1257,6 +1347,10 @@ function render(out, mode) {
     const on = row.classList.contains('claimed');
     b.textContent = on ? 'In recovery ✓' : 'Add to recovery';
     tallyClaims();
+  });
+  document.querySelectorAll('#exlist [data-draft]').forEach(b => b.onclick = () => {
+    const on = b.textContent[0] === 'D';
+    b.textContent = on ? 'Query drafted ✓' : 'Draft a query';
   });
   tallyClaims();
 
@@ -1295,9 +1389,10 @@ function tallyClaims() {
   if (!rows.length) { note.hidden = true; return; }
   const total = rows.reduce((a, r) =>
     a + (last.summary.exceptions_top[+r.dataset.ex].exposure_paise), 0);
-  note.innerHTML = `<b>${rows.length} claim${rows.length === 1 ? '' : 's'} staged, ` +
-    `${money(total)}.</b> Attest drafts the claim and the evidence list. It does not ` +
-    `file it, and it never posts to your ledger — a human approves every claim.`;
+  note.innerHTML = `<b>${rows.length} proven claim${rows.length === 1 ? '' : 's'} staged, ` +
+    `${money(total)}.</b> These are the claim-ready tier — the arithmetic disagrees with ` +
+    `the contract. Attest drafts the claim and the evidence list. It does not file it, ` +
+    `and it never posts to your ledger — a human approves every claim.`;
   note.hidden = false;
 }
 

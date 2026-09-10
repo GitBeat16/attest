@@ -242,7 +242,14 @@ def check_batches(corpus: Corpus) -> list[dict]:
             "container": "period",
         })
 
-    total_cb_adj = -sum(b.chargeback_adj for b in corpus.batches.values())
+    # Both sides of this equality must be drawn from the SAME period, or the
+    # comparison manufactures a finding out of nothing. Summing chargebacks over
+    # every batch while filtering disputes to the declared month reports the
+    # chargebacks carried by out-of-period batches as orphans — a phantom
+    # exception on a month where nobody did anything wrong, counted into the
+    # unexplained residual that decides whether the close can be signed.
+    # This is invariant 6 again, in the check rather than in the anchor.
+    total_cb_adj = -sum(b.chargeback_adj for b in in_scope)
     total_disputes = sum(d.amount for d in corpus.disputes if d.raised_on <= last_settled)
     if total_cb_adj != total_disputes:
         findings.append({

@@ -18,6 +18,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 
+from . import tiers
+
 # Claim windows in days, measured from the event that starts the clock.
 # Courier windows are the tight ones and the reason this module exists.
 WINDOWS = {
@@ -54,6 +56,7 @@ class Claim:
     opened_on: date
     deadline: date
     evidence_required: str
+    tier: str = tiers.UNPROVEN   # PROVEN | UNPROVEN | NEEDS_INPUT — see tiers.py
     state: str = "open"          # open | evidence_ready | filed | recovered | lapsed
     sample: list = field(default_factory=list)
 
@@ -101,6 +104,7 @@ def build_claims(exceptions: list[dict], period_end: date, today: date) -> list[
             opened_on=opened,
             deadline=opened + timedelta(days=window),
             evidence_required=e["evidence_required"],
+            tier=e.get("tier", tiers.UNPROVEN),
             sample=e.get("sample", []),
         ))
 
@@ -118,9 +122,20 @@ def summarise(claims: list[Claim], today: date) -> dict:
     for c in live:
         by_party[c.counterparty] = by_party.get(c.counterparty, 0) + c.exposure
 
+    # Exposure split by confidence tier, over the live claims only. `recoverable`
+    # is unchanged — this only says how much of it is which kind of claim.
+    by_tier: dict[str, dict] = {}
+    for c in live:
+        d = by_tier.setdefault(c.tier, {"exposure": 0, "count": 0})
+        d["exposure"] += c.exposure
+        d["count"] += c.count
+
     return {
         "recoverable": sum(c.exposure for c in live),
         "recoverable_count": sum(c.count for c in live),
+        "claim_ready": sum(c.exposure for c in live if c.tier == tiers.PROVEN),
+        "claim_ready_count": sum(c.count for c in live if c.tier == tiers.PROVEN),
+        "by_tier": by_tier,
         "expiring_soon": sum(c.exposure for c in critical),
         "expiring_count": sum(c.count for c in critical),
         "lapsed": sum(c.exposure for c in lapsed),

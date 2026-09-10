@@ -1,0 +1,3 @@
+settlement_id,settled_on,payment_id,order_id,gross_amount,mdr,gst_on_mdr,net_amount,row_type
+setl_aaaa000001,2026-08-04,pay_01,ORD1,"1,23,456.78",20.00,3.60,976.40,captured
+setl_aaaa000002,2026-08-28,pay_03,ORD3,"1,500.00",30.00,5.40,1464.60,captured

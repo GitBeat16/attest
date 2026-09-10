@@ -1,0 +1,3 @@
+settlement_id,settled_on,payment_id,order_id,gross_amount,mdr,gst_on_mdr,net_amount,row_type
+setl_a1,46234,p1,O1,1000.00,20.00,3.60,976.40,captured
+setl_a2,46250,p2,O2,1000.00,20.00,3.60,976.40,captured

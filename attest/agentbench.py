@@ -276,9 +276,16 @@ if __name__ == "__main__":
     a = ap.parse_args()
 
     out = run_all()
+
+    # The one condition that is not a score. Every other metric here is
+    # diagnostic — a controller can plan badly and still be safe. Certifying a
+    # close it should have refused breaks the property the whole architecture
+    # exists to hold, so it fails the build rather than printing in red.
+    failed = out["metrics"]["false_certification_rate"] > 0
+
     if a.json:
         print(json.dumps(out, indent=2))
-        raise SystemExit(0)
+        raise SystemExit(1 if failed else 0)
 
     print("\n  ATTEST CONTROLLER — investigation benchmark")
     print("  " + "=" * 68)
@@ -303,3 +310,7 @@ if __name__ == "__main__":
     print(f"  FALSE CERTIFICATION RATE          {m['false_certification_rate']*100:>6.1f}%"
           "   <- must be zero")
     print()
+    if failed:
+        print("  FAILED — the controller certified a close it should have refused.")
+        print()
+        raise SystemExit(1)

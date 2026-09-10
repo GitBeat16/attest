@@ -32,6 +32,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from attest.close import (CloseError, close, evidence_chain,  # noqa: E402
                           naive_view, stage)
+from attest import __version__, ruleset               # noqa: E402
 from attest.report import render                            # noqa: E402
 
 # Both of these are public by design. The project URL and the publishable key
@@ -42,11 +43,43 @@ from attest.report import render                            # noqa: E402
 # that would matter -- the service role key -- is not in this repository, is not
 # in this function's environment, and is never used by this app.
 SUPABASE_URL = os.environ.get(
-    "SUPABASE_URL", "https://fsqozbfghumfconnhowq.supabase.co").rstrip("/")
+    "SUPABASE_URL", "https://wmdvxrxcjwreyxklbhbs.supabase.co").rstrip("/")
 SUPABASE_ANON = os.environ.get(
-    "SUPABASE_ANON_KEY", "sb_publishable_tO-3LIT3VVJNzFUtWsZNvw_4ePwcohx")
+    "SUPABASE_ANON_KEY", "sb_publishable_oCeel4YnM1a9CfElZa9Z2Q_JocpH6K6")
 
 MAX_BODY = 6 * 1024 * 1024
+
+# What a spreadsheet looks like when the browser read it as text. The frontend
+# does `file.text()`, so an .xlsx does not arrive as bytes -- it arrives as
+# mojibake beginning "PK\x03\x04", parses as a one-column CSV of garbage, and
+# the readiness layer then reports a file it could not understand. That is a
+# true statement about a false situation: the file is fine, it is the wrong
+# format. Naming the format is the difference between a merchant fixing it in
+# ten seconds and filing a bug.
+BINARY_SIGNATURES = {
+    "PK\x03\x04": "a spreadsheet or zip archive (.xlsx, .ods, .zip)",
+    "%PDF": "a PDF",
+    "\xd0\xcf\x11\xe0": "an old-format Excel file (.xls)",
+    "\x1f\x8b": "a gzip archive",
+}
+
+
+def refuse_binary(files: dict[str, str]) -> None:
+    """Reject anything that is plainly not text, before the engine sees it.
+
+    The CLI needs no equivalent: it reads real files from disk and the readiness
+    layer refuses to parse what it cannot read. This is the hosted boundary,
+    where the caller hands us a string and asserts it is a CSV.
+    """
+    for name, text in files.items():
+        for sig, what in BINARY_SIGNATURES.items():
+            if text.startswith(sig):
+                raise CloseError(
+                    f"{name} looks like {what}, not a CSV. Export it as CSV "
+                    "and upload that -- the engine reads rows, not workbooks.")
+        if "\x00" in text[:4096]:
+            raise CloseError(
+                f"{name} contains binary data and cannot be read as a CSV.")
 COUNTERPARTY = {
     "MDR": "Razorpay", "GST": "Razorpay", "CREDIT": "Razorpay",
     "REFUND_DUPLICATE": "Razorpay", "ITC_MISMATCH": "Razorpay",
@@ -172,8 +205,11 @@ def _investigate(src) -> dict | None:
 
 
 def _top(exceptions: list[dict], claims=None, today=None) -> list[dict]:
-    """The exception register, ranked by rupee exposure, in the merchant's
-    language and with the counterparty and claim window attached."""
+    """The exception register in the merchant's language, with the counterparty,
+    the claim window and the confidence tier attached. Claim-ready findings are
+    ranked first, then by rupee exposure — the inverse of exposure alone, which
+    puts the largest unprovable item where a CA acts."""
+    from attest import tiers
     from attest.money import fmt
     # Attach the clock. A claim window that has already closed must say so
     # rather than sit in the list looking recoverable -- the whole cadence
@@ -186,14 +222,18 @@ def _top(exceptions: list[dict], claims=None, today=None) -> list[dict]:
                 clock[c.exception_class] = (c.deadline, c.days_left(today),
                                             c.urgency(today), c.counterparty)
 
-    claimable = [e for e in exceptions if e.get("kind") != "verdict"][:8]
+    claimable = tiers.rank([e for e in exceptions if e.get("kind") != "verdict"])[:8]
     verdicts = [e for e in exceptions if e.get("kind") == "verdict"][:4]
     out = []
     for e in claimable + verdicts:
+        tier = e.get("tier", tiers.UNPROVEN)
         out.append({
             "class": e["class"],
             "kind": e.get("kind", "chain"),
             "label": LABELS.get(e["class"], e["class"].replace("_", " ").title()),
+            "tier": tier,
+            "tier_label": tiers.LABEL.get(tier, tiers.LABEL[tiers.UNPROVEN]),
+            "claim_ready": e.get("kind") != "verdict" and tier == tiers.PROVEN,
             "count": e["count"],
             "exposure": fmt(e["exposure"]),
             "exposure_paise": e["exposure"],
@@ -248,6 +288,7 @@ def handle(body: dict) -> dict:
     year, month = int(period[:4]), int(period[5:])
 
     files = {k: v for k, v in (body.get("files") or {}).items() if isinstance(v, str)}
+    refuse_binary(files)
     key_masked = None
 
     if mode == "razorpay_test":
@@ -292,6 +333,18 @@ def handle(body: dict) -> dict:
         "recoverable_paise": s["recoverable_paise"],
         "residual_bps": s["residual_bps"], "attestable": s["attestable"],
         "evidence_supplied": supplied, "evidence_missing": missing,
+        # What was read, and what produced the answer. Neither is
+        # recoverable from this row otherwise: a close over a truncated
+        # file and a close over a complete one look identical here, and
+        # "which closes ran under ruleset X" would mean opening every
+        # pack. Who and when are already recorded -- user_id defaults to
+        # auth.uid(), created_at to now() -- so they are not repeated.
+        "readiness_verdict": s["readiness_verdict"],
+        "rows_in": s["readiness"]["rows_in"],
+        "rows_read": s["readiness"]["rows_read"],
+        "rows_rejected": s["readiness"]["rows_rejected"],
+        "engine_version": __version__,
+        "ruleset_digest": ruleset.short(),
         "pack_html": pack,
     }])
     close_id = row[0]["id"] if row else None
@@ -311,12 +364,16 @@ def handle(body: dict) -> dict:
         else:
             s["seal_recorded"] = True
 
+    # `tier` requires db/002_audit_trail.sql to have been applied: PostgREST
+    # rejects an unknown key and would fail the whole close. Migration first,
+    # then deploy -- never the other way round.
     findings = [{
         "close_id": close_id,
         "class": e["class"],
         "label": LABELS.get(e["class"], e["class"].replace("_", " ").title()),
         "line_count": e["count"],
         "exposure_paise": e["exposure"],
+        "tier": e.get("tier"),
     } for e in s["exceptions"][:20]]
     if close_id and findings:
         postgrest("attest_findings", token, findings)
@@ -341,6 +398,10 @@ class handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:                      # noqa: N802
         try:
+            ctype = (self.headers.get("Content-Type") or "").split(";")[0].strip()
+            if ctype and ctype != "application/json":
+                return self._send(415, {"ok": False, "error":
+                                        "this endpoint accepts application/json."})
             length = int(self.headers.get("Content-Length") or 0)
             if length > MAX_BODY:
                 return self._send(413, {"ok": False, "error":
