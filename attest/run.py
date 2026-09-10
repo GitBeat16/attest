@@ -115,6 +115,47 @@ def build_exceptions(corpus, res, aud) -> list[dict]:
     return ex
 
 
+def _print_readiness(rd) -> None:
+    """The pre-close readiness report: what was read, what was not, and whether
+    the covered range is the month that was declared."""
+    P = print
+    P("  READINESS")
+    P(f"    verdict                      {rd.verdict}")
+    P(f"    rows                         {rd.rows_read():,} read of {rd.rows_in():,}"
+      + (f", {rd.rows_rejected()} rejected" if rd.rows_rejected() else ""))
+    P(f"    {rd.coverage_line()}")
+    absent = rd.sources_absent()
+    if absent:
+        P(f"    not supplied                 {', '.join(absent)}")
+    for r in rd.all_rejections()[:8]:
+        P(f"    rejected                     {r.describe()}")
+    if rd.unrecognised_columns():
+        P(f"    columns not recognised       {', '.join(rd.unrecognised_columns())}")
+    if rd.verdict != "READY":
+        for reason in rd.reasons[:4]:
+            P(f"    · {reason}")
+    P("")
+
+
+def _print_refusal(rd) -> None:
+    P = print
+    P("")
+    P("  ATTEST — CLOSE REFUSED")
+    P("  " + "=" * 68)
+    P("  The files could not be read in full, so no close was produced.")
+    P("")
+    for reason in rd.reasons:
+        P(f"    · {reason}")
+    P("")
+    for r in rd.all_rejections()[:12]:
+        P(f"    {r.describe()}")
+    P("")
+    P("  Fix the file(s) above and run the close again. A close over data that")
+    P("  could not be fully read would report a clean month on incomplete input,")
+    P("  which is the one failure this tool exists to prevent.")
+    P("")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Close the month and attest to it.")
     ap.add_argument("--data", type=Path, default=Path("data"))
@@ -124,6 +165,26 @@ def main() -> None:
 
     t0 = time.time()
     corpus = load(args.data / "sources")
+    rd = corpus.readiness
+
+    # The volume denominator decides whether a residual in bps can be computed at
+    # all, and a close that cannot be judged must not be signed. Prefer the order
+    # export; fall back to settled gross and say so; refuse if neither exists.
+    volume = sum(o.gross for o in corpus.orders.values())
+    if not volume:
+        volume = sum(l.gross for b in corpus.batches.values() for l in b.lines)
+        if volume:
+            rd.downgrade("period volume computed from settled gross, not the order "
+                         "export — the order export was not supplied")
+        else:
+            rd.refuse("no order export and no settled line items — there is no "
+                      "volume to measure the residual against, so the close "
+                      "cannot be judged")
+
+    if rd.refused:
+        _print_refusal(rd)
+        raise SystemExit(1)
+
     naive = resolve_naive(corpus)
     keys = resolve(corpus)
     res = engine_mod.run(corpus)
@@ -133,7 +194,6 @@ def main() -> None:
     tied = sum(1 for v in res.batch_ties.values() if v)
     proven = sum(1 for c in res.chains if c.complete)
     total = len(res.chains)
-    volume = sum(o.gross for o in corpus.orders.values())
     exceptions = build_exceptions(corpus, res, aud)
     residual = sum(e["exposure"] for e in exceptions if e["class"] in
                    ("CREDIT", "CHARGEBACK_ORPHAN", "UNREFERENCED_ADJ"))
@@ -143,8 +203,10 @@ def main() -> None:
     P(f"\n  ATTEST  ·  period {corpus.mdr_invoice['period']}  ·  "
       f"{corpus.terms['merchant']}")
     P("  " + "=" * 68)
-    P(f"  {corpus.record_count():,} records from 7 sources closed in {elapsed:.2f}s")
+    P(f"  {corpus.record_count():,} of {corpus.rows_in():,} rows from "
+      f"{len(rd.sources_supplied())}/7 sources closed in {elapsed:.2f}s")
     P("")
+    _print_readiness(rd)
     P("  KEY RESOLUTION")
     P(f"    naive  (narration/UTR key)   {naive['resolved']:>4}/{naive['bank_rows']} resolved")
     P(f"    attest (settlement_id)       {keys['exact']:>4}/{keys['bank_rows']} exact, "
@@ -224,12 +286,21 @@ def main() -> None:
     P(f"    period volume            {fmt(volume):>16}")
     P(f"    unexplained residual     {fmt(residual):>16}   "
       f"({residual_bps:.1f} bps of volume)")
-    signed = residual_bps <= RESIDUAL_LIMIT_BPS and not card.false_positives
+    residual_ok = residual_bps <= RESIDUAL_LIMIT_BPS and not card.false_positives
+    # A close over data that could not be fully read is not attestable, whatever
+    # the residual says — an unread row is an unmeasured one. ROADMAP §1.2.
+    signed = residual_ok and rd.ready
     P(f"    close status             {'SIGNED' if signed else 'NOT ATTESTABLE':>16}")
     if not signed:
-        P(f"    reason                   residual exceeds the "
-          f"{RESIDUAL_LIMIT_BPS} bps limit; the close is")
-        P(f"                             not certified until it is investigated.")
+        if not residual_ok:
+            P(f"    reason                   residual exceeds the "
+              f"{RESIDUAL_LIMIT_BPS} bps limit; the close is")
+            P(f"                             not certified until it is investigated.")
+        if not rd.ready:
+            P(f"    reason                   ingest is {rd.verdict}: "
+              f"{rd.reasons[0] if rd.reasons else 'data could not be fully read'}")
+            for extra in rd.reasons[1:3]:
+                P(f"                             · {extra}")
     P("")
 
     payload = _payload(corpus, res, aud, card, exceptions, elapsed, volume,
@@ -246,6 +317,7 @@ def main() -> None:
         {"target": a.target, "reasoning": a.reasoning, **a.evidence}
         for a in aud.overturned if a.hypothesis == "offsetting_pair"
     ]
+    payload["readiness"] = rd.as_dict()
     payload["recovery"] = {
         "as_at": today.isoformat(),
         "recoverable": rec["recoverable"], "recoverable_count": rec["recoverable_count"],
@@ -283,6 +355,7 @@ def main() -> None:
             "residual_paise": residual,
             "residual_bps": round(residual_bps, 2),
             "signed": signed,
+            "readiness": rd.as_dict(),
             "exceptions": exceptions,
         }, indent=2), encoding="utf-8")
         P(f"  attestation written to {args.json}\n")

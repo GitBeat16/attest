@@ -5,231 +5,163 @@ accountant putting a client's books through it.
 
 ---
 
-## The honest starting position
+## Done since this plan was written
 
-Three things are true, and the plan follows from them.
+- **§1.2 Ingest that fails loudly** — `attest/readiness.py`, 20 fixtures, 30
+  tests. Encoding and BOM detection, delimiter sniffing, header aliasing,
+  Indian-grouped and euro-decimal money, Excel serial dates, day-first ambiguity,
+  preamble and ragged rows, coverage assessment against the declared month.
+- **§1.3 Confidence tiers** — `attest/tiers.py`, invariant 11. Only PROVEN
+  findings are framed as claim-ready. Verified: 15 adversarial verdicts, 0 became
+  claims. The seal's canonical block went `v1 → v2` to carry the tier, and an
+  unmapped class seals as UNPROVEN.
+- **The chargeback scope mismatch**, found by the clean-world control — plus
+  `scripts/stability.py` (20 worlds + control) and `tests/test_clean_world.py`.
 
-**The engine is ahead of the product.** The matching, the proof chains, the
-adversarial pass and the money arithmetic are stronger than the surface around
-them. The thing that breaks first with a real user is not the analysis — it is
-reading their files.
+Gates now: **71 verify checks, 76 tests**, 0 false positives across 20 worlds,
+control signs at 0.0 bps.
 
-**Everything measured so far was measured against a world we generated.** The
-73.0%, the 75% held-out recall, the zero false positives across twenty seeds, the
-₹87,256.57 — all of it is honest, all of it is synthetic. Not one number has been
-tested against data Attest did not create. That is the gap, and no amount of
-additional synthetic work closes it.
+## Measured, and not a problem
 
-**The architecture proves the AI cannot do harm. Nothing yet proves it does
-good.** `certify` is absent from the action tuple, the validator refuses it, a
-test fails the build if a writing tool appears — that is a genuinely strong
-safety story. But `agentbench` scores the *deterministic* planner at 100% on path
-selection, verdict and escalation, with 0% false certification, and it has never
-been run against a model at all. A benchmark the non-AI baseline saturates cannot
-show the AI is worth having. Right now, on the evidence, the model is decoration
-with excellent seatbelts.
-
-For a product whose entire claim is trustworthiness, that third point is not a
-side issue. It is the one a serious reviewer will find.
+**Scale.** 15,148 records close in 0.02 s; 3,043 in under 0.01 s. A realistic
+merchant is comfortably inside this and the cost is near-linear. No work needed —
+don't spend time optimising something that isn't slow.
 
 ---
 
-## The failure modes to design against
+## What to add next, ranked
 
-Trust is asymmetric. Rank the work by what would end it.
+### 1. Continuous integration — the highest-leverage thing missing
 
-| Failure | Consequence | Status |
-|---|---|---|
-| **A confident false positive on real data** | The CA files a claim, Razorpay says the charge was correct, the CA looks foolish in front of their client. They never open it again. | **Fatal. Undefended on real data.** |
-| Overstating recoverable money | Same, slower. The one direction a finance tool must never err in. | Defended (invariant 9) |
-| Silent partial ingest | Closes on the 80% of rows it could parse and reports a clean month. | **Undefended** |
-| Missing a real error | Value not delivered; rarely noticed | Measured, synthetic only |
-| Leaking client financial data | Ends the company | Partly defended (RLS, no secrets) |
+There are 71 verify checks, 76 tests, a 20-world stability run and a clean-world
+control. **None of them run unless someone remembers to run them.** Until a
+machine enforces them, every invariant in `INVARIANTS.md` is aspirational.
 
-Everything in Phase 1 exists to defend the first and third rows.
+A workflow on push and pull request that fails the build on:
 
----
+- any test failure, or `verify.py` reporting a failure
+- **held-out recall reaching 100%** (invariant 4 — that means a targeted detector
+  was written, deliberately or by accident)
+- **any false positive**, in any of the 20 worlds or in the clean control
+- **false certification rate ≠ 0.0%** in `agentbench`
 
-## Phase 1 · Earn the right to be trusted on real data
+Those last three are the project's integrity conditions. They should break the
+build, not wait to be noticed by a person who is looking at something else.
 
-### 1.1 One real month — the highest-value thing on this list
+*Note the CI runner needs no credentials — everything except the live-Razorpay
+check is offline and stdlib-only, which is exactly why this is cheap.*
 
-One real merchant month teaches more than another twenty synthetic ones. It is
-the only way to discover what the generator does not know how to be wrong about.
+### 2. Run it on one real month
 
-Escalating in cost, each worth doing:
+Still the highest-value thing on the list, and **now unblocked** — the readiness
+work is what made real files survivable. Escalating:
 
-1. **Your own Razorpay test account.** `api/close.py` already has a
-   `razorpay_test` mode that pulls live settlements. Run it end-to-end, write up
-   what it found, and quote **no accuracy figure** — there is no answer key.
-2. **A real, tiny merchant.** A friend's D2C store, one month, with permission.
+1. Your own Razorpay test account, via the existing `razorpay_test` mode.
+2. A real, tiny merchant — a friend's D2C store, one month, with permission.
    Anonymise and keep it as a permanent fixture.
-3. **A CA with several clients.** The actual buyer. Sit with them while they run
-   it and write down every question they ask.
+3. A CA with several clients. Write down every question they ask.
 
-The output is not a number. It is a list of everything that broke.
+Quote **no accuracy figure** on real data — there is no answer key. The output is
+a list of everything that broke.
 
-### 1.2 Ingest that fails loudly
+### 3. Version the pack, and keep a changelog
 
-Real exports differ from generated ones in every boring way: renamed columns,
-`DD/MM/YYYY`, BOM-prefixed headers, `₹1,23,456.78` as text, half-months, refunds
-in a separate export with a different key.
+`attest/__init__.py` is empty. Nothing anywhere records a version.
 
-The rule to build toward: **never close on data you could not fully read.** A
-close over 80% of the rows, reported as if it were the month, is the silent
-partial ingest failure — the most dangerous thing in the table above, because
-it produces a confident clean result.
+The seal currently proves *"this pack was not edited."* It cannot answer the
+question an auditor actually asks about an eight-month-old pack: **"what rules
+produced this?"** That answer must live inside the sealed block, not in whatever
+`main` says today.
 
-- A pre-close **readiness report**: rows read, rows rejected, columns not
-  recognised, date range actually covered vs the month declared
-- Refuse, or mark the close explicitly partial. Never silently proceed
-- Column aliasing with an explicit map, not guessing
-- A fixture per real-world format oddity, added as each is found
+Record inside the seal: engine version, ruleset version, the contracted rates
+used, and the tolerance and residual thresholds in force. Then a `CHANGELOG.md`
+so that "ruleset v3" means something specific. The two are one piece of work —
+a version number with nothing behind it is worse than none.
 
-### 1.3 Confidence tiers — findings do not all mean the same thing
+### 4. Reproducibility, as a test
 
-There is currently no confidence or severity concept in the engine. Every
-exception arrives with equal epistemic weight, and that is precisely how a CA
-files a claim that gets rejected.
+Same inputs, same version → **byte-identical pack**. Never tested. For a document
+whose whole value is a hash, this is foundational, and it is about twenty lines.
 
-Three tiers, carried through the register, the recovery list and the pack:
+It also protects the seal from a subtle failure: dict ordering, locale, or a
+timestamp leaking into the render would make two honest closes of the same month
+disagree, and there is currently nothing that would catch it.
 
-- **Proven wrong** — the arithmetic disagrees with the contract. `mdr`, `gst`,
-  `net`. Recomputable, defensible in front of a counterparty. File these.
-- **Cannot prove** — a link is missing. The money may be perfectly correct;
-  the evidence is absent. Ask, do not accuse.
-- **Needs your input** — depends on a fact Attest cannot see: an off-system
-  agreement, a negotiated rate, a credit note.
+### 5. Give `agentbench` headroom, then run the model
 
-Only the first tier should carry a claim-ready framing. Today the register ranks
-by exposure alone, which puts the largest *unproven* item at the top of the list
-a CA is most likely to act on.
+Unchanged and still open. `RulesPlanner` scores 100% on all six scenarios, so the
+benchmark cannot show the model adds anything. Write scenarios a fixed decision
+tree should struggle with, keep ground truth out of the planner's view, then run
+both planners and publish the comparison — **including if the model loses**.
 
-### 1.4 Version the rules inside the close pack
+That remains the honest answer to whether this is an AI product or a rules
+product with a model attached.
 
-An auditor's question about a pack from eight months ago is *"what rules produced
-this?"* — and the answer must be in the pack, not in whatever `main` says today.
+### 6. Claim state is currently decorative
 
-Record engine version, rule-set version, contracted rates used and tolerance
-thresholds, inside the sealed document. Cheap, and it converts the seal from
-"this was not edited" into "this was not edited, and here is exactly what
-produced it."
+`Claim.state` declares five states — `open | evidence_ready | filed | recovered |
+lapsed` — and **nothing ever writes or reads it**. Every close starts from
+nothing, so a claim cannot be tracked across closes.
 
----
+That is the gap between the pitch and the artifact: *"cadence is the product"*
+requires a claim raised on the 3rd to still be a claim on the 10th, with its
+window ticking. Persisting claim state is what turns the recovery layer from a
+report into a workflow — and it is the precondition for §3.4 calibration, since
+you cannot learn which claims get paid without recording which were filed.
 
-## Phase 2 · Make the AI earn its place
+### 7. Differential and property testing of the money math
 
-The safety architecture is finished. The value case has not started.
+A second, independent implementation of the fee/tax/net computation that must
+agree with `money.py` on random inputs. For a system whose credibility rests on
+arithmetic, two implementations disagreeing is the strongest bug detector
+available — and randomised properties (no float ever reaches a money path; ₹0
+takes the same path as ₹100; recoverable never exceeds total exposure; verdicts
+never enter recovery) cost little and hold forever.
 
-### 2.1 Give the benchmark headroom
-
-`agentbench` has six scenarios and the rules planner solves all six. Until there
-are scenarios it *fails*, no result can distinguish a good controller from a good
-rule set.
-
-Write scenarios where a fixed decision tree should struggle and judgement should
-win: contradictory evidence pointing two ways; a defect class the rules do not
-enumerate; an investigation where the informative next question depends on what
-the last three answers were; a month where the correct action is to stop early
-and ask a human.
-
-**Keep the ground truth out of the planner's view, as it already is.**
-
-### 2.2 Then actually run the model against it
-
-`run_all(planner_factory)` is already parameterised and has never been called
-with a model. Run both planners over the same scenarios and publish the
-comparison — including if the model loses.
-
-### 2.3 Cut the wasted calls
-
-41.3% unnecessary tool calls. On a serverless budget where the model gets a
-13-second slice, wasted calls are the difference between finishing and handing
-over.
-
-### 2.4 Be willing to conclude the model does not help
-
-If, with a benchmark that has real headroom, the deterministic planner still
-wins — say so, in the README, and keep the model for explanation rather than
-planning. That is a *better* outcome for a finance product than an AI that plans
-because AI is the category. It also happens to be the most credible sentence in
-this whole document.
+Hand-roll the random loop with stdlib `random` rather than adding `hypothesis` —
+the zero-dependency claim is worth more than the ergonomics.
 
 ---
 
-## Phase 3 · Trust engineering that compounds
+## Later — the product a CA actually uses
 
-Cheap, permanent, and it is the work that lets you change things later without
-fear.
+Only after a real month. Building these on untested assumptions about real data
+is how you build the wrong thing carefully.
 
-- **Differential testing of the money math.** A second, independent
-  implementation of the fee/tax/net computation that must agree with `money.py`
-  on random inputs. For a system whose credibility rests on arithmetic, two
-  implementations disagreeing is the strongest bug detector available.
-- **Property-based tests** on the invariants: no float ever reaches a money path;
-  a ₹0 value takes the same path as ₹100; recoverable never exceeds total
-  exposure; verdicts never enter recovery.
-- **CI gates** from what already exists: `stability.py` must show 0 false
-  positives in every world and in the clean control, and held-out recall must
-  **not** reach 100%. Fail the build rather than wait to notice.
-- **Calibration, once real claims exist.** Of the claims Attest called
-  recoverable, what fraction were actually paid? That number — not proof rate —
-  is what a CA will eventually judge it on.
-
----
-
-## Phase 4 · The product a CA actually uses
-
-Only after Phase 1. Building these first means building them on assumptions
-about real data that have not been tested.
-
-1. **Multi-client.** A CA has twenty merchants. One close per merchant, one view
-   across all of them, ranked by what is expiring.
-2. **Daily cadence.** The pitch says *"cadence is the product"* and the tool runs
-   monthly. That gap between claim and artifact is the most honest thing left to
-   close.
-3. **Claim filing and tracking**, with outcomes fed back into 3.4 calibration.
+1. **Multi-client.** A CA has twenty merchants. One view across all of them,
+   ranked by what is expiring.
+2. **Daily cadence.** Needs §6 first — cadence without claim persistence is just
+   running the same report more often.
+3. **Claim filing and tracking**, with outcomes feeding calibration.
 4. **Ledger export** to Tally and Zoho.
 5. **Razorpay OAuth**, so nobody pastes a key.
 
----
+## Operational trust
 
-## Phase 5 · Operational trust
-
-Boring, and non-negotiable the moment someone else's financial data is involved.
-
-- A written **retention and deletion** policy, and a working delete
-- **PII discipline** — what is stored, what is derived and discarded
-- An **audit log**: who ran which close, against which inputs, when
-- **Reproducibility**: same inputs, same engine version, byte-identical pack.
-  This is testable and should be tested.
-- Supabase leaked-password protection on; keys rotated off any machine that has
-  seen a demo
+- Retention and deletion policy, and a working delete
+- What is stored versus derived and discarded
+- An audit log: who ran which close, against which inputs, when
+- Supabase leaked-password protection on; keys rotated off any demo machine
 
 ---
 
 ## What not to do
 
-- **Don't add ML to detection.** Rules are the reason a finance professional
-  trusts the output. The model plans; it must never decide what is wrong.
-- **Don't write a targeted detector for the missed held-out class.** The visible
-  miss is what makes the other numbers believable.
-- **Don't chase more synthetic defect classes before one real month.** You would
-  be getting better at a world you invented.
-- **Don't build multi-tenancy before there is one real user.**
-- **Don't add dependencies.** Stdlib-only is a real selling point for a tool a CA
-  runs on their own laptop.
+- **Don't add ML to detection.** Rules are why a finance professional trusts the
+  output. The model plans; it must never decide what is wrong.
+- **Don't write a targeted detector for the missed held-out class.**
+- **Don't optimise the close.** It is already fast; see *Measured, and not a
+  problem*.
+- **Don't chase more synthetic defect classes before one real month.**
+- **Don't add dependencies.** Stdlib-only is a real selling point.
 - **Don't "improve" the numbers.** If a change makes proof rate or false-match
   rate look better without the system getting better, it is the wrong change.
 
 ---
 
-## If there is only time for three things
+## If there is only time for two things
 
-1. **Run it on one real month** and write down everything that broke. (1.1)
-2. **Make ingest refuse to close on data it could not fully read.** (1.2)
-3. **Give `agentbench` scenarios the rules planner fails**, then run the model
-   against them and publish the result either way. (2.1, 2.2)
+1. **CI**, so the integrity conditions stop depending on memory.
+2. **One real month**, because every number so far describes a world we invented.
 
-The first two decide whether it is a product. The third decides whether it is
-honestly an AI product.
+Everything else is easier once those two exist.

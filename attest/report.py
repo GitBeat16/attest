@@ -185,6 +185,15 @@ tr.miss td{background:var(--bad-soft)}
 .note b{color:var(--ink);font-weight:600}
 .note.warnb{background:var(--warn-soft);border-left-color:var(--warn)}
 
+.pband{background:var(--warn-soft);border:1px solid var(--warn);border-left:4px solid var(--warn);
+  padding:16px 20px;margin:22px 0 4px;font-size:.92rem;color:var(--ink);line-height:1.6}
+.pband b{font-family:var(--mono);letter-spacing:.04em;text-transform:uppercase;font-size:12px}
+.pband ul{margin:8px 0 0;padding-left:20px}
+.rdy dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 18px;margin:0;font-size:.92rem}
+.rdy dt{color:var(--ink3);font-family:var(--mono);font-size:11.5px;letter-spacing:.03em}
+.rdy dd{margin:0;color:var(--ink2)}
+.rdy .mono{font-family:var(--mono);font-size:12px}
+
 .status{border:1px solid var(--rule);background:var(--surface);padding:24px 26px;
   display:flex;gap:26px;align-items:center;flex-wrap:wrap}
 .status .big{font-family:var(--mono);font-size:1.3rem;font-weight:600;color:var(--warn);
@@ -419,6 +428,44 @@ def render(p: dict) -> str:
   not transferred to this page. What is on this page is evidence: what tied, what
   traced end to end, and what did not.</div>"""
 
+    # --- what was read, and what was not (ROADMAP §1.2) ------------------
+    rd = p.get("readiness") or {}
+    partial_band = ""
+    readiness_section = ""
+    if rd:
+        verdict = rd.get("verdict", "READY")
+        if verdict != "READY":
+            reasons = "".join(f"<li>{esc(r)}</li>" for r in rd.get("reasons", [])[:5])
+            partial_band = (
+                f'<div class="pband"><b>Close marked {esc(verdict.lower())}</b> &mdash; '
+                "it was produced over data that could not be fully read, and must "
+                "not be treated as a complete month.<ul>" + reasons + "</ul></div>"
+            )
+        src = rd.get("sources", {})
+        rej = sum(s.get("rows_rejected", 0) for s in src.values())
+        absent = [n for n, s in src.items() if not s.get("present")]
+        unrec = [f"{n}:{c}" for n, s in src.items()
+                 for c in s.get("columns_unrecognised", [])]
+        rej_lines = "".join(
+            f"<li class='mono'>{esc(x)}</li>"
+            for s in src.values() for x in s.get("rejections", [])[:6]
+        )
+        readiness_section = f"""<h2>What was read</h2>
+<p class="lede">Every source, and what came out of it. A close is only as complete
+  as the rows behind it &mdash; so the rows that did not parse, the columns not
+  recognised, and the range actually covered are stated here rather than
+  assumed.</p>
+<div class="rdy"><dl>
+  <dt>verdict</dt><dd><b>{esc(verdict)}</b></dd>
+  <dt>rows</dt><dd>{rd.get('rows_read', 0):,} read of {rd.get('rows_in', 0):,}
+    {f'&mdash; {rej} rejected' if rej else ''}</dd>
+  <dt>coverage</dt><dd class="mono">{esc(rd.get('coverage', ''))}</dd>
+  <dt>declared</dt><dd class="mono">{esc(rd.get('declared_period', ''))}</dd>
+  {f'<dt>not supplied</dt><dd>{esc(", ".join(absent))}</dd>' if absent else ''}
+  {f'<dt>columns not recognised</dt><dd class="mono">{esc(", ".join(unrec))}</dd>' if unrec else ''}
+</dl></div>
+{f'<div class="note warnb"><b>Rows rejected, not coerced.</b><ul>{rej_lines}</ul></div>' if rej_lines else ''}"""
+
     doc = f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -436,6 +483,7 @@ def render(p: dict) -> str:
 </div></nav>
 
 <div class="wrap">
+{partial_band}
 <header class="page">
   <p class="eyebrow">Close pack &middot; generated {p['generated']}</p>
   <h1><b>{fmt(rc.get('claim_ready', 0))}</b> you can prove today &mdash; inside
@@ -460,6 +508,8 @@ def render(p: dict) -> str:
     <div class="n">{rc.get('monthly_lapsed_count', 0)} claims expire unfiled at a
       {rc.get('late_date','')} close</div></div>
 </div>
+
+{readiness_section}
 
 <h2>The error a match rate can never find</h2>
 <p class="lede">One batch from this month, in full. It reconciles perfectly.</p>
@@ -503,6 +553,7 @@ def render(p: dict) -> str:
   <span class="why">{fmt(p['residual_paise'])} of {fmt(p['volume'])} cannot be
     attributed to any cause &mdash; {p['residual_bps']} bps of volume, against a
     25 bps limit. The close stays open until that is investigated.
+    {'<b>Ingest is ' + esc(rd.get('verdict','').lower()) + ':</b> a close is not attestable over data that could not be fully read, whatever the residual.' if rd and rd.get('verdict') not in ('READY', None) else ''}
     <b>Refusing to certify is the point of an attestation:</b> a system that always
     signs is not attesting to anything.</span>
 </div>

@@ -59,9 +59,12 @@ A_GST_CHARGED = 7_848          # 18% of the charged MDR
 A_STATED_REFUND = 775_220      # what the settlement report deducted
 A_TRUE_REFUND = 1_200_000      # what the merchant's own refund export shows
 
+# Spread across the month so the demo closes a whole month, not a slice of one:
+# the readiness gate (ROADMAP §1.2) correctly marks a close PARTIAL when the
+# supplied rows do not span the declared period, and the demo should not trip it.
 A_SETTLED = date(2026, 8, 14)
 B_SETTLED = date(2026, 8, 7)
-C_SETTLED = date(2026, 8, 21)
+C_SETTLED = date(2026, 8, 31)
 
 # --- batch B: clean -------------------------------------------------------
 B_LINES = 40

@@ -359,6 +359,18 @@ section{margin-top:56px}
 .note.warn{border-left-color:var(--gold-deep);background:var(--warn-soft)}
 .note.bad{border-left-color:var(--bad);background:var(--bad-soft);color:var(--ink)}
 .note.good{border-left-color:var(--good);background:var(--good-soft)}
+
+.rdypanel{margin:20px 0 4px;padding:16px 20px;border-left:2px solid var(--good);
+  background:var(--good-soft);font-size:.92rem;line-height:1.6;color:var(--ink2)}
+.rdypanel.part{border-left-color:var(--gold-deep);background:var(--warn-soft)}
+.rdypanel .vd{font-family:var(--mono);font-size:11px;letter-spacing:.08em;
+  text-transform:uppercase;font-weight:600;color:var(--ink)}
+.rdypanel dl{display:grid;grid-template-columns:max-content 1fr;gap:3px 16px;margin:10px 0 0}
+.rdypanel dt{color:var(--ink3);font-family:var(--mono);font-size:11px}
+.rdypanel dd{margin:0}
+.rdypanel ul{margin:6px 0 0;padding-left:18px}
+.rdypanel .rj{margin-top:10px}
+.rdypanel .mono{font-family:var(--mono);font-size:11.5px}
 .err{margin-top:18px;padding:16px 18px;border-left:2px solid var(--bad);
   background:var(--bad-soft);color:var(--ink);font-size:.94rem}
 .drop{border:1.5px dashed var(--rule2);background:var(--surface);
@@ -626,6 +638,9 @@ footer p{color:var(--on-deep3);font-size:.89rem;max-width:38ch;line-height:1.6;m
   <p class="kicker" id="rkicker">Close complete</p>
   <h1 id="rtitle"></h1>
 
+  <!-- what was read (ROADMAP §1.2) -->
+  <div id="readiness" hidden></div>
+
   <!-- money first -->
   <div class="moneyband"><div class="money">
     <div class="m1"><div class="t">Proven &mdash; claim-ready</div>
@@ -862,6 +877,48 @@ async function auth_sdk() {
 const $ = id => document.getElementById(id);
 const show = (id, on = true) => { const e = $(id); if (e) e.hidden = !on; };
 const pc = x => (x * 100).toFixed(1) + '%';
+const escHtml = t => String(t).replace(/[&<>"]/g,
+  c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// The pre-close readiness report (ROADMAP §1.2): what was read, what was not,
+// and whether the covered range is the month that was declared. A close over
+// data that could not be fully read is not a complete month, and the app must
+// say so rather than show a match rate as if nothing were missing.
+function renderReadiness(s) {
+  const el = $('readiness'), rd = s.readiness;
+  if (!el) return;
+  if (!rd) { el.hidden = true; return; }
+  el.hidden = false;
+  const partial = rd.verdict !== 'READY';
+  el.className = 'rdypanel' + (partial ? ' part' : '');
+  const src = rd.sources || {};
+  const rej = Object.values(src).reduce((a, x) => a + (x.rows_rejected || 0), 0);
+  const cost = (s.evidence_cost || []);
+  const absent = cost.length
+    ? cost.map(c => `<li><span class="mono">${escHtml(c.source)}</span> &mdash; ${escHtml(c.cost)}</li>`).join('')
+    : (rd.reasons || []).filter(r => /not supplied/.test(r))
+        .map(r => `<li>${escHtml(r)}</li>`).join('');
+  const unrec = [];
+  for (const [n, x] of Object.entries(src))
+    (x.columns_unrecognised || []).forEach(c => unrec.push(`${n}:${c}`));
+  const rejLines = [];
+  for (const x of Object.values(src))
+    (x.rejections || []).slice(0, 5).forEach(r => rejLines.push(r));
+  el.innerHTML = `
+    <span class="vd">${partial ? 'Close marked ' + escHtml(rd.verdict.toLowerCase())
+      : 'All supplied inputs read in full'}</span>${
+      partial ? ' &mdash; produced over data that could not be fully read; treat it as an incomplete month.' : ''}
+    <dl>
+      <dt>rows</dt><dd>${(rd.rows_read || 0).toLocaleString()} read of ${(rd.rows_in || 0).toLocaleString()}${rej ? ` &mdash; ${rej} rejected` : ''}</dd>
+      <dt>coverage</dt><dd class="mono">${escHtml(rd.coverage || '')}</dd>
+      ${absent ? `<dt>not supplied</dt><dd><ul>${absent}</ul></dd>` : ''}
+      ${unrec.length ? `<dt>columns not recognised</dt><dd class="mono">${escHtml(unrec.join(', '))}</dd>` : ''}
+    </dl>
+    ${rejLines.length ? `<div class="rj"><b>Rows rejected, not coerced</b><ul>${
+      rejLines.map(r => `<li class="mono">${escHtml(r)}</li>`).join('')}</ul></div>` : ''}
+    ${partial && rd.reasons && !absent ? `<ul>${
+      rd.reasons.slice(0, 4).map(r => `<li>${escHtml(r)}</li>`).join('')}</ul>` : ''}`;
+}
 
 const SOURCES = [
   ['razorpay_settlements.csv', 'Razorpay settlement report', 'Dashboard → Settlements → Reports', true],
@@ -1056,6 +1113,7 @@ function render(out, mode) {
   $('rkicker').textContent = mode === 'demo'
     ? 'Demo close · synthetic data, real engine' : 'Close complete';
   $('rtitle').textContent = `${s.merchant} · ${s.period}`;
+  renderReadiness(s);
 
   // --- money first ---------------------------------------------------
   // The big number is what can be PROVEN, not the whole exposure pile. Only
@@ -1076,11 +1134,15 @@ function render(out, mode) {
   $('m-cov-d').textContent =
     `${s.lines_proven.toLocaleString()} of ${s.lines_total.toLocaleString()} lines trace end to end`;
   const ok = s.attestable;
+  const rdVerdict = (s.readiness && s.readiness.verdict) || 'READY';
+  const residualOver = s.residual_bps > 25;
   $('m-status').textContent = ok ? 'SIGNED' : 'REVIEW REQUIRED';
   $('m-status').className = 'v st' + (ok ? ' ok' : '');
   $('m-status-d').textContent = ok
     ? `residual ${s.residual_bps} bps, inside the 25 bps limit`
-    : `${s.residual_bps} bps unexplained, against a 25 bps limit`;
+    : residualOver
+      ? `${s.residual_bps} bps unexplained, against a 25 bps limit`
+      : `ingest ${rdVerdict.toLowerCase()} — not attestable over data that could not be fully read`;
 
   // --- naive versus attest --------------------------------------------
   if (nv) {

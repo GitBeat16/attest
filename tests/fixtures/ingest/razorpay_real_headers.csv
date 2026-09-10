@@ -1,0 +1,3 @@
+settlement_id,settled_at,payment_id,order_id,amount,fee,tax,credit,type
+setl_aaaa000001,2026-08-04,pay_01,ORD1,1000.00,20.00,3.60,976.40,payment
+setl_aaaa000002,2026-08-28,pay_03,ORD3,1500.00,30.00,5.40,1464.60,payment

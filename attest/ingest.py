@@ -1,9 +1,17 @@
 """Load the source documents and resolve keys.
 
-Two jobs, and the second one is where most reconciliations quietly go wrong.
+Three jobs now, and the first one is new.
+
+READINESS is the gate. `readiness.py` reads every source through an explicit
+column-alias map, rejects — never coerces — a row it cannot parse, and compares
+the range actually covered with the declared month. The close is REFUSED if the
+settlement report could not be read in full, marked PARTIAL if anything else is
+incomplete, and READY only when every supplied row parsed. See `readiness.py`.
 
 LOADING is mechanical: parse decimal rupee strings back into integer paise the
-moment they cross the boundary, and never let a float touch the arithmetic.
+moment they cross the boundary, and never let a float touch the arithmetic. That
+parsing now lives in `readiness.parse_money`, which handles the shapes a real
+export actually uses (`₹1,23,456.78`, `1,234.00 Dr`, an accounting negative).
 
 KEY RESOLUTION is the interesting part. A bank statement does not contain
 Razorpay's settlement_id -- it contains a UTR issued by the correspondent bank.
@@ -13,23 +21,30 @@ against the authoritative identifier and treats narration as a hint at best.
 """
 from __future__ import annotations
 
-import csv
 import json
 import re
 from dataclasses import dataclass, field
-from datetime import date, timedelta
-from decimal import Decimal
+from datetime import date
 from pathlib import Path
 
-
-def _paise(s: str | None) -> int:
-    if s is None or s == "":
-        return 0
-    return int((Decimal(s) * 100).to_integral_value())
+from . import readiness as rdy
+from .readiness import MISSING, Readiness, assess_coverage, finalise, read_table
 
 
-def _d(s: str | None) -> date | None:
-    return date.fromisoformat(s) if s else None
+def _p(v) -> int:
+    """A parsed money value from readiness -> integer paise. A blank cell is 0
+    here: on an adjustment/hold row the amount columns are genuinely absent, and
+    that has always meant zero. A *malformed* value never reaches this point --
+    read_table rejected the row."""
+    return 0 if v is MISSING or v is None else int(v)
+
+
+def _dt(v) -> date | None:
+    return v if isinstance(v, date) else None
+
+
+def _s(v) -> str:
+    return "" if v is MISSING or v is None else str(v)
 
 
 # ==========================================================================
@@ -142,43 +157,74 @@ class Corpus:
     disputes: list[DisputeRow]
     mdr_invoice: dict
     terms: dict
+    readiness: Readiness = field(default_factory=Readiness)
 
     def record_count(self) -> int:
+        """Rows that became records. See `rows_in()` for the denominator."""
         return (
             len(self.settlements) + len(self.bank) + len(self.orders)
             + len(self.cod) + len(self.shipments) + len(self.refunds)
             + len(self.disputes)
         )
 
+    def rows_in(self) -> int:
+        """Data rows physically present across the CSV sources, rejected ones
+        included. `record_count()` over `rows_in()` is the honest throughput."""
+        return self.readiness.rows_in()
+
 
 # ==========================================================================
 # Loading
 # ==========================================================================
-def load(src: Path) -> Corpus:
-    def rows(name):
-        with (src / name).open(encoding="utf-8") as f:
-            return list(csv.DictReader(f))
+def _read_json(path: Path, ready: Readiness, label: str, required: bool):
+    if not path.exists():
+        if required:
+            ready.refuse(f"{path.name} was not supplied — {label}")
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8-sig"))
+    except (json.JSONDecodeError, UnicodeError) as e:
+        msg = f"{path.name} is not valid JSON ({e})"
+        ready.refuse(msg) if required else ready.downgrade(msg)
+        return {}
 
-    settlements = [
-        SettlementRow(
-            settlement_id=r["settlement_id"],
-            settled_on=_d(r["settled_on"]),
-            payment_id=r["payment_id"],
-            order_id=r["order_id"],
-            gross=_paise(r["gross_amount"]),
-            mdr=_paise(r["mdr"]),
-            gst_on_mdr=_paise(r["gst_on_mdr"]),
-            net=_paise(r["net_amount"]),
-            row_type=r["row_type"],
-        )
-        for r in rows("razorpay_settlements.csv")
-    ]
+
+def load(src: Path) -> Corpus:
+    src = Path(src)
+    ready = Readiness()
+
+    terms = _read_json(src / "contract_terms.json", ready, "the contracted rates "
+                       "and tolerances live here", required=True)
+    mdr_invoice = _read_json(src / "razorpay_mdr_invoice.json", ready,
+                             "the declared invoice month is the period anchor",
+                             required=True)
+    ready.declared_period = str(mdr_invoice.get("period", ""))
+    declared_date_format = terms.get("date_format")
+
+    def table(name: str):
+        spec = rdy.SPECS[name]
+        rows, sr = read_table(src / name, spec, declared_date_format)
+        ready.sources[name] = sr
+        return rows
+
+    # ---- settlements -> batches ----------------------------------------
+    settlements: list[SettlementRow] = []
+    for r in table("razorpay_settlements.csv"):
+        settlements.append(SettlementRow(
+            settlement_id=_s(r["settlement_id"]),
+            settled_on=_dt(r["settled_on"]),
+            payment_id=_s(r["payment_id"]),
+            order_id=_s(r["order_id"]),
+            gross=_p(r["gross"]),
+            mdr=_p(r["mdr"]),
+            gst_on_mdr=_p(r["gst_on_mdr"]),
+            net=_p(r["net"]),
+            row_type=_s(r["row_type"]) or "captured",
+        ))
 
     batches: dict[str, Batch] = {}
     for r in settlements:
-        b = batches.setdefault(
-            r.settlement_id, Batch(r.settlement_id, r.settled_on)
-        )
+        b = batches.setdefault(r.settlement_id, Batch(r.settlement_id, r.settled_on))
         if r.row_type == "captured":
             b.lines.append(r)
         elif r.row_type == "refund_adjustment":
@@ -188,75 +234,98 @@ def load(src: Path) -> Corpus:
         elif r.row_type == "hold_release":
             b.hold_release += r.net
 
-    bank = [
-        BankRow(
+    # ---- bank statement ----------------------------------------------
+    # `debit_amount` is now read. A debit row (money out: a fee, a transfer,
+    # a reversal) is NOT a settlement credit, and treating its blank credit
+    # column as ₹0 used to turn every one of them into a phantom
+    # ORPHAN_BANK_CREDIT. Debit-only rows are counted and set aside.
+    bank: list[BankRow] = []
+    debit_rows = 0
+    for i, r in enumerate(table("bank_statement.csv")):
+        credit_val = r["credit"]
+        debit_p = _p(r["debit"])
+        if (credit_val is MISSING or _p(credit_val) == 0) and debit_p > 0:
+            debit_rows += 1
+            continue
+        bank.append(BankRow(
             row_id=f"BNK{i:05d}",
-            value_date=_d(r["value_date"]),
-            narration=r["narration"],
-            utr=r["utr"],
-            credit=_paise(r["credit_amount"]),
-        )
-        for i, r in enumerate(rows("bank_statement.csv"))
-    ]
+            value_date=_dt(r["value_date"]),
+            narration=_s(r["narration"]),
+            utr=_s(r["utr"]),
+            credit=_p(credit_val),
+        ))
+    if debit_rows:
+        ready.sources["bank_statement.csv"].note(
+            f"{debit_rows} debit row(s) set aside — money out is not a settlement credit")
 
-    orders = {
-        r["order_id"]: OrderRow(
-            order_id=r["order_id"], placed_on=_d(r["placed_on"]),
-            gross=_paise(r["gross_amount"]), channel=r["channel"],
-            payment_mode=r["payment_mode"],
+    # ---- orders (unique on order_id, enforced in read_table) ---------
+    orders: dict[str, OrderRow] = {}
+    for r in table("orders.csv"):
+        orders[_s(r["order_id"])] = OrderRow(
+            order_id=_s(r["order_id"]), placed_on=_dt(r["placed_on"]),
+            gross=_p(r["gross"]), channel=_s(r["channel"]),
+            payment_mode=_s(r["payment_mode"]),
         )
-        for r in rows("orders.csv")
-    }
 
+    # ---- COD remittances -------------------------------------------
     cod = [
         CodRow(
-            remittance_id=r["remittance_id"], remitted_on=_d(r["remitted_on"]),
-            awb=r["awb"], cod_value=_paise(r["cod_value"]),
-            cod_fee=_paise(r["cod_fee"]), rto_freight=_paise(r["rto_freight"]),
-            adjustment=_paise(r["adjustment"]), net=_paise(r["net_remitted"]),
+            remittance_id=_s(r["remittance_id"]), remitted_on=_dt(r["remitted_on"]),
+            awb=_s(r["awb"]), cod_value=_p(r["cod_value"]), cod_fee=_p(r["cod_fee"]),
+            rto_freight=_p(r["rto_freight"]), adjustment=_p(r["adjustment"]),
+            net=_p(r["net"]),
         )
-        for r in rows("cod_remittances.csv")
+        for r in table("cod_remittances.csv")
     ]
 
-    shipments = {
-        r["awb"]: ShipmentRow(
-            awb=r["awb"], order_id=r["order_id"], shipped_on=_d(r["shipped_on"]),
-            delivered_on=_d(r["delivered_on"]) if r["delivered_on"] else None,
-            cod_value=_paise(r["cod_value"]), status=r["status"],
+    # ---- shipments (unique on awb) --------------------------------
+    shipments: dict[str, ShipmentRow] = {}
+    for r in table("shipments.csv"):
+        shipments[_s(r["awb"])] = ShipmentRow(
+            awb=_s(r["awb"]), order_id=_s(r["order_id"]),
+            shipped_on=_dt(r["shipped_on"]), delivered_on=_dt(r["delivered_on"]),
+            cod_value=_p(r["cod_value"]), status=_s(r["status"]),
         )
-        for r in rows("shipments.csv")
-    }
 
     refunds = [
         RefundRow(
-            refund_id=r["refund_id"], payment_id=r["payment_id"],
-            order_id=r["order_id"], initiated_on=_d(r["initiated_on"]),
-            amount=_paise(r["amount"]),
+            refund_id=_s(r["refund_id"]), payment_id=_s(r["payment_id"]),
+            order_id=_s(r["order_id"]), initiated_on=_dt(r["initiated_on"]),
+            amount=_p(r["amount"]),
         )
-        for r in rows("refunds.csv")
+        for r in table("refunds.csv")
     ]
 
     disputes = [
         DisputeRow(
-            dispute_id=r["dispute_id"], payment_id=r["payment_id"],
-            order_id=r["order_id"], raised_on=_d(r["raised_on"]),
-            amount=_paise(r["amount"]),
+            dispute_id=_s(r["dispute_id"]), payment_id=_s(r["payment_id"]),
+            order_id=_s(r["order_id"]), raised_on=_dt(r["raised_on"]),
+            amount=_p(r["amount"]),
         )
-        for r in rows("disputes.csv")
+        for r in table("disputes.csv")
     ]
 
-    return Corpus(
-        settlements=settlements,
-        batches=batches,
-        bank=bank,
-        orders=orders,
-        cod=cod,
-        shipments=shipments,
-        refunds=refunds,
-        disputes=disputes,
-        mdr_invoice=json.loads((src / "razorpay_mdr_invoice.json").read_text()),
-        terms=json.loads((src / "contract_terms.json").read_text()),
+    corpus = Corpus(
+        settlements=settlements, batches=batches, bank=bank, orders=orders,
+        cod=cod, shipments=shipments, refunds=refunds, disputes=disputes,
+        mdr_invoice=mdr_invoice, terms=terms, readiness=ready,
     )
+
+    # ---- coverage, then the verdict --------------------------------
+    _have_dates = any(o.placed_on for o in orders.values()) or \
+        any(b.settled_on for b in batches.values())
+    if ready.declared_period and _have_dates:
+        assess_coverage(
+            ready,
+            order_dates=[o.placed_on for o in orders.values() if o.placed_on],
+            settlement_dates=[b.settled_on for b in batches.values() if b.settled_on],
+            other_dates=(
+                [r.initiated_on for r in refunds if r.initiated_on]
+                + [d.raised_on for d in disputes if d.raised_on]
+            ),
+        )
+    finalise(ready)
+    return corpus
 
 
 # ==========================================================================

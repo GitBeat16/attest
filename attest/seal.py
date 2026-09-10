@@ -59,8 +59,25 @@ def canonical(p: dict) -> dict:
     rendering of a fact and not the fact itself, and rounding it would let two
     materially different closes seal identically.
     """
+    # A partial close must not seal indistinguishably from a whole one, so the
+    # coverage facts — rows in, rows rejected, which sources were supplied, the
+    # range actually covered — are part of what the digest attests to. A pack
+    # produced before readiness existed carries none, and seals as it did.
+    rd = p.get("readiness") or {}
+    coverage = {
+        "verdict": str(rd.get("verdict", "READY")),
+        "rows_in": int(rd.get("rows_in", p.get("records", 0)) or 0),
+        "rows_read": int(rd.get("rows_read", p.get("records", 0)) or 0),
+        "rows_rejected": int(rd.get("rows_rejected", 0) or 0),
+        "rows_outside_period": int(rd.get("rows_outside_period", 0) or 0),
+        "sources_supplied": sorted(
+            n for n, s in (rd.get("sources") or {}).items() if s.get("present")
+        ),
+        "activity_first": str(rd.get("activity_first") or ""),
+        "activity_last": str(rd.get("activity_last") or ""),
+    }
     return {
-        "v": 2,
+        "v": 3,
         "merchant": str(p.get("merchant", ""))[:200],
         "period": str(p.get("period", "")),
         "records": int(p.get("records", 0)),
@@ -73,6 +90,7 @@ def canonical(p: dict) -> dict:
         "volume_paise": int(p.get("volume", 0)),
         "residual_paise": int(p.get("residual_paise", 0)),
         "attestable": bool(p.get("signed", False)),
+        "coverage": coverage,
         # The tier is a material assertion of the pack — only PROVEN findings are
         # framed as claim-ready — so a verifier reading the embedded canonical
         # block alone must see it. An unmapped or tier-less row seals as

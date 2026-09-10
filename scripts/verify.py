@@ -111,6 +111,18 @@ def check_pipeline() -> dict:
     if elapsed > 5:
         record(WARN, "throughput", f"{elapsed:.1f}s is slower than expected")
 
+    # The benchmark corpus is clean ISO with exact headers. If it stops reading
+    # READY, ingest has started rejecting or silently dropping rows it should
+    # not — fail the build rather than publish numbers over a partial read.
+    rd = corpus.readiness
+    if rd.ready and rd.rows_rejected() == 0:
+        record(PASS, "benchmark corpus reads READY",
+               f"{rd.rows_read():,}/{rd.rows_in():,} rows, 0 rejected")
+    else:
+        record(FAIL, "benchmark corpus reads READY",
+               f"verdict {rd.verdict}, {rd.rows_rejected()} rejected: "
+               + "; ".join(rd.reasons[:2]))
+
     card = score(corpus, res, aud, ROOT / "data" / "truth")
     return {
         "match": match_rate, "proof": proof_rate, "fmr": fmr,
@@ -472,6 +484,38 @@ def check_money_tests() -> None:
     record(PASS if r.returncode == 0 else FAIL, "money edge cases", line.strip())
 
 
+def check_readiness() -> None:
+    """The ingest gate: never close on data that could not be fully read.
+    ROADMAP §1.2. A real export differs from the generator's in every boring
+    way, and each of those must produce a stated verdict, never a silent
+    partial close."""
+    section("READINESS")
+    import subprocess as sp
+    r = sp.run([sys.executable, "tests/test_ingest_readiness.py"], cwd=ROOT,
+               capture_output=True, text=True)
+    line = (r.stdout.strip().splitlines() or ["no output"])[-1]
+    record(PASS if r.returncode == 0 else FAIL, "ingest readiness",
+           line.strip() or r.stderr[-300:])
+
+    # The refuse/partial verdict must actually reach the close: a PARTIAL ingest
+    # can never be SIGNED, whatever the residual.
+    from attest.ingest import load
+    import tempfile as _tf, json as _json
+    d = Path(_tf.mkdtemp()) / "sources"
+    d.mkdir(parents=True)
+    (d / "razorpay_settlements.csv").write_text(
+        (ROOT / "tests/fixtures/ingest/half_month_settlements.csv").read_text())
+    (d / "razorpay_mdr_invoice.json").write_text(_json.dumps(
+        {"period": "2026-08", "total_tax": ""}))
+    (d / "contract_terms.json").write_text(_json.dumps(
+        {"merchant": "T", "period": "2026-08", "contracted_mdr_rate_pct": "2.00",
+         "gst_on_mdr_rate_pct": "18.00", "courier_cod_fee_pct": "1.50",
+         "courier_rto_freight_inr": "85.00"}))
+    verdict = load(d).readiness.verdict
+    record(PASS if verdict == "PARTIAL" else FAIL,
+           "a half-month reads PARTIAL, not READY", f"verdict {verdict}")
+
+
 # ==========================================================================
 def check_controller() -> None:
     """The layer above the engine. Checked for safety first, ability second."""
@@ -609,6 +653,7 @@ def main() -> None:
         check_tiers()
         check_outputs()
         check_money_tests()
+        check_readiness()
         check_demo()
         check_api()
         check_controller()

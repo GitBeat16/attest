@@ -235,7 +235,8 @@ def main() -> None:
         P(f"  Zero false positives across {len(rows)} independently seeded worlds.")
 
     if ctl["attestable"] and not ctl["false_positives"]:
-        P("  It refused all twenty defective months and signed the clean one, so")
+        P(f"  It refused all {len(rows)} defective months and signed the clean "
+          "one, so")
         P("  the refusal is a decision rather than a default.")
     elif not ctl["attestable"]:
         P("  It refused a month with nothing wrong in it. Either the residual")
@@ -245,6 +246,51 @@ def main() -> None:
     if args.json:
         args.json.write_text(json.dumps(rows, indent=2), encoding="utf-8")
         P(f"  full table -> {args.json}")
+
+    # ---- the gates -------------------------------------------------------
+    # These are not thresholds anyone may tune. They are the two conditions
+    # that make every other number in this project mean anything, plus the
+    # control that proves the refusal is a decision. A human reading a table
+    # will eventually miss one of these; a build will not.
+    failures = []
+
+    if fp_total:
+        failures.append(
+            f"{fp_total} false positive(s) in worlds {worlds_with_fp} — "
+            "fix the cause, never the seed that exposed it")
+
+    if ctl["false_positives"] or ctl["exceptions"]:
+        failures.append(
+            f"the clean control raised {ctl['exceptions']} exception(s) and "
+            f"{ctl['false_positives']} false positive(s) — a month with nothing "
+            "wrong in it must produce nothing")
+
+    if not ctl["attestable"]:
+        failures.append(
+            f"the clean control was refused at {ctl['residual_bps']:.1f} bps — "
+            "if a spotless month cannot be signed, the refusal means nothing")
+
+    hi_holdout = max(r["holdout_recall"] for r in rows)
+    if hi_holdout >= 100.0:
+        failures.append(
+            "held-out recall reached 100% — invariant 4. A detector was written "
+            "for a class that was planted with none, deliberately or by "
+            "accident. The visible miss is the evidence the score is not "
+            "circular; losing it costs more than the point gained")
+
+    P("")
+    if failures:
+        P("  GATE FAILED")
+        P("  " + "-" * 76)
+        for f in failures:
+            P("    · " + f)
+        P("")
+        sys.exit(1)
+
+    P(f"  Gates passed — 0 false positives across {len(rows)} worlds and the "
+      "control,")
+    P(f"  clean control signs at {ctl['residual_bps']:.1f} bps, held-out recall "
+      f"{hi_holdout:.0f}% (must stay under 100).")
     P("")
 
 
