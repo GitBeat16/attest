@@ -118,8 +118,17 @@ these numbers.
   seed.
 - **Move the CI gate to the pooled number.** It is the sensitive one.
 
-**Exit condition:** the README quotes pooled per-class recall, and CI fails if
-pooled held-out recall reaches 100%.
+**BUILT.** `scripts/stability.py` prints pooled per-class recall across the 20
+worlds, the CI gate reads the pooled held-out figure rather than a per-world
+maximum, and `verify.py` now checks the README's pooled claims against what the
+code actually produces — a README that disagrees with the engine fails the build.
+
+**Exit condition — met.** The README quotes 75.0% held-out (60 of 80) and
+**99.4%** designed-for (1054 of 1060), corrected from the 100% that held only on
+one seed, with the per-class table showing `OUT_OF_PERIOD_SETTLEMENT` at 0/20.
+Two further gates: pooled held-out reaching 100% fails the build, and so does a
+run in which no held-out defects were planted at all — a vacuous score must not
+pass silently.
 
 ---
 

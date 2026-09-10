@@ -81,6 +81,9 @@ LINES PROVEN (evidence chain)        743/1018 =  73.0%
 MATCHES OVERTURNED (adversarial)      15/22   =  68.2%
 
 recall, held-out defect classes            75.0%   (3 of 4 found, 1 missed)
+  pooled over 20 seeded worlds             75.0%   (60 of 80 instances)
+recall, designed-for classes              100.0%   on this seed
+  pooled over 20 seeded worlds              99.4%   (1054 of 1060)
 false positives                                0
 exposure under review                 ₹86,765.90   across 283 items
   proven — claim-ready                    ₹832.49   arithmetic disagrees with the contract
@@ -147,9 +150,28 @@ Because the truth exists before the system does, every accuracy figure is
 
 **Four defect classes were planted with no detector written for them.** Three
 were caught anyway by generic integrity checks. One is still missed, and it is
-reported as missed. Recall on the classes we designed for is 100%, which on its
-own proves nothing at all. Recall on the held-out classes is **75%** — that is the
+reported as missed. Recall on the classes we designed for is 100% on this seed —
+99.4% pooled across twenty independently seeded worlds, because `UTR_UNRESOLVABLE`
+and `CHARGEBACK_ORPHAN` miss on some months — and on its own it proves nothing at
+all. Recall on the held-out classes is **75%** — that is the
 number that means something, and the missed class is deliberately left unfixed.
+
+**Why the pooled figure is the honest one.** In any single world each held-out
+class plants exactly one instance, so per-world held-out recall can only read 0,
+25, 50, 75 or 100 percent — a four-point scale that looks stable because nothing
+was varying. Pooled over twenty worlds it rests on eighty instances, and the
+picture is sharper than "one of four missed":
+
+| held-out class | found |
+|---|---|
+| `DUPLICATE_AWB` | 20 / 20 |
+| `DUPLICATE_SETTLEMENT_LINE` | 20 / 20 |
+| `ORPHAN_BANK_CREDIT` | 20 / 20 |
+| **`OUT_OF_PERIOD_SETTLEMENT`** | **0 / 20 — never caught, in any world** |
+
+Three classes caught every single time and one caught never. That is systematic,
+not noise, and it is exactly what invariant 4 predicts. `scripts/stability.py`
+prints this table, and CI fails if the pooled figure ever reaches 100%.
 
 The corpus also separates **defects** from **world facts** — things that make
 reconciliation genuinely hard without anyone having erred, such as two identical

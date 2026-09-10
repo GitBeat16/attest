@@ -132,6 +132,14 @@ def one_world(seed: int, orders: int, clean: bool = False) -> dict:
             "holdout_recall": card.holdout_recall() * 100,
             "holdout_caught": sum(c.detected for c in card.by_class.values() if c.held_out),
             "holdout_planted": sum(c.planted for c in card.by_class.values() if c.held_out),
+            # Per-class counts, carried so the caller can POOL them. A per-world
+            # percentage cannot be averaged into anything meaningful here: each
+            # held-out class plants exactly one instance, so per-world held-out
+            # recall only ever reads 0, 25, 50, 75 or 100. Summing the counts
+            # first and dividing once turns a 4-point scale into an 80-point one.
+            "by_class": {k: {"planted": v.planted, "detected": v.detected,
+                             "held_out": v.held_out}
+                         for k, v in card.by_class.items()},
             "false_positives": len(card.false_positives),
             "fp_detail": card.false_positives[:5],
             "suppressed": card.suppressed,
@@ -212,6 +220,37 @@ def main() -> None:
     P(f"    {'signed the close':<22}{n_att:>6} of {len(rows)}   "
       f"({len(rows) - n_att} refused)")
 
+    # ---- pooled per-class recall -----------------------------------------
+    # The honest denominator. Ranges above describe how one world varied from
+    # another; this describes how the system did against every defect planted.
+    pooled: dict[str, dict] = {}
+    for r in rows:
+        for cls, c in r["by_class"].items():
+            d = pooled.setdefault(cls, {"planted": 0, "detected": 0,
+                                        "held_out": c["held_out"]})
+            d["planted"] += c["planted"]
+            d["detected"] += c["detected"]
+
+    P("")
+    P(f"  POOLED ACROSS {len(rows)} WORLDS — every defect planted, counted once")
+    P("  " + "-" * 76)
+    P(f"    {'class':<30}{'held':>6}{'planted':>9}{'found':>7}{'recall':>9}")
+    for cls, d in sorted(pooled.items(), key=lambda x: (not x[1]["held_out"], x[0])):
+        rec = d["detected"] / d["planted"] * 100 if d["planted"] else 0.0
+        P(f"    {cls:<30}{'YES' if d['held_out'] else '':>6}"
+          f"{d['planted']:>9}{d['detected']:>7}{rec:>8.1f}%")
+    P("  " + "-" * 76)
+
+    def _pool(held: bool) -> tuple[int, int, float]:
+        pl = sum(d["planted"] for d in pooled.values() if d["held_out"] is held)
+        dt = sum(d["detected"] for d in pooled.values() if d["held_out"] is held)
+        return pl, dt, (dt / pl * 100 if pl else 0.0)
+
+    ho_planted, ho_found, ho_recall = _pool(True)
+    df_planted, df_found, df_recall = _pool(False)
+    P(f"    {'HELD OUT':<30}{'':>6}{ho_planted:>9}{ho_found:>7}{ho_recall:>8.1f}%")
+    P(f"    {'designed-for':<30}{'':>6}{df_planted:>9}{df_found:>7}{df_recall:>8.1f}%")
+
     # ---- the control: a world with the traps but no errors ----------------
     P("")
     P("  CONTROL — same world, world facts intact, no defects planted")
@@ -270,13 +309,22 @@ def main() -> None:
             f"the clean control was refused at {ctl['residual_bps']:.1f} bps — "
             "if a spotless month cannot be signed, the refusal means nothing")
 
-    hi_holdout = max(r["holdout_recall"] for r in rows)
-    if hi_holdout >= 100.0:
+    # Gated on the POOLED figure, not the per-world maximum. Per world each
+    # held-out class plants one instance, so a single lucky world reads 100%
+    # and would fail this gate spuriously; pooled, 100% means every held-out
+    # instance in every world was caught, which is the thing invariant 4
+    # actually forbids.
+    if ho_recall >= 100.0:
         failures.append(
-            "held-out recall reached 100% — invariant 4. A detector was written "
-            "for a class that was planted with none, deliberately or by "
-            "accident. The visible miss is the evidence the score is not "
-            "circular; losing it costs more than the point gained")
+            f"pooled held-out recall reached 100% ({ho_found}/{ho_planted}) — "
+            "invariant 4. A detector was written for a class that was planted "
+            "with none, deliberately or by accident. The visible miss is the "
+            "evidence the score is not circular; losing it costs more than the "
+            "point gained")
+    if ho_planted == 0:
+        failures.append(
+            "no held-out defects were planted at all — the held-out score is "
+            "vacuous and this gate is testing nothing")
 
     P("")
     if failures:
@@ -289,8 +337,8 @@ def main() -> None:
 
     P(f"  Gates passed — 0 false positives across {len(rows)} worlds and the "
       "control,")
-    P(f"  clean control signs at {ctl['residual_bps']:.1f} bps, held-out recall "
-      f"{hi_holdout:.0f}% (must stay under 100).")
+    P(f"  clean control signs at {ctl['residual_bps']:.1f} bps, pooled held-out "
+      f"recall {ho_recall:.1f}% on {ho_planted} instances (must stay under 100).")
     P("")
 
 

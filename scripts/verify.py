@@ -609,6 +609,65 @@ def check_engine() -> None:
 
 
 # ==========================================================================
+def check_pooled_recall() -> None:
+    """The README's pooled figures, checked rather than asserted.
+
+    A per-world recall percentage cannot be averaged into anything meaningful:
+    each held-out class plants one instance per world, so per-world held-out
+    recall only ever reads 0, 25, 50, 75 or 100. The pooled figure sums the
+    counts first and divides once, which is the number the README quotes -- so
+    it is the number that has to be true.
+    """
+    section("POOLED RECALL")
+    sys.path.insert(0, str(ROOT / "scripts"))
+    try:
+        from stability import HEADLINE_SEED, one_world
+    except Exception as e:                      # pragma: no cover
+        record(WARN, "pooled recall", f"harness unavailable: {type(e).__name__}")
+        return
+
+    pooled: dict[str, dict] = {}
+    n = 20
+    for i in range(n):
+        for cls, c in one_world(HEADLINE_SEED + i, 1200)["by_class"].items():
+            d = pooled.setdefault(cls, {"planted": 0, "detected": 0,
+                                        "held_out": c["held_out"]})
+            d["planted"] += c["planted"]
+            d["detected"] += c["detected"]
+
+    def pool(held: bool) -> tuple[int, int, float]:
+        pl = sum(d["planted"] for d in pooled.values() if d["held_out"] is held)
+        dt = sum(d["detected"] for d in pooled.values() if d["held_out"] is held)
+        return pl, dt, (dt / pl * 100 if pl else 0.0)
+
+    ho_pl, ho_dt, ho = pool(True)
+    df_pl, df_dt, df = pool(False)
+
+    if ho_pl == 0:
+        record(FAIL, "held-out defects are planted",
+               "none planted -- the held-out score is vacuous")
+    else:
+        record(PASS, "held-out defects are planted", f"{ho_pl} across {n} worlds")
+
+    # Invariant 4. Not a target to beat -- a condition that must keep failing.
+    if ho < 100.0:
+        record(PASS, "held-out recall stays under 100%",
+               f"{ho:.1f}% ({ho_dt}/{ho_pl}) pooled")
+    else:
+        record(FAIL, "held-out recall stays under 100%",
+               f"{ho:.1f}% -- a targeted detector was written for a held-out class")
+
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    for label, got, planted, found in (
+            ("held-out", ho, ho_pl, ho_dt), ("designed-for", df, df_pl, df_dt)):
+        quoted = f"{got:.1f}%"
+        if quoted in readme and f"{found} of {planted}" in readme:
+            record(PASS, f"README quotes pooled {label} recall", f"{quoted} ({found} of {planted})")
+        else:
+            record(FAIL, f"README quotes pooled {label} recall",
+                   f"code says {quoted} ({found} of {planted}) -- README disagrees")
+
+
 def check_razorpay() -> None:
     section("RAZORPAY — LIVE")
     import os
@@ -658,6 +717,7 @@ def main() -> None:
         check_api()
         check_controller()
         check_engine()
+        check_pooled_recall()
         check_razorpay()
     except Exception as ex:                       # a crash is itself a failure
         import traceback
