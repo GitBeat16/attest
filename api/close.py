@@ -340,6 +340,9 @@ def handle(body: dict) -> dict:
         # pack. Who and when are already recorded -- user_id defaults to
         # auth.uid(), created_at to now() -- so they are not repeated.
         "readiness_verdict": s["readiness_verdict"],
+        # recoverable_paise is meaningless without this: claim windows
+        # expire, so the same close run a week later reports less money.
+        "claims_as_at": s["as_at"],
         "rows_in": s["readiness"]["rows_in"],
         "rows_read": s["readiness"]["rows_read"],
         "rows_rejected": s["readiness"]["rows_rejected"],

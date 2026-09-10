@@ -42,6 +42,7 @@ create table if not exists public.attest_closes (
   -- The input fingerprint. See db/002_audit_trail.sql for why these
   -- exist and why `actor`/`ran_at` deliberately do not.
   readiness_verdict  text,
+  claims_as_at       date,     -- recoverable_paise is relative to this date
   rows_in            integer,
   rows_read          integer,
   rows_rejected      integer,

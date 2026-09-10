@@ -90,6 +90,15 @@ exposure under review                 ₹86,765.90   across 283 items
   cannot prove                        ₹79,436.57   a link in the evidence chain is missing
   needs your input                     ₹6,496.84   depends on a fact Attest cannot see
 cost of closing monthly                ₹5,365.00   (16 claims expire unfiled)
+```
+
+Every recovery figure above is **as at 2026-09-03** — three days after the
+period ends, a realistic close date. Claim windows expire, so a lapsed claim
+stops being counted: the same month re-run a week later reports less money,
+and that is the argument, not a defect. The pack states its own as-at date
+for this reason; a recovery total quoted without one is half a fact.
+
+```
 unexplained residual                  ₹46,126.65   (251.8 bps)  -> NOT ATTESTABLE
 ```
 
@@ -231,7 +240,7 @@ python3 -m attest.seal --verify web/close-pack.html
 ```
 
 ```
-digest     0ba7e1c2 3abe58c3 830da4af cb5b6cfc
+digest     d907888a e1230bef deccf9f6 42b898a8
 INTACT     the whole document hashes to its printed digest.
 ```
 

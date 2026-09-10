@@ -158,6 +158,31 @@ def test_no_merchant_data_reaches_the_model_provider() -> None:
                 f"{label} reached the model provider in prompt {i + 1}")
 
 
+def test_the_results_screen_escapes_what_came_out_of_the_files() -> None:
+    """The same bug as the seal, in the other artefact.
+
+    `c.id` in the evidence chain is `ln.order_id` / `ln.payment_id`, read
+    straight out of the uploaded CSV, and it was interpolated into innerHTML.
+    A merchant whose order ids contain markup -- or anyone who hands a CA a
+    crafted export -- got script execution on the screen that decides whether
+    a month can be signed.
+
+    Note how it survived: an escape helper already existed in this file and was
+    used in exactly ONE place. A fix that is present somewhere reads, to a
+    reviewer, as a fix that is present.
+    """
+    app = (ROOT / "web" / "app.html").read_text(encoding="utf-8")
+    assert "const escHtml" in app, "the escape helper is gone"
+    raw = ["${c.id}", "${c.note}", "${c.stage}", "${c.value}",
+           "${c.merchant}", "${c.period}",
+           "${e.label}", "${e.evidence}", "${e.counterparty}",
+           "${v.label}", "${n.reference}", "${n.evidence}"]
+    found = [t for t in raw if t in app]
+    assert not found, (
+        f"interpolated into innerHTML without escaping: {found} — "
+        "these carry values read out of the merchant's own files")
+
+
 # ---------------------------------------------------------- the secrets ---
 def test_no_secret_appears_in_an_error_message() -> None:
     from attest.sources.razorpay_api import RazorpayClient, RazorpayError

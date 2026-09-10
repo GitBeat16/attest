@@ -992,8 +992,8 @@ async function accept(list) {
     placed.push(meta[1]);
   }
   $('matched').innerHTML =
-    placed.map(l => `<span class="chip">${l} ✓</span>`).join('') +
-    rejected.map(n => `<span class="chip no">${n} — not recognised</span>`).join('');
+    placed.map(l => `<span class="chip">${escHtml(l)} ✓</span>`).join('') +
+    rejected.map(n => `<span class="chip no">${escHtml(n)} — not recognised</span>`).join('');
 }
 (function wireDrop() {
   const zone = $('drop'), input = $('dropinput');
@@ -1123,7 +1123,7 @@ function render(out, mode) {
   const bt = s.recoverable_by_tier || {};
   $('m-money').textContent = s.claim_ready_display || '₹0.00';
   $('m-money-d').innerHTML = [
-    `${s.recoverable_display} total exposure under review`,
+    `${s.recoverable_display} total exposure under review (claim windows as at ${(s.recovery && s.recovery.as_at) || s.as_at || '—'})`,
     bt.UNPROVEN ? `${bt.UNPROVEN.display} evidence missing` : null,
     bt.NEEDS_INPUT ? `${bt.NEEDS_INPUT.display} needs your input` : null,
   ].filter(Boolean).join(' &middot; ');
@@ -1281,7 +1281,7 @@ function render(out, mode) {
     const needed = (inv.resolution && inv.resolution.needed) || [];
     if (needed.length) {
       $('resolve-list').innerHTML = needed.map(n =>
-        `<li><b>${n.evidence}</b><br>for ${n.for} (${n.exposure_display}), reference ${n.reference}</li>`).join('');
+        `<li><b>${escHtml(n.evidence)}</b><br>for ${escHtml(n.for)} (${escHtml(n.exposure_display)}), reference ${escHtml(n.reference)}</li>`).join('');
       show('resolve');
     } else show('resolve', false);
     show('ctrl-wrap');
@@ -1291,9 +1291,9 @@ function render(out, mode) {
   if (out.chain?.length) {
     $('chain').innerHTML = out.chain.map(c => `
       <div class="cstep ${c.status === 'ok' ? '' : c.status}">
-        <span class="s">${c.stage}</span>
-        <span><span class="id">${c.id}</span><span class="nt">${c.note}</span></span>
-        <span class="val">${c.value}</span>
+        <span class="s">${escHtml(c.stage)}</span>
+        <span><span class="id">${escHtml(c.id)}</span><span class="nt">${escHtml(c.note)}</span></span>
+        <span class="val">${escHtml(c.value)}</span>
         ${c.status === 'break' ? '<span class="flag">break</span>' : ''}
       </div>`).join('');
     show('chain-wrap');
@@ -1324,18 +1324,18 @@ function render(out, mode) {
 
   $('exlist').innerHTML = claims.map((e, i) => `
     <div class="ex ${e.urgency === 'lapsed' ? 'dead' : ''}" data-ex="${s.exceptions_top.indexOf(e)}">
-      <span class="lab"><span class="tier ${TIERCLS[e.tier] || 'ti-unproven'}">${e.tier_label || 'Cannot prove'}</span>
-        ${e.label}<small>${e.evidence}</small></span>
-      <span class="amt">${e.exposure}</span>
-      <span class="meta">${e.counterparty}<br>${deadlineText(e)}</span>
+      <span class="lab"><span class="tier ${TIERCLS[e.tier] || 'ti-unproven'}">${escHtml(e.tier_label || 'Cannot prove')}</span>
+        ${escHtml(e.label)}<small>${escHtml(e.evidence)}</small></span>
+      <span class="amt">${escHtml(e.exposure)}</span>
+      <span class="meta">${escHtml(e.counterparty)}<br>${deadlineText(e)}</span>
       <span class="act">${actFor(e)}</span>
     </div>`).join('');
 
   if (verdicts.length) {
     $('verdicts').innerHTML = verdicts.map(v => `
       <div class="ex">
-        <span class="lab">${v.label}<small>${v.reasoning || v.evidence}</small></span>
-        <span class="amt" style="color:var(--ink3)">${v.exposure}</span>
+        <span class="lab">${escHtml(v.label)}<small>${escHtml(v.reasoning || v.evidence)}</small></span>
+        <span class="amt" style="color:var(--ink3)">${escHtml(v.exposure)}</span>
         <span class="meta">already counted<br>above</span>
         <span class="act"></span>
       </div>`).join('');
@@ -1428,7 +1428,7 @@ $('askwhy').onclick = async () => {
     : `Written by ${r.source} from figures the engine had already computed. It received no source documents and can invent no number.`;
   $('expltext').textContent = r.text;
   $('explfacts').innerHTML = Object.entries(r.facts)
-    .map(([k, v]) => `<li>${k.replace(/_/g, ' ')}: ${v}</li>`).join('');
+    .map(([k, v]) => `<li>${escHtml(k.replace(/_/g, ' '))}: ${escHtml(v)}</li>`).join('');
   show('expl');
 };
 
@@ -1480,10 +1480,10 @@ async function loadHistory() {
   }
   host.innerHTML = data.map(c => `
     <div class="ex">
-      <span class="lab">${c.merchant}<small>${c.period}</small></span>
+      <span class="lab">${escHtml(c.merchant)}<small>${escHtml(c.period)}</small></span>
       <span class="amt">${money(c.recoverable_paise || 0)}</span>
-      <span class="meta">${c.attestable ? 'signed' : 'open'}<br>${c.residual_bps} bps</span>
-      <span class="act"><button class="btn ghost sm" data-pack="${c.id}">Open pack</button></span>
+      <span class="meta">${c.attestable ? 'signed' : 'open'}<br>${escHtml(c.residual_bps)} bps</span>
+      <span class="act"><button class="btn ghost sm" data-pack="${escHtml(c.id)}">Open pack</button></span>
     </div>`).join('');
   document.querySelectorAll('[data-pack]').forEach(b => b.onclick = async () => {
     b.textContent = 'opening…';
