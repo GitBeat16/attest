@@ -286,6 +286,11 @@ def close(src: Path, supplied: list[str], missing: list[str]) -> dict:
         "volume_display": fmt(volume),
         "residual_paise": residual,
         "residual_bps": round(residual_bps, 2),
+        # The date the claim windows were evaluated against. Every figure
+        # below it is relative to this: a lapsed claim is not counted, so
+        # the same month re-run a week later returns less money. Reporting
+        # the amount without the date is reporting half a fact.
+        "as_at": today.isoformat(),
         "recoverable_paise": rec.get("recoverable", 0),
         "recoverable_display": fmt(rec.get("recoverable", 0)),
         "claim_ready_paise": rec.get("claim_ready", 0),

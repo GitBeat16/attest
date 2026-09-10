@@ -29,6 +29,7 @@
 
 alter table public.attest_closes
   add column if not exists readiness_verdict text,      -- READY | PARTIAL | REFUSED
+  add column if not exists claims_as_at     date,      -- recoverable is relative to it
   add column if not exists rows_in           integer,   -- rows the files contained
   add column if not exists rows_read         integer,   -- rows the engine understood
   add column if not exists rows_rejected     integer,   -- the difference, stated

@@ -351,6 +351,19 @@ def check_outputs() -> None:
     # `attest.seal --verify` by eye is the one manual check this product invites
     # a reader to perform, and they would have found two lines where the tool
     # prints one. The README was never checked at all.
+    # Every recovery figure in the pack is relative to a date, because claim
+    # windows expire. The pack and the hosted app once disagreed by Rs 71.58 on
+    # identical inputs -- run.py freezes `today` so the digest is reproducible,
+    # close.py uses the real date -- and neither document said which date it
+    # meant. Both were right; the pack was simply unreadable without it.
+    import re as _re
+    m = _re.search(r"[Cc]laim windows evaluated as at (\d{4}-\d{2}-\d{2})", body)
+    if m:
+        record(PASS, "the pack states the date its claim windows assume", m.group(1))
+    else:
+        record(FAIL, "the pack states the date its claim windows assume",
+               "a recovery total without an as-at date cannot be checked later")
+
     want = grouped(r["digest"])
     for rel, text in (("web/index.html", lb),
                       ("README.md",

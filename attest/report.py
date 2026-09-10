@@ -536,7 +536,10 @@ def render(p: dict) -> str:
   <div><div class="l">Exposure under review</div>
     <div class="v" style="color:var(--gold)">{fmt(rc.get('recoverable', 0))}</div>
     <div class="n">{rc.get('recoverable_count', 0)} items total; the rest is
-      evidence missing or needs your input</div></div>
+      evidence missing or needs your input.<br>
+      <b>Claim windows evaluated as at {rc.get('as_at', '—')}.</b> A claim that
+      has lapsed is not counted here, so this figure falls as the month
+      ages.</div></div>
   <div><div class="l">Lost by closing monthly</div>
     <div class="v no">{fmt(rc.get('monthly_lapsed', 0))}</div>
     <div class="n">{rc.get('monthly_lapsed_count', 0)} claims expire unfiled at a

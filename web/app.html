@@ -1123,7 +1123,7 @@ function render(out, mode) {
   const bt = s.recoverable_by_tier || {};
   $('m-money').textContent = s.claim_ready_display || '₹0.00';
   $('m-money-d').innerHTML = [
-    `${s.recoverable_display} total exposure under review`,
+    `${s.recoverable_display} total exposure under review (claim windows as at ${(s.recovery && s.recovery.as_at) || s.as_at || '—'})`,
     bt.UNPROVEN ? `${bt.UNPROVEN.display} evidence missing` : null,
     bt.NEEDS_INPUT ? `${bt.NEEDS_INPUT.display} needs your input` : null,
   ].filter(Boolean).join(' &middot; ');
