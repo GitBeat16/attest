@@ -66,6 +66,12 @@ jobs:
       - name: Input completeness
         run: python3 tests/test_completeness.py
 
+      # A pack must be able to say what rules produced it, and the ruleset
+      # digest must move when any rule value moves — otherwise the version is
+      # decoration, which in a finance tool is worse than none.
+      - name: Versioning
+        run: python3 tests/test_versioning.py
+
       # INTEGRITY GATE. Fails on any false positive across 20 seeded worlds or
       # the control, on a refused control, or on held-out recall hitting 100%.
       - name: Benchmark stability
@@ -106,5 +112,6 @@ jobs:
       - run: python3 tests/test_ingest_readiness.py
       - run: python3 tests/test_clean_world.py
       - run: python3 tests/test_completeness.py
+      - run: python3 tests/test_versioning.py
       - run: python3 scripts/stability.py --seeds 6
       - run: python3 -m attest.agentbench

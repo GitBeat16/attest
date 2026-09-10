@@ -144,8 +144,28 @@ actually asks about an old pack: **"what rules produced this?"**
   number with nothing behind it is worse than none.
 - Reproducibility is already CI-enforced — this builds on it.
 
-**Exit condition:** a pack from an old engine version can be explained without
-reading today's `main`.
+**BUILT.** Two versions, deliberately different in kind. The **engine version**
+(`attest/__init__.py`, now `0.3.0`) is hand-maintained and described in
+`CHANGELOG.md`, because a refactor that changes no answer should not bump it and
+that is a judgement. The **ruleset digest** (`attest/ruleset.py`) is *computed*
+from the rule values — the two tolerances, the two audit thresholds, the
+residual limit, the unexplained classes, 15 claim windows and 24 tier mappings —
+so it cannot drift when somebody changes a threshold and forgets. Both sit
+inside the sealed block (canonical v4), and the pack body carries a readable
+*What produced this* section with the full window and tier tables.
+
+Found and fixed on the way: **`RESIDUAL_LIMIT_BPS` was defined twice**, in
+`policy.py` and `run.py`. Two sources of truth for the number that decides
+whether a close can be signed. `policy.py` owns it; a test asserts there is
+exactly one definition.
+
+**Exit condition — met, and demonstrated end to end.** Changing one tolerance
+moves the digest (`82be09261684` → `20414e2ad6ca`), the sealed pack records the
+new value, and CI fails twice over: the pack needs resealing *and* the CHANGELOG
+no longer describes the current ruleset. A rule cannot change silently. Ten
+tests in `tests/test_versioning.py`, including that a pack sealed under the
+older canonical v2 shape still verifies — old packs do not break when the code
+moves on, which is the entire point.
 
 ---
 

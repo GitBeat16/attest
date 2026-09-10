@@ -466,6 +466,40 @@ def render(p: dict) -> str:
 </dl></div>
 {f'<div class="note warnb"><b>Rows rejected, not coerced.</b><ul>{rej_lines}</ul></div>' if rej_lines else ''}"""
 
+    # What produced this conclusion. An auditor reading an old pack should not
+    # have to check out the repository at the right commit to find out which
+    # tolerances applied -- the answer belongs in the document.
+    rs = p.get("ruleset") or {}
+    rules_section = ""
+    if rs:
+        from .recovery import WINDOWS
+        from .tiers import LABEL, _MAP
+        win_rows = "".join(
+            f"<tr><td class='mono'>{esc(k)}</td><td>{esc(v[0])}</td>"
+            f"<td class='n'>{int(v[1])} days</td></tr>"
+            for k, v in sorted(WINDOWS.items()))
+        tier_rows = "".join(
+            f"<tr><td class='mono'>{esc(k)}</td><td>{esc(LABEL.get(v, v))}</td></tr>"
+            for k, v in sorted(_MAP.items()))
+        rules_section = f"""<h2>What produced this</h2>
+<p class="lede">The seal proves this document was not edited. This states what
+  was <em>applied</em>. The ruleset digest is computed from the rule values
+  themselves, so a threshold cannot change without it changing &mdash; and the
+  contract rates below are the merchant&rsquo;s, not ours.</p>
+<div class="rdy"><dl>
+  <dt>engine</dt><dd class="mono">{esc(rs.get('engine_version', ''))}</dd>
+  <dt>ruleset</dt><dd class="mono">{esc(rs.get('ruleset_digest', ''))}</dd>
+  <dt>batch tolerance</dt><dd class="mono">{int(rs.get('batch_tolerance_paise', 0))} paise</dd>
+  <dt>line tolerance</dt><dd class="mono">{int(rs.get('line_tolerance_paise', 0))} paise</dd>
+  <dt>residual limit</dt><dd class="mono">{int(rs.get('residual_limit_bps', 0))} bps</dd>
+</dl></div>
+<details><summary>Claim windows and confidence tiers applied</summary>
+<table class="tbl"><thead><tr><th>exception</th><th>counterparty</th><th class="n">window</th></tr></thead>
+<tbody>{win_rows}</tbody></table>
+<table class="tbl"><thead><tr><th>exception</th><th>may assert</th></tr></thead>
+<tbody>{tier_rows}</tbody></table>
+</details>"""
+
     doc = f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -510,6 +544,7 @@ def render(p: dict) -> str:
 </div>
 
 {readiness_section}
+{rules_section}
 
 <h2>The error a match rate can never find</h2>
 <p class="lede">One batch from this month, in full. It reconciles perfectly.</p>

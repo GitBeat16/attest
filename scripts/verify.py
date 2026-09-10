@@ -609,6 +609,32 @@ def check_engine() -> None:
 
 
 # ==========================================================================
+def check_versioning() -> None:
+    """Can an old pack say what produced it?"""
+    section("VERSIONING")
+    from attest import __version__, ruleset
+    from attest.seal import extract
+
+    record(PASS, "engine version declared", __version__)
+    record(PASS, "ruleset digest computed", ruleset.short())
+
+    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    if f"## {__version__}" in changelog and ruleset.short() in changelog:
+        record(PASS, "CHANGELOG describes this version",
+               f"{__version__} @ {ruleset.short()}")
+    else:
+        record(FAIL, "CHANGELOG describes this version",
+               f"no entry pairing {__version__} with {ruleset.short()}")
+
+    _, canon = extract((ROOT / "web" / "close-pack.html").read_text(encoding="utf-8"))
+    rs = (canon or {}).get("ruleset") or {}
+    if rs.get("engine_version") == __version__ and rs.get("ruleset_digest") == ruleset.short():
+        record(PASS, "sealed pack states what produced it",
+               f"v{canon.get('v')} carries {rs['engine_version']} @ {rs['ruleset_digest']}")
+    else:
+        record(FAIL, "sealed pack states what produced it", f"got {rs}")
+
+
 def check_pooled_recall() -> None:
     """The README's pooled figures, checked rather than asserted.
 
@@ -717,6 +743,7 @@ def main() -> None:
         check_api()
         check_controller()
         check_engine()
+        check_versioning()
         check_pooled_recall()
         check_razorpay()
     except Exception as ex:                       # a crash is itself a failure

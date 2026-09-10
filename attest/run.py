@@ -25,9 +25,13 @@ from .ingest import load, resolve, resolve_naive
 from .money import fmt
 from .recovery import build_claims, summarise
 from .readiness import corroborate
+from . import ruleset
 from .score import render, score
 
-RESIDUAL_LIMIT_BPS = 25          # 0.25% of period volume
+# Re-exported from policy, which owns it. Defined here once too, these two
+# drifted apart silently and the pack and the controller could then disagree
+# about whether the same month was attestable.
+from .policy import RESIDUAL_LIMIT_BPS  # noqa: F401
 
 
 def build_exceptions(corpus, res, aud) -> list[dict]:
@@ -399,6 +403,7 @@ def _payload(corpus, res, aud, card, exceptions, elapsed, volume, residual,
                 "detected": v.detected, "recall": v.recall}
             for k, v in card.by_class.items()
         } if card else None),
+        "ruleset": ruleset.summary(),   # what produced this, not just that it was not edited
         "designed_recall": card.designed_recall() if card else None,
         "holdout_recall": card.holdout_recall() if card else None,
         "notes": card.notes if card else [],

@@ -30,7 +30,8 @@ from .ingest import load, resolve, resolve_naive
 from .money import fmt, pct
 from .readiness import corroborate
 from .recovery import build_claims, summarise
-from .run import RESIDUAL_LIMIT_BPS, build_exceptions, _payload
+from .policy import RESIDUAL_LIMIT_BPS
+from .run import build_exceptions, _payload
 
 # Every source the pipeline can use, what it contributes, and whether the close
 # can proceed without it. Order is the order the UI offers them in.

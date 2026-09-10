@@ -76,8 +76,23 @@ def canonical(p: dict) -> dict:
         "activity_first": str(rd.get("activity_first") or ""),
         "activity_last": str(rd.get("activity_last") or ""),
     }
+    # What produced this conclusion, not merely that it was not edited. The
+    # digest is computed from the rule VALUES (see attest/ruleset.py), so a
+    # threshold cannot be changed without this moving -- no discipline required
+    # from anyone. A pack sealed before versioning existed carries none of this
+    # and still verifies, because `verify()` re-hashes the block embedded in
+    # that pack rather than recomputing today's shape.
+    rs = p.get("ruleset") or {}
+    ruleset_block = {
+        "engine_version": str(rs.get("engine_version", "")),
+        "ruleset_digest": str(rs.get("ruleset_digest", "")),
+        "batch_tolerance_paise": int(rs.get("batch_tolerance_paise", 0) or 0),
+        "line_tolerance_paise": int(rs.get("line_tolerance_paise", 0) or 0),
+        "residual_limit_bps": int(rs.get("residual_limit_bps", 0) or 0),
+    }
     return {
-        "v": 3,
+        "v": 4,
+        "ruleset": ruleset_block,
         "merchant": str(p.get("merchant", ""))[:200],
         "period": str(p.get("period", "")),
         "records": int(p.get("records", 0)),
