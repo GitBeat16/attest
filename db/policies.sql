@@ -39,6 +39,14 @@ create table if not exists public.attest_closes (
   attestable         boolean not null default false,
   evidence_supplied  text[]  not null default '{}'::text[],
   evidence_missing   text[]  not null default '{}'::text[],
+  -- The input fingerprint. See db/002_audit_trail.sql for why these
+  -- exist and why `actor`/`ran_at` deliberately do not.
+  readiness_verdict  text,
+  rows_in            integer,
+  rows_read          integer,
+  rows_rejected      integer,
+  engine_version     text,
+  ruleset_digest     text,
   pack_html          text,
   created_at         timestamptz not null default now()
 );
@@ -53,6 +61,7 @@ create table if not exists public.attest_findings (
   exposure_paise bigint  not null default 0,
   counterparty   text,
   deadline       date,
+  tier           text,          -- PROVEN | UNPROVEN | NEEDS_INPUT
   created_at     timestamptz not null default now()
 );
 
@@ -73,6 +82,9 @@ create table if not exists public.attest_seals (
 
 create index if not exists attest_closes_user_idx    on public.attest_closes(user_id, created_at desc);
 create index if not exists attest_findings_close_idx on public.attest_findings(close_id);
+create index if not exists attest_closes_partial_idx
+  on public.attest_closes(user_id, created_at desc)
+  where readiness_verdict is distinct from 'READY';
 
 -- ==========================================================================
 -- Row-level security
@@ -93,10 +105,13 @@ drop policy if exists attest_closes_insert on public.attest_closes;
 create policy attest_closes_insert on public.attest_closes
   for insert with check (user_id = (select auth.uid()));
 
+-- There is deliberately NO update policy on closes. A close is a statement
+-- about a month as it was found; correcting it means running the month again,
+-- which produces a new row and a new seal. An updatable close can disagree
+-- with the seal that attests to it, and the seal is what an auditor trusts.
+-- The statement below is kept so re-running this file removes an update policy
+-- an older deployment may still have.
 drop policy if exists attest_closes_update on public.attest_closes;
-create policy attest_closes_update on public.attest_closes
-  for update using (user_id = (select auth.uid()))
-          with check (user_id = (select auth.uid()));
 
 -- Deletion is how a merchant removes their financial data. The seal survives
 -- it, by the absence of a cascade on attest_seals.close_id above.
@@ -109,9 +124,15 @@ drop policy if exists attest_findings_select on public.attest_findings;
 create policy attest_findings_select on public.attest_findings
   for select using (user_id = (select auth.uid()));
 
+-- `user_id` alone is not enough: without the close_id check a caller could
+-- attach a finding to somebody else's close -- invisible to them, still wrong.
 drop policy if exists attest_findings_insert on public.attest_findings;
 create policy attest_findings_insert on public.attest_findings
-  for insert with check (user_id = (select auth.uid()));
+  for insert with check (
+    user_id = (select auth.uid())
+    and exists (select 1 from public.attest_closes c
+                where c.id = close_id and c.user_id = (select auth.uid()))
+  );
 
 drop policy if exists attest_findings_delete on public.attest_findings;
 create policy attest_findings_delete on public.attest_findings
@@ -135,40 +156,26 @@ create policy attest_seals_insert on public.attest_seals
   for insert with check (user_id = (select auth.uid()));
 
 -- ==========================================================================
--- Recommended hardening — NOT applied to the live project
+-- Not applied, and why
 -- ==========================================================================
--- Kept separate and commented deliberately. Each is a change in behaviour, and
--- a security file that quietly alters what the running system does is worse
--- than one that states the gap.
+-- Two items from the original hardening list are now applied above and are no
+-- longer optional: findings are tied to a close you own, and closes cannot be
+-- updated. What remains is stated here rather than left implied.
 --
--- 1. FORCE row level security, so a future trigger or view running as the table
---    owner cannot read across tenants:
+-- 1. FORCE row level security --- NOT applied.
 --
 --      alter table public.attest_closes   force row level security;
 --      alter table public.attest_findings force row level security;
 --      alter table public.attest_seals    force row level security;
 --
--- 2. Tie a finding to a close you actually own. Today `user_id = auth.uid()` is
---    checked but `close_id` is not, so a caller could attach a finding to
---    somebody else's close — invisible to them, but still wrong:
+--    This makes RLS apply to the table owner too. It guards against a future
+--    SECURITY DEFINER function or view owned by `postgres` reading across
+--    tenants -- of which this project has none, because it holds nothing but
+--    Attest. Applying it would also stop maintenance and verification queries
+--    that run as the owner from seeing any rows, which is a real cost today
+--    against a hypothetical risk tomorrow. Revisit when the first such
+--    function is added; that is the moment the trade-off flips.
 --
---      create policy attest_findings_insert on public.attest_findings
---        for insert with check (
---          user_id = (select auth.uid())
---          and exists (select 1 from public.attest_closes c
---                      where c.id = close_id and c.user_id = (select auth.uid()))
---        );
---
--- 3. Consider dropping attest_closes_update. A close is a statement about a
---    month as it was found; correcting it means running the month again, which
---    produces a new row and a new seal. An updatable close can disagree with
---    the seal that attests to it. Check the app does not rely on it first.
---
--- 4. Revoke public EXECUTE on the SECURITY DEFINER functions flagged by the
---    linter. Neither is exploitable — `is_admin()` keys on auth.uid() so an
---    anonymous caller always gets false, and `handle_new_user()` returns
---    `trigger` and cannot run outside a trigger — but neither should be in the
---    exposed API surface:
---
---      revoke execute on function public.is_admin()        from anon, authenticated;
---      revoke execute on function public.handle_new_user() from anon, authenticated;
+-- 2. Revoking EXECUTE on `is_admin()` and `handle_new_user()` --- no longer
+--    applicable. Those functions belonged to the shared project this app used
+--    to live in. This project has no functions at all.

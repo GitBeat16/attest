@@ -32,6 +32,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from attest.close import (CloseError, close, evidence_chain,  # noqa: E402
                           naive_view, stage)
+from attest import __version__, ruleset               # noqa: E402
 from attest.report import render                            # noqa: E402
 
 # Both of these are public by design. The project URL and the publishable key
@@ -42,9 +43,9 @@ from attest.report import render                            # noqa: E402
 # that would matter -- the service role key -- is not in this repository, is not
 # in this function's environment, and is never used by this app.
 SUPABASE_URL = os.environ.get(
-    "SUPABASE_URL", "https://fsqozbfghumfconnhowq.supabase.co").rstrip("/")
+    "SUPABASE_URL", "https://wmdvxrxcjwreyxklbhbs.supabase.co").rstrip("/")
 SUPABASE_ANON = os.environ.get(
-    "SUPABASE_ANON_KEY", "sb_publishable_tO-3LIT3VVJNzFUtWsZNvw_4ePwcohx")
+    "SUPABASE_ANON_KEY", "sb_publishable_oCeel4YnM1a9CfElZa9Z2Q_JocpH6K6")
 
 MAX_BODY = 6 * 1024 * 1024
 COUNTERPARTY = {
@@ -299,6 +300,18 @@ def handle(body: dict) -> dict:
         "recoverable_paise": s["recoverable_paise"],
         "residual_bps": s["residual_bps"], "attestable": s["attestable"],
         "evidence_supplied": supplied, "evidence_missing": missing,
+        # What was read, and what produced the answer. Neither is
+        # recoverable from this row otherwise: a close over a truncated
+        # file and a close over a complete one look identical here, and
+        # "which closes ran under ruleset X" would mean opening every
+        # pack. Who and when are already recorded -- user_id defaults to
+        # auth.uid(), created_at to now() -- so they are not repeated.
+        "readiness_verdict": s["readiness_verdict"],
+        "rows_in": s["readiness"]["rows_in"],
+        "rows_read": s["readiness"]["rows_read"],
+        "rows_rejected": s["readiness"]["rows_rejected"],
+        "engine_version": __version__,
+        "ruleset_digest": ruleset.short(),
         "pack_html": pack,
     }])
     close_id = row[0]["id"] if row else None
@@ -318,16 +331,16 @@ def handle(body: dict) -> dict:
         else:
             s["seal_recorded"] = True
 
-    # `tier` is deliberately NOT written here yet: attest_findings has no tier
-    # column in the deployed schema, and PostgREST rejects an unknown key, which
-    # would fail the whole close. Add the column, then add "tier": e.get("tier")
-    # to this dict — the value is already on every exception.
+    # `tier` requires db/002_audit_trail.sql to have been applied: PostgREST
+    # rejects an unknown key and would fail the whole close. Migration first,
+    # then deploy -- never the other way round.
     findings = [{
         "close_id": close_id,
         "class": e["class"],
         "label": LABELS.get(e["class"], e["class"].replace("_", " ").title()),
         "line_count": e["count"],
         "exposure_paise": e["exposure"],
+        "tier": e.get("tier"),
     } for e in s["exceptions"][:20]]
     if close_id and findings:
         postgrest("attest_findings", token, findings)
