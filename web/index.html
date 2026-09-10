@@ -957,6 +957,15 @@ footer a:hover{color:var(--gold-lit)}
         <li>Tamper-evident close pack, independently verifiable</li>
         <li>Live Razorpay Settlement Recon API, accounts with row-level security</li>
         <li>Hosted app, and one command that verifies every claim on this page</li>
+        <li>Ingest that refuses to close on data it could not fully read &mdash; six of
+          seven sources cross-checked against the records pointing into them</li>
+        <li>A confidence tier on every finding; only proven ones framed as claim-ready</li>
+        <li>Rule-set versioning &mdash; every pack states the engine and a digest computed
+          from the rule values, so it cannot drift from the code</li>
+        <li>Recall pooled across twenty seeded worlds, not averaged per world</li>
+        <li>Authorisation boundary committed as SQL and tested against a live project
+          &mdash; ten cross-tenant checks that roll themselves back</li>
+        <li>Every recovery figure states the date its claim windows assume</li>
       </ul></div>
     <div class="later"><h4>Next, in order</h4>
       <ul>
