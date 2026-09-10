@@ -60,6 +60,14 @@ READY = "READY"
 PARTIAL = "PARTIAL"
 REFUSED = "REFUSED"
 
+# Emitted only while nothing is wrong. `corroborate` retracts it the moment a
+# completeness check downgrades, because leading a PARTIAL close with a line
+# about everything having been read is the same overstatement this whole stage
+# exists to remove.
+_READY_NOTE = ("every row supplied was parsed, and the covered range spans the "
+               "declared month; completeness against the other sources is "
+               "checked separately once records are resolved")
+
 
 # ==========================================================================
 # What a read produced
@@ -1038,5 +1046,107 @@ def finalise(readiness: Readiness) -> None:
                 f"{name} is missing column(s): " + ", ".join(s.columns_missing))
 
     if readiness.verdict == READY and not readiness.reasons:
-        readiness.reasons.append("every supplied source read in full; the covered "
-                                 "range spans the declared month")
+        # Say what was actually verified. "Read in full" would mean "every row I
+        # was handed, I parsed" -- which is not the same as "I received every row
+        # that exists", and stating the stronger thing was a real defect.
+        readiness.reasons.append(_READY_NOTE)
+
+
+# ==========================================================================
+# Completeness -- what was owed, not merely what was handed over
+# ==========================================================================
+def corroborate(readiness: Readiness, corpus) -> None:
+    """Cross-check each source against the records that point into it.
+
+    Everything above this line asks "could I read what I was given?". That
+    question cannot detect rows that were never supplied: truncating 57% of the
+    settlement report parsed cleanly, reported READY, and *raised* the proof
+    rate, because the missing rows took their unproven lines with them.
+
+    The signal is independence. The bank statement is produced by a different
+    party than the settlement report, so a credit the settlement report cannot
+    explain is evidence about that report -- and whether the cause is missing
+    rows or a genuine orphan credit, the user must be told before trusting the
+    close, and the required action is the same either way. So this does not try
+    to distinguish them. It states the fact.
+
+    No thresholds. A world with no defects planted produces exactly zero on
+    every count below, so "any at all" is a sound rule and there is no invented
+    cut-off to argue about later.
+
+    Must run AFTER `ingest.resolve()`, which is what writes `settlement_id` onto
+    each bank row. `corpus` is duck-typed rather than imported: `ingest` imports
+    this module, so a type import here would be circular.
+
+    Downgrades only, never refuses. A short file is a reason to distrust a
+    close, not always a reason to refuse to produce one -- and the caller
+    decides which.
+    """
+    def _flag(reason: str) -> None:
+        """Downgrade, retracting the all-clear note the first time."""
+        if _READY_NOTE in readiness.reasons:
+            readiness.reasons.remove(_READY_NOTE)
+        readiness.downgrade(reason)
+
+    # 1. Money reached the bank that the settlement report does not account for.
+    unexplained = [b for b in corpus.bank if not getattr(b, "settlement_id", None)]
+    if unexplained:
+        amt = sum(b.credit for b in unexplained)
+        _flag(
+            f"{len(unexplained)} bank credit(s) totalling {_rupees(amt)} have no "
+            "matching entry in the settlement report -- either settlement rows "
+            "are missing from what was supplied, or these credits are orphans; "
+            "both need answering before this close can be relied on")
+
+    # 2. The mirror: settlements the bank never confirms. Catches a truncated
+    #    bank statement, which check 1 cannot see -- nothing references a bank row.
+    credited = {b.settlement_id for b in corpus.bank if getattr(b, "settlement_id", None)}
+    uncredited = [sid for sid in corpus.batches if sid not in credited]
+    if uncredited:
+        _flag(
+            f"{len(uncredited)} settlement batch(es) have no corresponding bank "
+            "credit -- either the bank statement is incomplete, or the money "
+            "never arrived")
+
+    # 3. Settlement lines pointing at orders that were not supplied.
+    missing_orders = {
+        ln.order_id for b in corpus.batches.values() for ln in b.lines
+        if ln.order_id not in corpus.orders
+    }
+    if missing_orders:
+        _flag(
+            f"{len(missing_orders)} order(s) referenced by the settlement report "
+            "are absent from the orders export -- the orders file does not cover "
+            "everything that was settled")
+
+    # 4. COD remittances pointing at shipments that were not supplied.
+    missing_awbs = {r.awb for r in corpus.cod if r.awb not in corpus.shipments}
+    if missing_awbs:
+        _flag(
+            f"{len(missing_awbs)} AWB(s) in the COD remittance file are absent "
+            "from the shipment manifest -- the manifest does not cover "
+            "everything that was remitted")
+
+    # HONEST LIMITATION, deliberately recorded rather than hidden: this census
+    # only sees a source that something else points INTO. Truncating
+    # cod_remittances.csv, refunds.csv or disputes.csv is invisible here,
+    # because nothing in the corpus holds a reference to those rows. Refunds and
+    # disputes do surface indirectly as REFUND_MISMATCH and CHARGEBACK_ORPHAN,
+    # but those are ambiguous with real defects. A short COD remittance file is
+    # currently undetectable. Do not describe this function as complete.
+
+
+def _rupees(paise: int) -> str:
+    """Local formatter -- `money` must not be imported here (circular)."""
+    neg = paise < 0
+    whole, frac = divmod(abs(int(paise)), 100)
+    s = str(whole)
+    if len(s) > 3:                      # Indian grouping: 12,34,567
+        head, tail = s[:-3], s[-3:]
+        parts = []
+        while len(head) > 2:
+            parts.insert(0, head[-2:]); head = head[:-2]
+        if head:
+            parts.insert(0, head)
+        s = ",".join(parts + [tail])
+    return f"{'-' if neg else ''}\u20b9{s}.{frac:02d}"

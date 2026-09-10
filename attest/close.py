@@ -28,6 +28,7 @@ from . import audit as audit_mod
 from . import engine as engine_mod
 from .ingest import load, resolve, resolve_naive
 from .money import fmt, pct
+from .readiness import corroborate
 from .recovery import build_claims, summarise
 from .run import build_exceptions, _payload
 
@@ -173,6 +174,14 @@ def close(src: Path, supplied: list[str], missing: list[str]) -> dict:
                if rd.all_rejections() else ""))
     naive = resolve_naive(corpus)
     keys = resolve(corpus)
+
+    # Completeness is only answerable once records are resolved -- `resolve()` is
+    # what writes settlement_id onto each bank row. Everything checked before
+    # this point asks "could I read what I was given?", which cannot see rows
+    # that were never supplied. This may downgrade READY to PARTIAL; it never
+    # refuses, so a short file distrusts the close rather than blocking it.
+    corroborate(rd, corpus)
+
     res = engine_mod.run(corpus)
     aud = audit_mod.run(corpus, res.batch_ties)
     elapsed = time.time() - t0

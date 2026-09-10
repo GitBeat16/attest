@@ -24,6 +24,7 @@ from . import tiers
 from .ingest import load, resolve, resolve_naive
 from .money import fmt
 from .recovery import build_claims, summarise
+from .readiness import corroborate
 from .score import render, score
 
 RESIDUAL_LIMIT_BPS = 25          # 0.25% of period volume
@@ -187,6 +188,12 @@ def main() -> None:
 
     naive = resolve_naive(corpus)
     keys = resolve(corpus)
+
+    # The CLI and the hosted close must reach the same verdict on the same
+    # files. `close.py` corroborates here too -- if only one path did, the pack
+    # a CA downloads and the screen they were shown could disagree.
+    corroborate(corpus.readiness, corpus)
+
     res = engine_mod.run(corpus)
     aud = audit_mod.run(corpus, res.batch_ties)
     elapsed = time.time() - t0

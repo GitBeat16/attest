@@ -60,6 +60,12 @@ jobs:
       - name: Clean-world control
         run: python3 tests/test_clean_world.py
 
+      # Rows that were never supplied. Truncating a source used to report READY
+      # and *raise* the proof rate. Carries its own false-positive guard: a
+      # clean month must still be READY.
+      - name: Input completeness
+        run: python3 tests/test_completeness.py
+
       # INTEGRITY GATE. Fails on any false positive across 20 seeded worlds or
       # the control, on a refused control, or on held-out recall hitting 100%.
       - name: Benchmark stability
@@ -99,5 +105,6 @@ jobs:
       - run: python3 tests/test_controller.py
       - run: python3 tests/test_ingest_readiness.py
       - run: python3 tests/test_clean_world.py
+      - run: python3 tests/test_completeness.py
       - run: python3 scripts/stability.py --seeds 6
       - run: python3 -m attest.agentbench
