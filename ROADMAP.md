@@ -183,8 +183,38 @@ Scope it to that, not to a generic threat model:
 - AI provider data retention — what leaves the machine when the model plans
 - An audit log: who ran which close, against which inputs, when
 
-**Exit condition:** you would be comfortable if a CA uploaded a real client's
-settlement file this afternoon.
+**PARTLY BUILT.**
+
+**A live XSS was found and fixed.** The seal embeds its canonical block in an
+HTML comment, and that block carries the merchant name — merchant-controlled
+input. A name containing `-->` closed the comment 330 characters early and
+everything after it rendered as live markup, *while the seal still verified*.
+The pack is a self-contained file an auditor opens because it is sealed. Fixed
+by escaping `<`/`>` in the embedded blob only, so `verify()` — which
+re-serialises the parsed dict — still matches and **no existing pack was
+invalidated** (tested against the committed one).
+
+The fix also collapsed a duplication: `report.py` inlined the blob-building
+rather than calling `seal.embed()`, so escaping added to the shared helper
+missed the path that actually renders the pack. There is now one builder,
+`seal.marker()`, and a test asserting `report.py` never rebuilds the marker
+itself.
+
+**`db/policies.sql` now exists** — the RLS policies in version control for the
+first time, with the deletion semantics made explicit: financial rows are
+deletable, seals are not, and no token may rewrite a seal.
+
+**Nine tests in `tests/test_security.py`**, two of which guard properties that
+were true only by accident: that no merchant name, order id, payment id or
+settlement id reaches the model provider across a full investigation, and that a
+pack sealed before the escaping change still verifies.
+
+**Still open:** the audit trail (`actor`, `ran_at` on a close), a content-type
+check on upload, and running the tenant-isolation test against a live project.
+
+**Exit condition — not yet met.** Blocked on the new Supabase project: the
+policies are written but unapplied, and tenant isolation is untested against a
+real database.
 
 ---
 

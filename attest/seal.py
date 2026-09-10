@@ -135,10 +135,42 @@ def grouped(d: str, size: int = 8, groups: int = 4) -> str:
     return " ".join(d[i:i + size] for i in range(0, size * groups, size))
 
 
-def embed(d: str, canon: dict) -> str:
-    """The machine-readable half, kept out of the visible document."""
-    blob = json.dumps(canon, sort_keys=True, separators=(",", ":"))
+def _inert(blob: str) -> str:
+    """Make a JSON blob safe to sit inside an HTML comment.
+
+    The canonical block carries merchant-controlled text -- the merchant name
+    comes from the uploaded contract terms. A name containing `-->` closes the
+    comment early, and everything after it renders as live HTML in a document an
+    auditor opens *because* it is sealed. That was real: an `<img onerror=...>`
+    executed, and the seal still verified, so the pack looked legitimate.
+
+    `\u003c` and `\u003e` decode back to `<` and `>`, so `extract()` recovers a
+    byte-identical dict and `verify()` -- which re-serialises the PARSED dict --
+    still matches. The digest is computed over the canonical dict, never over
+    this text, so no existing pack is invalidated.
+
+    This escaping belongs here and nowhere else. Apply it anywhere the digest is
+    computed and the two paths disagree, and every pack ever sealed stops
+    verifying.
+    """
+    return blob.replace("<", "\\u003c").replace(">", "\\u003e")
+
+
+def marker(d: str, canon: dict) -> str:
+    """The machine-readable half, kept out of the visible document.
+
+    THE one place this comment is built. `report.py` used to inline the same
+    three lines, so escaping added here would have missed the path that actually
+    renders the pack -- which is exactly how the injection survived review.
+    Both callers go through this now.
+    """
+    blob = _inert(json.dumps(canon, sort_keys=True, separators=(",", ":")))
     return f"{MARK_OPEN}{d} {blob}{MARK_CLOSE}"
+
+
+def embed(d: str, canon: dict) -> str:
+    """Backwards-compatible alias."""
+    return marker(d, canon)
 
 
 # ==========================================================================

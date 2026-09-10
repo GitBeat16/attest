@@ -72,6 +72,12 @@ jobs:
       - name: Versioning
         run: python3 tests/test_versioning.py
 
+      # The close pack is a self-contained file an auditor opens BECAUSE it is
+      # sealed. A merchant name containing "-->" once closed the seal's comment
+      # early and turned the rest of the document into live markup.
+      - name: Security
+        run: python3 tests/test_security.py
+
       # INTEGRITY GATE. Fails on any false positive across 20 seeded worlds or
       # the control, on a refused control, or on held-out recall hitting 100%.
       - name: Benchmark stability
@@ -113,5 +119,6 @@ jobs:
       - run: python3 tests/test_clean_world.py
       - run: python3 tests/test_completeness.py
       - run: python3 tests/test_versioning.py
+      - run: python3 tests/test_security.py
       - run: python3 scripts/stability.py --seeds 6
       - run: python3 -m attest.agentbench

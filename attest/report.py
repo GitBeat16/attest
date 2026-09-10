@@ -286,12 +286,12 @@ def esc(v) -> str:
 
 
 def render(p: dict) -> str:
-    from .seal import MARK_CLOSE, MARK_OPEN, PH, PH_GROUPED, canonical
+    from .seal import PH, PH_GROUPED, canonical, marker
     seal_canon = canonical(p)
-    seal_blob = (MARK_OPEN + PH + " "
-                 + __import__("json").dumps(seal_canon, sort_keys=True,
-                                            separators=(",", ":"))
-                 + MARK_CLOSE)
+    # Built by seal.marker(), never inlined: the blob carries merchant-supplied
+    # text and must be escaped so a name containing "-->" cannot close the
+    # comment and turn the rest of the document into live HTML.
+    seal_blob = marker(PH, seal_canon)
     rc = p.get("recovery") or {}
     comp = (p.get("compensating") or [{}])[0]
 
