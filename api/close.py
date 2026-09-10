@@ -48,6 +48,38 @@ SUPABASE_ANON = os.environ.get(
     "SUPABASE_ANON_KEY", "sb_publishable_oCeel4YnM1a9CfElZa9Z2Q_JocpH6K6")
 
 MAX_BODY = 6 * 1024 * 1024
+
+# What a spreadsheet looks like when the browser read it as text. The frontend
+# does `file.text()`, so an .xlsx does not arrive as bytes -- it arrives as
+# mojibake beginning "PK\x03\x04", parses as a one-column CSV of garbage, and
+# the readiness layer then reports a file it could not understand. That is a
+# true statement about a false situation: the file is fine, it is the wrong
+# format. Naming the format is the difference between a merchant fixing it in
+# ten seconds and filing a bug.
+BINARY_SIGNATURES = {
+    "PK\x03\x04": "a spreadsheet or zip archive (.xlsx, .ods, .zip)",
+    "%PDF": "a PDF",
+    "\xd0\xcf\x11\xe0": "an old-format Excel file (.xls)",
+    "\x1f\x8b": "a gzip archive",
+}
+
+
+def refuse_binary(files: dict[str, str]) -> None:
+    """Reject anything that is plainly not text, before the engine sees it.
+
+    The CLI needs no equivalent: it reads real files from disk and the readiness
+    layer refuses to parse what it cannot read. This is the hosted boundary,
+    where the caller hands us a string and asserts it is a CSV.
+    """
+    for name, text in files.items():
+        for sig, what in BINARY_SIGNATURES.items():
+            if text.startswith(sig):
+                raise CloseError(
+                    f"{name} looks like {what}, not a CSV. Export it as CSV "
+                    "and upload that -- the engine reads rows, not workbooks.")
+        if "\x00" in text[:4096]:
+            raise CloseError(
+                f"{name} contains binary data and cannot be read as a CSV.")
 COUNTERPARTY = {
     "MDR": "Razorpay", "GST": "Razorpay", "CREDIT": "Razorpay",
     "REFUND_DUPLICATE": "Razorpay", "ITC_MISMATCH": "Razorpay",
@@ -256,6 +288,7 @@ def handle(body: dict) -> dict:
     year, month = int(period[:4]), int(period[5:])
 
     files = {k: v for k, v in (body.get("files") or {}).items() if isinstance(v, str)}
+    refuse_binary(files)
     key_masked = None
 
     if mode == "razorpay_test":
@@ -365,6 +398,10 @@ class handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:                      # noqa: N802
         try:
+            ctype = (self.headers.get("Content-Type") or "").split(";")[0].strip()
+            if ctype and ctype != "application/json":
+                return self._send(415, {"ok": False, "error":
+                                        "this endpoint accepts application/json."})
             length = int(self.headers.get("Content-Length") or 0)
             if length > MAX_BODY:
                 return self._send(413, {"ok": False, "error":

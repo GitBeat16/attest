@@ -181,6 +181,59 @@ def test_the_package_logs_nothing() -> None:
     assert not offenders, f"logging introduced at: {offenders}"
 
 
+# ----------------------------------------------------------- the boundary ---
+def _api():
+    """api/close.py is not a package. Load it by path."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("attest_api_close",
+                                                  ROOT / "api" / "close.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_a_spreadsheet_uploaded_as_a_csv_is_named_rather_than_parsed() -> None:
+    """MAX_BODY bounds the request; nothing checked what arrived.
+
+    The frontend calls file.text(), so an .xlsx does not arrive as bytes -- it
+    arrives as mojibake starting "PK", parses as a one-column CSV of garbage,
+    and readiness then reports a file it could not understand. True statement,
+    false situation: the file is fine, the format is wrong.
+    """
+    api = _api()
+    cases = {
+        "settlements.xlsx": "PK\x03\x04\x14\x00\x08\x08garbage",
+        "statement.pdf": "%PDF-1.7\nnonsense",
+        "old.xls": "\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1rubbish",
+        "archive.gz": "\x1f\x8b\x08\x00rubbish",
+    }
+    for name, blob in cases.items():
+        try:
+            api.refuse_binary({name: blob})
+        except Exception as e:
+            assert name in str(e), f"the refusal for {name} does not name the file"
+        else:
+            raise AssertionError(f"{name} was accepted as a CSV")
+
+
+def test_a_real_csv_is_not_refused() -> None:
+    """The check must not cost a working upload. This is the half that breaks
+    silently if the signatures are ever widened carelessly."""
+    api = _api()
+    good = (ROOT / "data" / "sources" / "razorpay_settlements.csv")
+    if not good.exists():
+        return
+    api.refuse_binary({"razorpay_settlements.csv":
+                       good.read_text(encoding="utf-8")})
+
+
+def test_the_endpoint_declares_a_content_type() -> None:
+    src = (ROOT / "api" / "close.py").read_text(encoding="utf-8")
+    guard = src.index("application/json.")
+    read = src.index("rfile.read")
+    assert guard < read, "the content-type guard must come before the body is read"
+
+
 def test_uploads_are_bounded_before_the_body_is_read() -> None:
     src = (ROOT / "api" / "close.py").read_text(encoding="utf-8")
     assert "MAX_BODY" in src, "no upload bound"
