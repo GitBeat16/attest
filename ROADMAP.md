@@ -81,9 +81,26 @@ The fix is cheap and uses data already present:
 3. **Reword the reason string.** "Every supplied source read in full" overstates
    what was verified. Say what was actually checked.
 
-**Exit condition:** deleting rows from any source file produces PARTIAL or
-REFUSED, never READY — with a regression test that fails if it ever returns to
-READY.
+**BUILT.** `corroborate()` cross-checks each source against the records that
+point into it, after resolution. Six checks: unexplained bank credits, batches
+the bank never confirms, dangling order references, dangling AWBs, and — by
+*direction* rather than magnitude — refunds and chargebacks netted against
+records that were not supplied. No thresholds anywhere: a clean world scores
+zero on the first four, and the last two were negative or zero on all six clean
+worlds measured, turning positive only under truncation.
+
+**Exit condition — met for 6 of 7 sources.** Halving any of
+`razorpay_settlements`, `bank_statement`, `orders`, `shipments`, `refunds` or
+`disputes` now yields PARTIAL; the clean control stays READY; and a month that
+is not READY cannot be attested. 13 tests in `tests/test_completeness.py`, five
+of which fail if `corroborate` is disabled.
+
+**Knowingly uncovered: `cod_remittances.csv`.** Nothing references a remittance
+row, and the obvious mirror — COD shipments delivered but never remitted — runs
+at 125–147 on clean worlds against 223 when halved. No separation, no honest
+threshold, so it is left uncovered rather than covered badly.
+`test_the_cod_remittance_gap_is_still_a_gap` pins the current behaviour so the
+caveat cannot go stale.
 
 ---
 

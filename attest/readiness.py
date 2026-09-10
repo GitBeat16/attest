@@ -1127,13 +1127,39 @@ def corroborate(readiness: Readiness, corpus) -> None:
             "from the shipment manifest -- the manifest does not cover "
             "everything that was remitted")
 
+    # 5 and 6 use direction rather than magnitude. A settlement cannot deduct a
+    # refund or a chargeback that the corresponding export does not contain, so
+    # a POSITIVE delta means money was netted against records nobody supplied.
+    # A negative delta is ordinary timing -- refunds and disputes recorded but
+    # not yet netted -- and is left alone. Measured across six independent clean
+    # worlds the delta was negative or zero every time, and turned positive only
+    # when the export was truncated, so "greater than zero" needs no threshold.
+    refund_netted = -sum(getattr(b, "refund_adj", 0) for b in corpus.batches.values())
+    refund_export = sum(r.amount for r in corpus.refunds)
+    if refund_netted > refund_export:
+        _flag(
+            f"settlements deduct {_rupees(refund_netted)} of refunds but the "
+            f"refund export accounts for only {_rupees(refund_export)} -- "
+            f"{_rupees(refund_netted - refund_export)} was netted against refund "
+            "records that were not supplied")
+
+    cb_netted = -sum(b.chargeback_adj for b in corpus.batches.values())
+    cb_export = sum(d.amount for d in corpus.disputes)
+    if cb_netted > cb_export:
+        _flag(
+            f"settlements deduct {_rupees(cb_netted)} of chargebacks but the "
+            f"dispute export accounts for only {_rupees(cb_export)} -- "
+            f"{_rupees(cb_netted - cb_export)} was netted against dispute "
+            "records that were not supplied")
+
     # HONEST LIMITATION, deliberately recorded rather than hidden: this census
-    # only sees a source that something else points INTO. Truncating
-    # cod_remittances.csv, refunds.csv or disputes.csv is invisible here,
-    # because nothing in the corpus holds a reference to those rows. Refunds and
-    # disputes do surface indirectly as REFUND_MISMATCH and CHARGEBACK_ORPHAN,
-    # but those are ambiguous with real defects. A short COD remittance file is
-    # currently undetectable. Do not describe this function as complete.
+    # covers six of the seven sources. A short cod_remittances.csv remains
+    # UNDETECTABLE: nothing references a remittance row, and the obvious mirror
+    # -- COD shipments delivered but never remitted -- runs at 125-147 on clean
+    # worlds because remittance legitimately lags delivery, against 223 when the
+    # file is halved. There is no separation to key on and no honest threshold,
+    # so it is left uncovered rather than covered badly. Do not describe this
+    # function as complete.
 
 
 def _rupees(paise: int) -> str:

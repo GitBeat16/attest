@@ -145,6 +145,75 @@ def test_a_short_bank_statement_is_never_ready() -> None:
                    for r in s["readiness_reasons"]), s["readiness_reasons"]
 
 
+def test_a_short_refund_export_is_never_ready() -> None:
+    """Direction, not magnitude.
+
+    A settlement cannot deduct a refund the export does not contain, so a
+    POSITIVE delta means money was netted against records nobody supplied. The
+    delta was negative or zero on all six clean worlds measured and turned
+    positive only under truncation, which is why no threshold is needed.
+    """
+    with tempfile.TemporaryDirectory() as td:
+        src = _truncated(Path(td), "refunds.csv", 9)
+        s = _closed(src)
+        assert s["readiness_verdict"] != READY
+        assert any("refund export" in r for r in s["readiness_reasons"]), \
+            s["readiness_reasons"]
+
+
+def test_a_short_dispute_export_is_never_ready() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        src = _truncated(Path(td), "disputes.csv", 5)
+        s = _closed(src)
+        assert s["readiness_verdict"] != READY
+        assert any("dispute export" in r for r in s["readiness_reasons"]), \
+            s["readiness_reasons"]
+
+
+def test_ordinary_timing_lag_is_not_flagged() -> None:
+    """The other half of the direction rule.
+
+    A NEGATIVE delta -- refunds or disputes recorded but not yet netted -- is
+    ordinary month-end timing and must be left alone. The clean world carries
+    exactly that, and it must still be READY.
+    """
+    with tempfile.TemporaryDirectory() as td:
+        src = _clean_sources(Path(td))
+        joined = " ".join(_closed(src)["readiness_reasons"])
+        assert "refund export" not in joined and "dispute export" not in joined, \
+            "legitimate timing lag was reported as missing records: " + joined
+
+
+def test_an_incomplete_month_cannot_be_attested() -> None:
+    """A close cannot be signed over input nobody can vouch for."""
+    with tempfile.TemporaryDirectory() as td:
+        src = _truncated(Path(td), "razorpay_settlements.csv", 200)
+        s = _closed(src)
+        assert s["readiness_verdict"] != READY
+        assert not s.get("attestable"), "a truncated month was marked attestable"
+
+
+def test_the_cod_remittance_gap_is_still_a_gap() -> None:
+    """Pins a KNOWN limitation so the note in `corroborate` cannot go stale.
+
+    Nothing references a remittance row, and the obvious mirror -- COD
+    shipments delivered but never remitted -- runs at 125-147 on clean worlds
+    against 223 when halved, so there is no honest threshold. If this test ever
+    fails, the gap was closed: delete the test and the caveat together.
+    """
+    with tempfile.TemporaryDirectory() as base:
+        clean = _clean_sources(Path(base))
+        with tempfile.TemporaryDirectory() as td:
+            src = Path(td) / "sources"
+            shutil.copytree(clean, src)
+            f = src / "cod_remittances.csv"
+            lines = f.read_text(encoding="utf-8").splitlines()
+            f.write_text("\n".join(lines[: len(lines) // 2]) + "\n", encoding="utf-8")
+            assert _closed(src)["readiness_verdict"] == READY, (
+                "a short COD remittance file is now detected -- good. Remove "
+                "this test and the limitation note in corroborate().")
+
+
 # ------------------------------------------------------------- messaging ---
 def test_the_all_clear_note_is_retracted_on_downgrade() -> None:
     """A PARTIAL close must not lead with a line saying everything was read."""

@@ -30,7 +30,7 @@ from .ingest import load, resolve, resolve_naive
 from .money import fmt, pct
 from .readiness import corroborate
 from .recovery import build_claims, summarise
-from .run import build_exceptions, _payload
+from .run import RESIDUAL_LIMIT_BPS, build_exceptions, _payload
 
 # Every source the pipeline can use, what it contributes, and whether the close
 # can proceed without it. Order is the order the UI offers them in.
@@ -215,7 +215,9 @@ def close(src: Path, supplied: list[str], missing: list[str]) -> dict:
     residual_bps = (residual / volume * 10000) if volume else 0
     # A close over data that could not be fully read is not attestable, whatever
     # the residual says. ROADMAP §1.2.
-    signed = residual_bps <= 25 and rd.ready
+    # Named constant, not a literal: run.py gates on RESIDUAL_LIMIT_BPS and
+    # these two must never drift apart.
+    signed = residual_bps <= RESIDUAL_LIMIT_BPS and rd.ready
 
     y, m = (int(x) for x in corpus.mdr_invoice["period"].split("-"))
     period_end = date(y + (m // 12), (m % 12) + 1, 1) - timedelta(days=1)
