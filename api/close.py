@@ -205,10 +205,20 @@ def _investigate(src) -> dict | None:
 
 
 def _top(exceptions: list[dict], claims=None, today=None) -> list[dict]:
-    """The exception register in the merchant's language, with the counterparty,
-    the claim window and the confidence tier attached. Claim-ready findings are
-    ranked first, then by rupee exposure — the inverse of exposure alone, which
-    puts the largest unprovable item where a CA acts."""
+    """The exception register, grouped by class.
+
+    The engine emits one group per class *per batch or rate*, so a month with
+    six gateway-fee discrepancies produced six near-identical rows -- same
+    label, same evidence sentence, same counterparty, same deadline, six
+    separate buttons. And the list was then capped at the top eight of
+    fifty-three groups without saying so, which is the worse half: a reader
+    takes the register for the register.
+
+    Grouping by class fixes both at once. Tier is a property of the class
+    (`tiers._MAP`), so a class-group is tier-uniform by construction, and there
+    are at most a couple of dozen classes -- so nothing has to be hidden, and
+    the counts finally agree with what the CLI prints.
+    """
     from attest import tiers
     from attest.money import fmt
     # Attach the clock. A claim window that has already closed must say so
@@ -222,8 +232,38 @@ def _top(exceptions: list[dict], claims=None, today=None) -> list[dict]:
                 clock[c.exception_class] = (c.deadline, c.days_left(today),
                                             c.urgency(today), c.counterparty)
 
-    claimable = tiers.rank([e for e in exceptions if e.get("kind") != "verdict"])[:8]
-    verdicts = [e for e in exceptions if e.get("kind") == "verdict"][:4]
+    def collapse(rows: list[dict]) -> list[dict]:
+        by_class: dict[str, dict] = {}
+        for e in rows:
+            g = by_class.setdefault(e["class"], {
+                "class": e["class"],
+                "kind": e.get("kind", "chain"),
+                "tier": e.get("tier", tiers.UNPROVEN),
+                "count": 0, "exposure": 0, "groups": 0,
+                "evidence_required": e.get("evidence_required", ""),
+                "reasoning": e.get("reasoning", ""),
+                "members": [],
+            })
+            g["count"] += e["count"]
+            g["exposure"] += e["exposure"]
+            g["groups"] += 1
+            # Kept for the expander. The per-group reasoning is where the
+            # specifics live -- which batch, how many lines, by how much -- and
+            # collapsing without it would trade noise for missing detail.
+            g["members"].append({
+                "count": e["count"],
+                "exposure": fmt(e["exposure"]),
+                "exposure_paise": e["exposure"],
+                "reasoning": e.get("reasoning", ""),
+                "evidence": e.get("evidence_required", ""),
+            })
+        return list(by_class.values())
+
+    claimable = tiers.rank(collapse(
+        [e for e in exceptions if e.get("kind") != "verdict"]))
+    verdicts = sorted(collapse([e for e in exceptions if e.get("kind") == "verdict"]),
+                      key=lambda g: -g["exposure"])
+
     out = []
     for e in claimable + verdicts:
         tier = e.get("tier", tiers.UNPROVEN)
@@ -235,6 +275,8 @@ def _top(exceptions: list[dict], claims=None, today=None) -> list[dict]:
             "tier_label": tiers.LABEL.get(tier, tiers.LABEL[tiers.UNPROVEN]),
             "claim_ready": e.get("kind") != "verdict" and tier == tiers.PROVEN,
             "count": e["count"],
+            "groups": e["groups"],
+            "members": sorted(e["members"], key=lambda m: -m["exposure_paise"]),
             "exposure": fmt(e["exposure"]),
             "exposure_paise": e["exposure"],
             "evidence": e.get("evidence_required", ""),

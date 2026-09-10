@@ -329,6 +329,15 @@ section{margin-top:56px}
 .ex.claimed{background:var(--good-soft);padding-left:16px;padding-right:16px;
   border-left:2px solid var(--good)}
 .ex.claimed .amt{color:var(--good)}
+.grp{display:block;margin-top:7px}
+.lnk{background:none;border:0;padding:0;font:inherit;font-size:12.5px;color:var(--accent);
+  cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.lnk:hover{color:var(--ink)}
+.exsub{padding:2px 0 14px 0;border-bottom:1px solid var(--rule)}
+.subrow{display:grid;grid-template-columns:1fr auto;gap:16px;padding:7px 0 7px 18px;
+  font-size:13px;color:var(--ink3);border-left:2px solid var(--rule);margin-left:2px}
+.subrow .amt{font-variant-numeric:tabular-nums;color:var(--ink2)}
+@media(max-width:640px){.subrow{grid-template-columns:1fr;gap:3px}}
 @media(max-width:860px){.ex{grid-template-columns:1fr 1fr;gap:12px}
   .ex .amt{text-align:left}
   .ex .act{grid-column:1/-1;justify-content:flex-start}}
@@ -1127,9 +1136,14 @@ function render(out, mode) {
     bt.UNPROVEN ? `${bt.UNPROVEN.display} evidence missing` : null,
     bt.NEEDS_INPUT ? `${bt.NEEDS_INPUT.display} needs your input` : null,
   ].filter(Boolean).join(' &middot; ');
+  // The register used to show the top 8 of 53 groups and say nothing about
+  // the other 45. It is grouped by class now, so this is the whole list and
+  // these counts agree with the close pack and the CLI.
   const items = s.exceptions_top.reduce((a, e) => a + e.count, 0);
+  const occurrences = s.exceptions_top.reduce((a, e) => a + (e.groups || 1), 0);
   $('m-ex').textContent = s.exceptions_top.length;
-  $('m-ex-d').textContent = `${items.toLocaleString()} items, claim-ready first`;
+  $('m-ex-d').textContent =
+    `${items.toLocaleString()} items in ${occurrences.toLocaleString()} occurrences, claim-ready first`;
   $('m-cov').textContent = pc(s.proof_rate);
   $('m-cov-d').textContent =
     `${s.lines_proven.toLocaleString()} of ${s.lines_total.toLocaleString()} lines trace end to end`;
@@ -1325,11 +1339,28 @@ function render(out, mode) {
   $('exlist').innerHTML = claims.map((e, i) => `
     <div class="ex ${e.urgency === 'lapsed' ? 'dead' : ''}" data-ex="${s.exceptions_top.indexOf(e)}">
       <span class="lab"><span class="tier ${TIERCLS[e.tier] || 'ti-unproven'}">${escHtml(e.tier_label || 'Cannot prove')}</span>
-        ${escHtml(e.label)}<small>${escHtml(e.evidence)}</small></span>
+        ${escHtml(e.label)}<small>${escHtml(e.evidence)}</small>
+        ${e.groups > 1 ? `<small class="grp"><button class="lnk" data-more="${i}">${
+          e.groups} occurrences · ${e.count.toLocaleString()} lines — show each</button></small>` : ''}</span>
       <span class="amt">${escHtml(e.exposure)}</span>
       <span class="meta">${escHtml(e.counterparty)}<br>${deadlineText(e)}</span>
       <span class="act">${actFor(e)}</span>
-    </div>`).join('');
+    </div>
+    ${e.groups > 1 ? `<div class="exsub" id="sub-${i}" hidden>${
+      (e.members || []).map(m => `<div class="subrow"><span>${
+        escHtml(m.reasoning || m.evidence || `${m.count} line(s)`)}</span><span class="amt">${
+        escHtml(m.exposure)}</span></div>`).join('')}</div>` : ''}`).join('');
+
+  // The detail is one click away, not gone. Collapsing without it would have
+  // traded eight identical rows for a missing explanation.
+  document.querySelectorAll('#exlist [data-more]').forEach(b => b.onclick = () => {
+    const sub = $(`sub-${b.dataset.more}`);
+    if (!sub) return;
+    sub.hidden = !sub.hidden;
+    b.textContent = b.textContent.replace(
+      sub.hidden ? '— hide each' : '— show each',
+      sub.hidden ? '— show each' : '— hide each');
+  });
 
   if (verdicts.length) {
     $('verdicts').innerHTML = verdicts.map(v => `
@@ -1389,7 +1420,10 @@ function tallyClaims() {
   if (!rows.length) { note.hidden = true; return; }
   const total = rows.reduce((a, r) =>
     a + (last.summary.exceptions_top[+r.dataset.ex].exposure_paise), 0);
-  note.innerHTML = `<b>${rows.length} proven claim${rows.length === 1 ? '' : 's'} staged, ` +
+  const lines = rows.reduce((a, r) =>
+    a + (last.summary.exceptions_top[+r.dataset.ex].count || 0), 0);
+  note.innerHTML = `<b>${rows.length} proven finding${rows.length === 1 ? '' : 's'} staged ` +
+    `across ${lines.toLocaleString()} line${lines === 1 ? '' : 's'}, ` +
     `${money(total)}.</b> These are the claim-ready tier — the arithmetic disagrees with ` +
     `the contract. Attest drafts the claim and the evidence list. It does not file it, ` +
     `and it never posts to your ledger — a human approves every claim.`;
